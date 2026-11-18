@@ -1,0 +1,457 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>idtrack.settings &mdash; idtrack 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=6a604523" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="../../_static/tutorials.css?v=0e72a3a5" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../_static/design-tabs.js?v=fcb327ea"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />  
+<!-- Google tag (gtag.js) -->
+<script
+    async
+    src="https://www.googletagmanager.com/gtag/js?id=G-FYKLWNJBVK"
+></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() {
+        dataLayer.push(arguments);
+    }
+    gtag("js", new Date());
+
+    gtag("config", "G-FYKLWNJBVK");
+</script>
+
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            idtrack
+              <img src="../../_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../changes.html">Changes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_of_conduct.html">Code of Conduct</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">idtrack</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">idtrack.settings</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for idtrack.settings</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Settings of idtrack: how Ensembl is reached (for building), how a search is bounded, and how a graph is cached.</span>
+
+<span class="sd">Three kinds, each one object:</span>
+
+<span class="sd">- :py:class:`SearchSettings` (frozen): the budget of one conversion and the rules of bridges. An</span>
+<span class="sd">  :py:class:`idtrack.API` holds one (``API.load(path, search=...)``), and every conversion call can override the</span>
+<span class="sd">  budget for itself (``budget_states``, ``budget_seconds``). Nothing of it is process-wide.</span>
+<span class="sd">- :py:class:`GraphSettings` (frozen): the hyper-connectivity threshold and the bounds of the per-node caches of one</span>
+<span class="sd">  loaded graph (``API.load(path, graph_settings=...)``, :py:meth:`idtrack.graph.TheGraph.load`).</span>
+<span class="sd">- :py:data:`ENSEMBL` (:py:class:`EnsemblSettings`): hosts, timeouts, retries and the access mode of the build stack</span>
+<span class="sd">  (MySQL or Ensembl's HTTPS dumps, and Ensembl REST). Network settings are a property of the process: set them once</span>
+<span class="sd">  at start with :py:func:`configure_ensembl`, which checks every value. A loaded graph never uses the network.</span>
+
+<span class="sd">This module imports only :py:mod:`idtrack.errors`.</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">dataclasses</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numbers</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mapping</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">cast</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">ArgumentTypeError</span><span class="p">,</span> <span class="n">InvalidArgumentError</span>
+
+<span class="c1">#: External databases whose ids name a clone or a region rather than a gene; never a bridge between two genes.</span>
+<span class="n">NON_BRIDGING_DATABASES</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span>
+    <span class="p">{</span>
+        <span class="s2">"Clone_based_ensembl_gene"</span><span class="p">,</span>
+        <span class="s2">"Clone_based_vega_gene"</span><span class="p">,</span>
+        <span class="s2">"Clone_based_ensembl_transcript"</span><span class="p">,</span>
+        <span class="s2">"Clone_based_vega_transcript"</span><span class="p">,</span>
+    <span class="p">}</span>
+<span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_positive_number</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">integer</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Refuse anything but a positive (integer) number, naming the setting."""</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">numbers</span><span class="o">.</span><span class="n">Integral</span> <span class="k">if</span> <span class="n">integer</span> <span class="k">else</span> <span class="n">numbers</span><span class="o">.</span><span class="n">Real</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">ArgumentTypeError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">` must be a positive </span><span class="si">{</span><span class="s1">'integer'</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">integer</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">'number'</span><span class="si">}</span><span class="s2">, got </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">."</span><span class="p">,</span>
+            <span class="n">argument</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="c1"># `cast`: a `numbers.Real` compares with numbers at run time, which the type of `numbers.Real` does not say.</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">cast</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">math</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">value</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="n">InvalidArgumentError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">` must be a positive finite number, got </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">."</span><span class="p">,</span> <span class="n">argument</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">value</span>
+        <span class="p">)</span>
+
+
+<div class="viewcode-block" id="SearchSettings">
+<a class="viewcode-back" href="../../reference.html#idtrack.settings.SearchSettings">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">SearchSettings</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""How one conversion searches: its budget and the rules of bridges through external ids.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        budget_states (int): Largest number of search states one conversion may expand before</span>
+<span class="sd">            :py:class:`idtrack.errors.SearchBudgetExceededError` is raised.</span>
+<span class="sd">        budget_seconds (float): Longest time one conversion may take before the same error is raised.</span>
+<span class="sd">        bridge_limit (int): Most bridges through external ids (or shared transcripts) one path may take.</span>
+<span class="sd">        non_bridging_databases (frozenset[str]): External databases whose ids are names of a clone or region rather</span>
+<span class="sd">            than of a gene; they are never used as a bridge between two genes.</span>
+<span class="sd">    """</span>
+
+    <span class="n">budget_states</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">200_000</span>
+    <span class="n">budget_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">30.0</span>
+    <span class="n">bridge_limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="n">non_bridging_databases</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">NON_BRIDGING_DATABASES</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Check every value."""</span>
+        <span class="n">_positive_number</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">budget_states</span><span class="p">,</span> <span class="s2">"budget_states"</span><span class="p">,</span> <span class="n">integer</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">_positive_number</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">budget_seconds</span><span class="p">,</span> <span class="s2">"budget_seconds"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bridge_limit</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bridge_limit</span><span class="p">,</span> <span class="n">numbers</span><span class="o">.</span><span class="n">Integral</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">ArgumentTypeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"`bridge_limit` must be an integer, got </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">bridge_limit</span><span class="si">!r}</span><span class="s2">."</span><span class="p">,</span> <span class="n">argument</span><span class="o">=</span><span class="s2">"bridge_limit"</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">bridge_limit</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">InvalidArgumentError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"`bridge_limit` must be 0 or more, got </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">bridge_limit</span><span class="si">!r}</span><span class="s2">."</span><span class="p">,</span> <span class="n">argument</span><span class="o">=</span><span class="s2">"bridge_limit"</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">non_bridging_databases</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span>
+            <span class="nb">isinstance</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">non_bridging_databases</span>
+        <span class="p">):</span>
+            <span class="k">raise</span> <span class="n">ArgumentTypeError</span><span class="p">(</span><span class="s2">"`non_bridging_databases` must be a set of database names."</span><span class="p">)</span>
+        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">"non_bridging_databases"</span><span class="p">,</span> <span class="nb">frozenset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">non_bridging_databases</span><span class="p">))</span>
+
+<div class="viewcode-block" id="SearchSettings.replace">
+<a class="viewcode-back" href="../../reference.html#idtrack.settings.SearchSettings.replace">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">replace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">changes</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SearchSettings</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return a copy with some values changed (checked like the original).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            changes: Values of the fields to change.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            SearchSettings: The new settings.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            InvalidArgumentError: For a name that is not a field of the settings.</span>
+<span class="sd">        """</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">dataclasses</span><span class="o">.</span><span class="n">fields</span><span class="p">(</span><span class="bp">self</span><span class="p">)]</span>
+        <span class="n">unknown</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">changes</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">names</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">unknown</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">InvalidArgumentError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"SearchSettings has no setting </span><span class="si">{</span><span class="n">unknown</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">!r}</span><span class="s2">; the settings are </span><span class="si">{</span><span class="n">names</span><span class="si">}</span><span class="s2">."</span><span class="p">,</span>
+                <span class="n">argument</span><span class="o">=</span><span class="n">unknown</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="n">allowed</span><span class="o">=</span><span class="n">names</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">dataclasses</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">changes</span><span class="p">)</span></div>
+</div>
+
+
+
+<span class="n">_CACHE_KINDS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"adjacency"</span><span class="p">,</span> <span class="s2">"node"</span><span class="p">,</span> <span class="s2">"edges"</span><span class="p">,</span> <span class="s2">"summary"</span><span class="p">,</span> <span class="s2">"trios"</span><span class="p">,</span> <span class="s2">"names"</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="GraphSettings">
+<a class="viewcode-back" href="../../reference.html#idtrack.settings.GraphSettings">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GraphSettings</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""How a loaded graph caches what it computes per node, and when an external id is too common to identify a gene.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        hyperconnective_threshold (int): An external identifier linked to more genes than this in one release is</span>
+<span class="sd">            hyper-connective (a family name, not an identity): it is never a bridge and is not counted as annotation</span>
+<span class="sd">            (:py:attr:`idtrack.graph.TheGraph.hyperconnective_nodes`).</span>
+<span class="sd">        cache_sizes (Mapping[str, int]): Upper bounds of the per-node caches (entries), per kind: ``adjacency``,</span>
+<span class="sd">            ``node``, ``edges``, ``summary``, ``trios``, ``names``.</span>
+<span class="sd">    """</span>
+
+    <span class="n">hyperconnective_threshold</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span>
+    <span class="n">cache_sizes</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span>
+        <span class="n">default_factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">"adjacency"</span><span class="p">:</span> <span class="mi">200_000</span><span class="p">,</span>
+            <span class="s2">"node"</span><span class="p">:</span> <span class="mi">200_000</span><span class="p">,</span>
+            <span class="s2">"edges"</span><span class="p">:</span> <span class="mi">200_000</span><span class="p">,</span>
+            <span class="s2">"summary"</span><span class="p">:</span> <span class="mi">200_000</span><span class="p">,</span>
+            <span class="s2">"trios"</span><span class="p">:</span> <span class="mi">20_000</span><span class="p">,</span>
+            <span class="s2">"names"</span><span class="p">:</span> <span class="mi">20_000</span><span class="p">,</span>
+        <span class="p">}</span>
+    <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Check every value."""</span>
+        <span class="n">_positive_number</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hyperconnective_threshold</span><span class="p">,</span> <span class="s2">"hyperconnective_threshold"</span><span class="p">,</span> <span class="n">integer</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">sizes</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cache_sizes</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="n">sizes</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">set</span><span class="p">(</span><span class="n">_CACHE_KINDS</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">InvalidArgumentError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"`cache_sizes` must give exactly the kinds </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">_CACHE_KINDS</span><span class="p">)</span><span class="si">}</span><span class="s2">, got </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">sizes</span><span class="p">)</span><span class="si">}</span><span class="s2">."</span><span class="p">,</span>
+                <span class="n">argument</span><span class="o">=</span><span class="s2">"cache_sizes"</span><span class="p">,</span>
+                <span class="n">allowed</span><span class="o">=</span><span class="n">_CACHE_KINDS</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">for</span> <span class="n">kind</span><span class="p">,</span> <span class="n">size</span> <span class="ow">in</span> <span class="n">sizes</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">_positive_number</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"cache_sizes[</span><span class="si">{</span><span class="n">kind</span><span class="si">!r}</span><span class="s2">]"</span><span class="p">,</span> <span class="n">integer</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">"cache_sizes"</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">sizes</span><span class="p">))</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Hash by value (the cache sizes are a dict)."""</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">hyperconnective_threshold</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cache_sizes</span><span class="o">.</span><span class="n">items</span><span class="p">()))))</span></div>
+
+
+
+<div class="viewcode-block" id="check_search">
+<a class="viewcode-back" href="../../reference.html#idtrack.settings.check_search">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">check_search</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SearchSettings</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return a ``search`` argument: a :py:class:`SearchSettings` or ``None``.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ArgumentTypeError: For anything else.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">SearchSettings</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">ArgumentTypeError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"`search` must be a SearchSettings, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">."</span><span class="p">,</span> <span class="n">argument</span><span class="o">=</span><span class="s2">"search"</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">value</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">value</span></div>
+
+
+
+<div class="viewcode-block" id="check_graph_settings">
+<a class="viewcode-back" href="../../reference.html#idtrack.settings.check_graph_settings">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">check_graph_settings</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GraphSettings</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return a ``graph_settings`` argument: a :py:class:`GraphSettings` or ``None``.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ArgumentTypeError: For anything else.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">GraphSettings</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">ArgumentTypeError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"`graph_settings` must be a GraphSettings, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">."</span><span class="p">,</span>
+            <span class="n">argument</span><span class="o">=</span><span class="s2">"graph_settings"</span><span class="p">,</span>
+            <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">value</span></div>
+
+
+
+<div class="viewcode-block" id="EnsemblSettings">
+<a class="viewcode-back" href="../../reference.html#idtrack.settings.EnsemblSettings">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">EnsemblSettings</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""How the build stack reaches Ensembl. One instance, :py:data:`ENSEMBL`, set with :py:func:`configure_ensembl`.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        access (str | None): ``"auto"`` uses the public MySQL service where its ports answer and the HTTPS dumps</span>
+<span class="sd">            otherwise; ``"https"`` never touches MySQL. ``None`` reads the environment variable</span>
+<span class="sd">            :py:attr:`access_env_var` and falls back to ``"auto"``.</span>
+<span class="sd">        access_env_var (str): The environment variable read when :py:attr:`access` is ``None``.</span>
+<span class="sd">        connection_timeout (float): TCP connect timeout in seconds of HTTPS and REST requests.</span>
+<span class="sd">        reading_timeout (float): Socket read timeout in seconds of HTTPS and REST requests.</span>
+<span class="sd">        rest_attempts (int): Attempts of every request to Ensembl (REST and HTTPS dumps): timeouts, connection</span>
+<span class="sd">            errors and the HTTP statuses 429, 500, 502, 503 and 504 are retried.</span>
+<span class="sd">        rest_retry_wait (float): Seconds before the second attempt; doubled before each further one (an HTTP</span>
+<span class="sd">            ``Retry-After`` header is honoured when longer, up to 60 s).</span>
+<span class="sd">        rest_species_cache_seconds (float): How long a process keeps Ensembl's species list.</span>
+<span class="sd">        https_host (str): Host of Ensembl's HTTPS dumps.</span>
+<span class="sd">        rest_server (str): Root URL of Ensembl REST.</span>
+<span class="sd">        mysql_host (str): Host of Ensembl's public MySQL service.</span>
+<span class="sd">        mysql_user (str): User of the anonymous MySQL access.</span>
+<span class="sd">        mysql_password (str): Password of the anonymous MySQL access (empty: the public service needs none).</span>
+<span class="sd">        mysql_port_min_release (dict[int, int]): The first Ensembl release each public MySQL port serves.</span>
+<span class="sd">        mysql_port_assembly (dict[int, tuple[str, int]]): Ports that serve one assembly only,</span>
+<span class="sd">            ``{port: (organism, assembly key)}``: 3337, Ensembl's archive, is read for human GRCh37 only (its frozen</span>
+<span class="sd">            copies of other assemblies under later release numbers are not annotation of those releases).</span>
+<span class="sd">        mysql_probe_timeout (float): TCP connect timeout of the one probe of a MySQL port per process.</span>
+<span class="sd">    """</span>
+
+    <span class="n">access</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">access_env_var</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"IDTRACK_ENSEMBL_ACCESS"</span>
+    <span class="n">connection_timeout</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">15</span>
+    <span class="n">reading_timeout</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">60</span>
+    <span class="n">rest_attempts</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span>
+    <span class="n">rest_retry_wait</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">2.0</span>
+    <span class="n">rest_species_cache_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">86400.0</span>
+    <span class="n">https_host</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"ftp.ensembl.org"</span>
+    <span class="n">rest_server</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"https://rest.ensembl.org"</span>
+    <span class="n">mysql_host</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"ensembldb.ensembl.org"</span>
+    <span class="n">mysql_user</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"anonymous"</span>
+    <span class="n">mysql_password</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="n">mysql_port_min_release</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="p">{</span><span class="mi">3306</span><span class="p">:</span> <span class="mi">48</span><span class="p">,</span> <span class="mi">5306</span><span class="p">:</span> <span class="mi">48</span><span class="p">,</span> <span class="mi">3337</span><span class="p">:</span> <span class="mi">79</span><span class="p">})</span>
+    <span class="n">mysql_port_assembly</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="p">{</span><span class="mi">3337</span><span class="p">:</span> <span class="p">(</span><span class="s2">"homo_sapiens"</span><span class="p">,</span> <span class="mi">37</span><span class="p">)})</span>
+    <span class="n">mysql_probe_timeout</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">5.0</span></div>
+
+
+
+<span class="c1">#: The access modes of :py:attr:`EnsemblSettings.access`.</span>
+<span class="n">ACCESS_MODES</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"auto"</span><span class="p">,</span> <span class="s2">"https"</span><span class="p">)</span>
+
+<span class="c1">#: How the build stack reaches Ensembl, for the whole process (see :py:func:`configure_ensembl`).</span>
+<span class="n">ENSEMBL</span> <span class="o">=</span> <span class="n">EnsemblSettings</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="configure_ensembl">
+<a class="viewcode-back" href="../../reference.html#idtrack.settings.configure_ensembl">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">configure_ensembl</span><span class="p">(</span><span class="o">**</span><span class="n">values</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">EnsemblSettings</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Change how the build stack reaches Ensembl, checking every value first (nothing changes if one is wrong).</span>
+
+<span class="sd">    Example:</span>
+<span class="sd">        &gt;&gt;&gt; import idtrack.settings</span>
+<span class="sd">        &gt;&gt;&gt; _ = idtrack.settings.configure_ensembl(access="https", reading_timeout=120)</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        values: Fields of :py:class:`EnsemblSettings` and their new values.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        EnsemblSettings: :py:data:`ENSEMBL`, changed.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        idtrack.errors.InvalidArgumentError: For an unknown field, an unknown access mode or a value out of range.</span>
+<span class="sd">        idtrack.errors.ArgumentTypeError: For a value of the wrong type.</span>
+<span class="sd">    """</span>
+    <span class="n">names</span> <span class="o">=</span> <span class="p">{</span><span class="n">f</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">dataclasses</span><span class="o">.</span><span class="n">fields</span><span class="p">(</span><span class="n">EnsemblSettings</span><span class="p">)}</span>
+    <span class="n">unknown</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">values</span><span class="p">)</span> <span class="o">-</span> <span class="n">names</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">unknown</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidArgumentError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"Unknown Ensembl settings </span><span class="si">{</span><span class="n">unknown</span><span class="si">}</span><span class="s2">; known: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">names</span><span class="p">)</span><span class="si">}</span><span class="s2">."</span><span class="p">,</span> <span class="n">allowed</span><span class="o">=</span><span class="nb">sorted</span><span class="p">(</span><span class="n">names</span><span class="p">)</span>
+        <span class="p">)</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">values</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">"access"</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">value</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ACCESS_MODES</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">InvalidArgumentError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"`access` must be one of </span><span class="si">{</span><span class="n">ACCESS_MODES</span><span class="si">}</span><span class="s2"> or None, got </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">."</span><span class="p">,</span>
+                    <span class="n">argument</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+                    <span class="n">allowed</span><span class="o">=</span><span class="n">ACCESS_MODES</span><span class="p">,</span>
+                <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">"rest_retry_wait"</span><span class="p">:</span>
+            <span class="c1"># `cast`: a `numbers.Real` compares with numbers at run time, which its type does not say.</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">numbers</span><span class="o">.</span><span class="n">Real</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">cast</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">math</span><span class="o">.</span><span class="n">inf</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">InvalidArgumentError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"`rest_retry_wait` must be a number of seconds, 0 or more, got </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">."</span><span class="p">,</span>
+                    <span class="n">argument</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+                    <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">,</span>
+                <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span>
+            <span class="s2">"connection_timeout"</span><span class="p">,</span>
+            <span class="s2">"reading_timeout"</span><span class="p">,</span>
+            <span class="s2">"rest_species_cache_seconds"</span><span class="p">,</span>
+            <span class="s2">"mysql_probe_timeout"</span><span class="p">,</span>
+        <span class="p">):</span>
+            <span class="n">_positive_number</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">"rest_attempts"</span><span class="p">:</span>
+            <span class="n">_positive_number</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">integer</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"access_env_var"</span><span class="p">,</span> <span class="s2">"https_host"</span><span class="p">,</span> <span class="s2">"rest_server"</span><span class="p">,</span> <span class="s2">"mysql_host"</span><span class="p">,</span> <span class="s2">"mysql_user"</span><span class="p">,</span> <span class="s2">"mysql_password"</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">ArgumentTypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">` must be a string, got </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">."</span><span class="p">,</span> <span class="n">argument</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">ArgumentTypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">` must be a dict, got </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">."</span><span class="p">,</span> <span class="n">argument</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">values</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="n">ENSEMBL</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ENSEMBL</span></div>
+
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">"ACCESS_MODES"</span><span class="p">,</span>
+    <span class="s2">"ENSEMBL"</span><span class="p">,</span>
+    <span class="s2">"NON_BRIDGING_DATABASES"</span><span class="p">,</span>
+    <span class="s2">"EnsemblSettings"</span><span class="p">,</span>
+    <span class="s2">"GraphSettings"</span><span class="p">,</span>
+    <span class="s2">"SearchSettings"</span><span class="p">,</span>
+    <span class="s2">"check_graph_settings"</span><span class="p">,</span>
+    <span class="s2">"check_search"</span><span class="p">,</span>
+    <span class="s2">"configure_ensembl"</span><span class="p">,</span>
+<span class="p">]</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Kemal Inecik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

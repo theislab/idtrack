@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Part 0 — Conceptual Foundation &mdash; idtrack 0.0.5 documentation</title>
+  <title>Part 0 — Conceptual Foundation &mdash; idtrack 0.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=6a604523" />
@@ -17,7 +17,7 @@
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=282f96c0"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../_static/design-tabs.js?v=fcb327ea"></script>
@@ -103,7 +103,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../changes.html">Changes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributor Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../authors.html">Credits</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code_of_conduct.html">Code of Conduct</a></li>
 </ul>
 
         </div>
@@ -283,34 +283,29 @@
 <ol class="arabic simple">
 <li><p><strong>``idtrack.API``</strong> — the high-level entry point</p>
 <ul class="simple">
-<li><p>resolves organism names</p></li>
-<li><p>builds/loads the graph snapshot</p></li>
-<li><p>provides <code class="docutils literal notranslate"><span class="pre">convert_identifier(...)</span></code> and batch helpers</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">API.build(organism,</span> <span class="pre">snapshot_release,</span> <span class="pre">local_repository)</span></code> builds a graph snapshot (or loads its file); <code class="docutils literal notranslate"><span class="pre">API.load(path)</span></code> loads a graph file and never builds</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">api.convert(...)</span></code> and <code class="docutils literal notranslate"><span class="pre">api.convert_many(...)</span></code> return typed results (<code class="docutils literal notranslate"><span class="pre">idtrack.results.ConversionResult</span></code>): every candidate, ranked, the best marked, with the reason when there is none</p></li>
 </ul>
 </li>
-<li><p><strong>``idtrack.DatabaseManager``</strong> — data access + caching</p>
+<li><p><strong>``idtrack.build.DatabaseManager``</strong> — data access + caching (only needed to build)</p>
 <ul class="simple">
-<li><p>downloads tables from Ensembl (live MySQL when reachable; otherwise HTTPS/FTP MySQL dumps)</p></li>
+<li><p>downloads tables from Ensembl (live MySQL when reachable; otherwise HTTPS MySQL dumps)</p></li>
 <li><p>manages your external YAML (<code class="docutils literal notranslate"><span class="pre">*_externals_modified.yml</span></code>)</p></li>
 </ul>
 </li>
-<li><p><strong>``idtrack.Track``</strong> — the conversion engine</p>
+<li><p><strong>``idtrack.engine.Track``</strong> — the conversion engine</p>
 <ul class="simple">
-<li><p>performs path-finding and scoring in the graph</p></li>
-<li><p>you usually access it as <code class="docutils literal notranslate"><span class="pre">api.track</span></code></p></li>
+<li><p>performs path-finding and ranking in the graph</p></li>
+<li><p>you usually use it through the API (<code class="docutils literal notranslate"><span class="pre">api.engine</span></code>)</p></li>
 </ul>
 </li>
-<li><p><strong>``idtrack.HarmonizeFeatures``</strong> — multi-dataset harmonization</p>
+<li><p><strong>``idtrack.harmonize.HarmonizeFeatures``</strong> — multi-dataset harmonization (the <code class="docutils literal notranslate"><span class="pre">harmonize</span></code> extra)</p>
 <ul class="simple">
 <li><p>converts gene identifiers across multiple <code class="docutils literal notranslate"><span class="pre">.h5ad</span></code> datasets</p></li>
 <li><p>helps build a unified integrated dataset</p></li>
 </ul>
 </li>
-<li><p><strong>``idtrack._external_mappers`` (optional)</strong> — orthologs and external mapping services</p>
-<ul class="simple">
-<li><p>advanced features that require extra dependencies</p></li>
-</ul>
-</li>
+<li><p><strong>``idtrack.organisms``, ``idtrack.settings``, ``idtrack.errors``</strong> — the organism table, the settings (search budget, Ensembl access) and the errors a caller can catch (every one an <code class="docutils literal notranslate"><span class="pre">idtrack.errors.IdtrackError</span></code>)</p></li>
 </ol>
 </section>
 </section>
@@ -342,23 +337,23 @@
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>1
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># 1) Minimal setup cell (safe to run in any notebook)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># 1) Minimal setup cell (safe to run in any notebook)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack</span><span class="w"> </span><span class="kn">import</span> <span class="n">API</span>
 
 <span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'IDTRACK_LOCAL_REPO'</span><span class="p">,</span> <span class="s1">'idtrack_cache'</span><span class="p">))</span>
 <span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-<span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
-<span class="n">api</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
+<span class="n">API</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
 
 <span class="nb">print</span><span class="p">(</span><span class="s1">'IDTrack version:'</span><span class="p">,</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">'Local repository:'</span><span class="p">,</span> <span class="n">LOCAL_REPOSITORY</span><span class="p">)</span>
-<br/></pre></div>
+</pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -366,27 +361,28 @@
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-IDTrack version: 0.0.5
+IDTrack version: 0.1.0
 Local repository: idtrack_cache
 </pre></div></div>
 </div>
 <p>The cell above does three things:</p>
 <ol class="arabic simple">
 <li><p>chooses a cache directory (your <em>local repository</em>)</p></li>
-<li><p>creates the high-level <code class="docutils literal notranslate"><span class="pre">idtrack.API</span></code> object</p></li>
+<li><p>imports the high-level <code class="docutils literal notranslate"><span class="pre">idtrack.API</span></code> class</p></li>
 <li><p>enables logging so you can see progress (downloads, caching, graph build)</p></li>
 </ol>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>2
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># 2) Resolve organism names the way IDTrack expects</span>
-<span class="c1"># You can use common names ('human'), scientific names, taxon IDs, or Ensembl-style names.</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># 2) Resolve organism names the way IDTrack expects</span>
+<span class="c1"># You can use common names ('human'), scientific names, taxon IDs, or Ensembl-style names (Ensembl REST).</span>
+<span class="c1"># A name of IDTrack's own table also resolves offline: idtrack.organisms.resolve_organism('human').</span>
 
 <span class="k">for</span> <span class="n">query</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">'human'</span><span class="p">,</span> <span class="s1">'mus musculus'</span><span class="p">,</span> <span class="s1">'sus scrofa'</span><span class="p">]:</span>
-    <span class="n">formal_name</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+    <span class="n">formal_name</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">API</span><span class="o">.</span><span class="n">ensembl_organism</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">query</span><span class="si">!r}</span><span class="s1"> -&gt; </span><span class="si">{</span><span class="n">formal_name</span><span class="si">!r}</span><span class="s1"> (latest Ensembl release: </span><span class="si">{</span><span class="n">latest_release</span><span class="si">}</span><span class="s1">)'</span><span class="p">)</span>
-<br/></pre></div>
+</pre></div>
 </div>
 </div>
 <div class="nboutput docutils container">
@@ -394,7 +390,7 @@ Local repository: idtrack_cache
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2026-11-12 15:14:48 INFO:idtrack._verify_organism: Ensembl Rest API query to get the organism names and associated releases.
+2026-11-18 05:10:34 INFO:idtrack.build.species: Ensembl Rest API query to get the organism names and associated releases.
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">

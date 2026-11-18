@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Part 3 — Graph Initialization &amp; Management &mdash; idtrack 0.0.5 documentation</title>
+  <title>Part 3 — Graph Initialization &amp; Management &mdash; idtrack 0.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=6a604523" />
@@ -17,7 +17,7 @@
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=282f96c0"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../_static/design-tabs.js?v=fcb327ea"></script>
@@ -105,7 +105,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../changes.html">Changes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributor Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../authors.html">Credits</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code_of_conduct.html">Code of Conduct</a></li>
 </ul>
 
         </div>
@@ -247,15 +247,15 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack</span><span class="w"> </span><span class="kn">import</span> <span class="n">API</span>
 
 <span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'IDTRACK_LOCAL_REPO'</span><span class="p">,</span> <span class="s1">'idtrack_cache'</span><span class="p">))</span>
 <span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-<span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
-<span class="n">api</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
+<span class="n">API</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
 
 <span class="nb">print</span><span class="p">(</span><span class="s1">'Local repository:'</span><span class="p">,</span> <span class="n">LOCAL_REPOSITORY</span><span class="p">)</span>
-<br/></pre></div>
+</pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -319,7 +319,7 @@ OK                                                      sus_scrofa_externals_mod
 <ol class="arabic simple">
 <li><p>resolve organism name</p></li>
 <li><p>pick (and pin) the snapshot release</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">api.build_graph(...)</span></code>: loads the graph file if it is in the local repository, builds and saves it otherwise</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">API.build(organism,</span> <span class="pre">snapshot_release,</span> <span class="pre">local_repository)</span></code>: loads the graph file if it is in the local repository, builds and saves it otherwise (<code class="docutils literal notranslate"><span class="pre">API.load(path)</span></code> loads a file and never builds)</p></li>
 <li><p>inspect + reuse</p></li>
 </ol>
 <p>The primary assembly of a graph is the organism’s preferred assembly that has the snapshot release (human GRCh38, mouse GRCm39, pig Sscrofa11.1, rhesus Mmul_10, cynomolgus 6.0 at release 115); it is part of the graph file’s name.</p>
@@ -332,10 +332,10 @@ OK                                                      sus_scrofa_externals_mod
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>4
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">'human'</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">API</span><span class="o">.</span><span class="n">ensembl_organism</span><span class="p">(</span><span class="s1">'human'</span><span class="p">)</span>
 <span class="n">SNAPSHOT_RELEASE</span> <span class="o">=</span> <span class="mi">115</span>  <span class="c1"># pinned: the same graph and the same answers in every run (latest_release is Ensembl's newest)</span>
 <span class="n">organism</span><span class="p">,</span> <span class="n">SNAPSHOT_RELEASE</span>
-<br/></pre></div>
+</pre></div>
 </div>
 </div>
 <div class="nboutput docutils container">
@@ -343,7 +343,7 @@ OK                                                      sus_scrofa_externals_mod
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2026-11-12 15:15:15 INFO:idtrack._verify_organism: Ensembl Rest API query to get the organism names and associated releases.
+2026-11-18 05:10:54 INFO:idtrack.build.species: Ensembl Rest API query to get the organism names and associated releases.
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -363,8 +363,8 @@ OK                                                      sus_scrofa_externals_mod
 # Included for tutorial purposes only.
 
 # Build (or load) the graph snapshot
-api.build_graph(organism_name=organism, snapshot_release=SNAPSHOT_RELEASE)
-<br/></pre></div>
+api = API.build(organism, SNAPSHOT_RELEASE, str(LOCAL_REPOSITORY))
+</pre></div>
 </div>
 </div>
 <div class="nboutput docutils container">
@@ -386,25 +386,33 @@ api.build_graph(organism_name=organism, snapshot_release=SNAPSHOT_RELEASE)
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>6
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Quick inspection</span>
-<span class="n">g</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">'Organism:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'organism'</span><span class="p">))</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">'Snapshot release:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'ensembl_release'</span><span class="p">))</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">'Main assembly:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'genome_assembly'</span><span class="p">))</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">'Assemblies in this graph:'</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">list_genome_assemblies</span><span class="p">()))</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">'Nodes:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">number_of_nodes</span><span class="p">())</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">'Edges:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">number_of_edges</span><span class="p">())</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Quick inspection: what the graph holds (read from the graph, no network)</span>
+<span class="n">described</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Organism:'</span><span class="p">,</span> <span class="n">described</span><span class="o">.</span><span class="n">organism</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Snapshot release:'</span><span class="p">,</span> <span class="n">described</span><span class="o">.</span><span class="n">snapshot_release</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Primary assembly:'</span><span class="p">,</span> <span class="n">described</span><span class="o">.</span><span class="n">primary_assembly</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Assemblies in this graph:'</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">assembly</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">api</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span><span class="o">.</span><span class="n">assemblies</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Nodes:'</span><span class="p">,</span> <span class="n">described</span><span class="o">.</span><span class="n">counts</span><span class="p">[</span><span class="s1">'nodes'</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Edges:'</span><span class="p">,</span> <span class="n">described</span><span class="o">.</span><span class="n">counts</span><span class="p">[</span><span class="s1">'history_edges'</span><span class="p">]</span> <span class="o">+</span> <span class="n">described</span><span class="o">.</span><span class="n">counts</span><span class="p">[</span><span class="s1">'cross_reference_edges'</span><span class="p">])</span>
 
-<span class="n">aed</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="s1">'available_external_databases'</span><span class="p">,</span> <span class="p">[]))</span>
+<span class="n">aed</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">external_databases</span><span class="p">()</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">'External DBs enabled (count):'</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">aed</span><span class="p">))</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">'External DBs (first 20):'</span><span class="p">,</span> <span class="n">aed</span><span class="p">[:</span><span class="mi">20</span><span class="p">])</span>
 
 <span class="c1"># What the graph file records about itself (checked when it is loaded)</span>
-<span class="n">manifest</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s1">'manifest'</span><span class="p">]</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">'Graph format version:'</span><span class="p">,</span> <span class="n">manifest</span><span class="p">[</span><span class="s1">'format_version'</span><span class="p">],</span> <span class="s1">'| built by idtrack'</span><span class="p">,</span> <span class="n">manifest</span><span class="p">[</span><span class="s1">'package_version'</span><span class="p">])</span>
+<span class="n">manifest</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">manifest</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Graph format version:'</span><span class="p">,</span> <span class="n">described</span><span class="o">.</span><span class="n">format_version</span><span class="p">,</span> <span class="s1">'| built by idtrack'</span><span class="p">,</span> <span class="n">described</span><span class="o">.</span><span class="n">package_version</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">'History corrections made while building:'</span><span class="p">,</span> <span class="n">manifest</span><span class="p">[</span><span class="s1">'history'</span><span class="p">][</span><span class="s1">'corrections'</span><span class="p">])</span>
-<br/></pre></div>
+</pre></div>
 </div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2026-11-18 05:11:00 INFO:idtrack.graph.graph: Graph-wide table being calculated: assembly_releases
+</pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
@@ -413,7 +421,7 @@ api.build_graph(organism_name=organism, snapshot_release=SNAPSHOT_RELEASE)
 <div class="highlight"><pre>
 Organism: homo_sapiens
 Snapshot release: 115
-Main assembly: 38
+Primary assembly: 38
 Assemblies in this graph: [36, 37, 38]
 Nodes: 3682041
 Edges: 8630251
@@ -449,10 +457,10 @@ History corrections made while building: [{&#39;edges&#39;: 7, &#39;events&#39;:
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>8
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">'mus musculus'</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">API</span><span class="o">.</span><span class="n">ensembl_organism</span><span class="p">(</span><span class="s1">'mus musculus'</span><span class="p">)</span>
 <span class="n">SNAPSHOT_RELEASE</span> <span class="o">=</span> <span class="mi">115</span>
 <span class="n">organism</span><span class="p">,</span> <span class="n">SNAPSHOT_RELEASE</span>
-<br/></pre></div>
+</pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -473,10 +481,10 @@ History corrections made while building: [{&#39;edges&#39;: 7, &#39;events&#39;:
 
 # Build (or load) the mouse graph snapshot
 if HAS_MOUSE_YAML:
-    api.build_graph(organism_name=organism, snapshot_release=SNAPSHOT_RELEASE)
+    api = API.build(organism, SNAPSHOT_RELEASE, str(LOCAL_REPOSITORY))
 else:
     print('Skipping mouse build: mus_musculus_externals_modified.yml is missing (run Part 2 first).')
-<br/></pre></div>
+</pre></div>
 </div>
 </div>
 <div class="nboutput docutils container">
@@ -499,21 +507,29 @@ else:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">HAS_MOUSE_YAML</span><span class="p">:</span>
-    <span class="n">g</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">'Organism:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'organism'</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">'Snapshot release:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'ensembl_release'</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">'Main assembly:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'genome_assembly'</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">'Assemblies in this graph:'</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">list_genome_assemblies</span><span class="p">()))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">'Nodes:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">number_of_nodes</span><span class="p">())</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">'Edges:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">number_of_edges</span><span class="p">())</span>
+    <span class="n">described</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Organism:'</span><span class="p">,</span> <span class="n">described</span><span class="o">.</span><span class="n">organism</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Snapshot release:'</span><span class="p">,</span> <span class="n">described</span><span class="o">.</span><span class="n">snapshot_release</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Primary assembly:'</span><span class="p">,</span> <span class="n">described</span><span class="o">.</span><span class="n">primary_assembly</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Assemblies in this graph:'</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">assembly</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">api</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span><span class="o">.</span><span class="n">assemblies</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Nodes:'</span><span class="p">,</span> <span class="n">described</span><span class="o">.</span><span class="n">counts</span><span class="p">[</span><span class="s1">'nodes'</span><span class="p">])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Edges:'</span><span class="p">,</span> <span class="n">described</span><span class="o">.</span><span class="n">counts</span><span class="p">[</span><span class="s1">'history_edges'</span><span class="p">]</span> <span class="o">+</span> <span class="n">described</span><span class="o">.</span><span class="n">counts</span><span class="p">[</span><span class="s1">'cross_reference_edges'</span><span class="p">])</span>
 
-    <span class="n">aed</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="s1">'available_external_databases'</span><span class="p">,</span> <span class="p">[]))</span>
+    <span class="n">aed</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">external_databases</span><span class="p">()</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">'External DBs enabled (count):'</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">aed</span><span class="p">))</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">'External DBs (first 20):'</span><span class="p">,</span> <span class="n">aed</span><span class="p">[:</span><span class="mi">20</span><span class="p">])</span>
 <span class="k">else</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">'Mouse graph not built (missing YAML).'</span><span class="p">)</span>
-<br/></pre></div>
+</pre></div>
 </div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2026-11-18 05:11:03 INFO:idtrack.graph.graph: Graph-wide table being calculated: assembly_releases
+</pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
@@ -522,7 +538,7 @@ else:
 <div class="highlight"><pre>
 Organism: mus_musculus
 Snapshot release: 115
-Main assembly: 39
+Primary assembly: 39
 Assemblies in this graph: [37, 38, 39]
 Nodes: 2476278
 Edges: 5367306
@@ -555,10 +571,10 @@ External DBs (first 20): [&#39;CCDS&#39;, &#39;Clone_based_ensembl_gene&#39;, &#
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>12
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">'sus scrofa'</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">API</span><span class="o">.</span><span class="n">ensembl_organism</span><span class="p">(</span><span class="s1">'sus scrofa'</span><span class="p">)</span>
 <span class="n">SNAPSHOT_RELEASE</span> <span class="o">=</span> <span class="mi">115</span>
 <span class="n">organism</span><span class="p">,</span> <span class="n">SNAPSHOT_RELEASE</span>
-<br/></pre></div>
+</pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -579,10 +595,10 @@ External DBs (first 20): [&#39;CCDS&#39;, &#39;Clone_based_ensembl_gene&#39;, &#
 
 # Build (or load) the pig graph snapshot
 if HAS_PIG_YAML:
-    api.build_graph(organism_name=organism, snapshot_release=SNAPSHOT_RELEASE)
+    api = API.build(organism, SNAPSHOT_RELEASE, str(LOCAL_REPOSITORY))
 else:
     print('Skipping pig build: sus_scrofa_externals_modified.yml is missing (run Part 2 first).')
-<br/></pre></div>
+</pre></div>
 </div>
 </div>
 <div class="nboutput docutils container">
@@ -605,21 +621,29 @@ else:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">HAS_PIG_YAML</span><span class="p">:</span>
-    <span class="n">g</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">'Organism:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'organism'</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">'Snapshot release:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'ensembl_release'</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">'Main assembly:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'genome_assembly'</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">'Assemblies in this graph:'</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">list_genome_assemblies</span><span class="p">()))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">'Nodes:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">number_of_nodes</span><span class="p">())</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">'Edges:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">number_of_edges</span><span class="p">())</span>
+    <span class="n">described</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Organism:'</span><span class="p">,</span> <span class="n">described</span><span class="o">.</span><span class="n">organism</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Snapshot release:'</span><span class="p">,</span> <span class="n">described</span><span class="o">.</span><span class="n">snapshot_release</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Primary assembly:'</span><span class="p">,</span> <span class="n">described</span><span class="o">.</span><span class="n">primary_assembly</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Assemblies in this graph:'</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">assembly</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">api</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span><span class="o">.</span><span class="n">assemblies</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Nodes:'</span><span class="p">,</span> <span class="n">described</span><span class="o">.</span><span class="n">counts</span><span class="p">[</span><span class="s1">'nodes'</span><span class="p">])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Edges:'</span><span class="p">,</span> <span class="n">described</span><span class="o">.</span><span class="n">counts</span><span class="p">[</span><span class="s1">'history_edges'</span><span class="p">]</span> <span class="o">+</span> <span class="n">described</span><span class="o">.</span><span class="n">counts</span><span class="p">[</span><span class="s1">'cross_reference_edges'</span><span class="p">])</span>
 
-    <span class="n">aed</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="s1">'available_external_databases'</span><span class="p">,</span> <span class="p">[]))</span>
+    <span class="n">aed</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">external_databases</span><span class="p">()</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">'External DBs enabled (count):'</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">aed</span><span class="p">))</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">'External DBs (first 20):'</span><span class="p">,</span> <span class="n">aed</span><span class="p">[:</span><span class="mi">20</span><span class="p">])</span>
 <span class="k">else</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">'Pig graph not built (missing YAML).'</span><span class="p">)</span>
-<br/></pre></div>
+</pre></div>
 </div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2026-11-18 05:11:05 INFO:idtrack.graph.graph: Graph-wide table being calculated: assembly_releases
+</pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
@@ -628,7 +652,7 @@ else:
 <div class="highlight"><pre>
 Organism: sus_scrofa
 Snapshot release: 115
-Main assembly: 111
+Primary assembly: 111
 Assemblies in this graph: [9, 102, 111]
 Nodes: 1073214
 Edges: 1757774
@@ -691,10 +715,10 @@ OK                                                      macaca_fascicularis_exte
 # Included for tutorial purposes only.
 
 # Build (or load) the rhesus macaque graph snapshot
-organism, latest_release = api.resolve_organism('macaca_mulatta')
+organism, latest_release = API.ensembl_organism('macaca_mulatta')
 if HAS_MMUL_YAML:
-    api.build_graph(organism_name=organism, snapshot_release=115)
-    print('Assemblies in this graph:', sorted(api.list_genome_assemblies()))
+    api = API.build(organism, 115, str(LOCAL_REPOSITORY))
+    print('Assemblies in this graph:', sorted(a.assembly for a in api.describe().assemblies))
 else:
     print('Skipping rhesus build: macaca_mulatta_externals_modified.yml is missing (run Part 2 first).')
 </pre></div>
@@ -712,7 +736,8 @@ else:
 <div class="output_area rendered_html docutils container">
 <details class="idtrack-collapse">
 <summary>Click to show build logs</summary>
-<pre class="idtrack-collapse-content">Assemblies in this graph: [1, 10, 801]</pre>
+<pre class="idtrack-collapse-content">2026-11-18 05:11:07 INFO:idtrack.graph.graph: Graph-wide table being calculated: assembly_releases
+Assemblies in this graph: [1, 10, 801]</pre>
 </details></div>
 </div>
 <div class="nbinput docutils container">
@@ -723,10 +748,10 @@ else:
 # Included for tutorial purposes only.
 
 # Build (or load) the cynomolgus macaque graph snapshot
-organism, latest_release = api.resolve_organism('macaca_fascicularis')
+organism, latest_release = API.ensembl_organism('macaca_fascicularis')
 if HAS_MFAS_YAML:
-    api.build_graph(organism_name=organism, snapshot_release=115)
-    print('Assemblies in this graph:', sorted(api.list_genome_assemblies()))
+    api = API.build(organism, 115, str(LOCAL_REPOSITORY))
+    print('Assemblies in this graph:', sorted(a.assembly for a in api.describe().assemblies))
 else:
     print('Skipping cynomolgus build: macaca_fascicularis_externals_modified.yml is missing (run Part 2 first).')
 </pre></div>
@@ -744,7 +769,8 @@ else:
 <div class="output_area rendered_html docutils container">
 <details class="idtrack-collapse">
 <summary>Click to show build logs</summary>
-<pre class="idtrack-collapse-content">Assemblies in this graph: [5, 6]</pre>
+<pre class="idtrack-collapse-content">2026-11-18 05:11:07 INFO:idtrack.graph.graph: Graph-wide table being calculated: assembly_releases
+Assemblies in this graph: [5, 6]</pre>
 </details></div>
 </div>
 </section>
@@ -754,21 +780,21 @@ else:
 <section id="Reloading-vs-rebuilding">
 <h3>Reloading vs rebuilding<a class="headerlink" href="#Reloading-vs-rebuilding" title="Link to this heading"></a></h3>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">api.build_graph(...)</span></code> is safe to call repeatedly.</p>
+<li><p><code class="docutils literal notranslate"><span class="pre">API.build(...)</span></code> is safe to call repeatedly: it loads the file of the graph when it is there.</p>
 <ul>
 <li><p>If the graph file is in the local repository, IDTrack <strong>loads</strong> it: from the file alone, with no table, no database manager and no network.</p></li>
 <li><p>If it does not exist yet, IDTrack <strong>builds</strong> it (slow, first time only) and saves it.</p></li>
 </ul>
 </li>
-<li><p>One <code class="docutils literal notranslate"><span class="pre">idtrack.API</span></code> holds one graph: <code class="docutils literal notranslate"><span class="pre">build_graph</span></code> for another organism replaces the graph of the object. Keep one <code class="docutils literal notranslate"><span class="pre">API</span></code> per organism if you need several at once.</p></li>
+<li><p>One <code class="docutils literal notranslate"><span class="pre">idtrack.API</span></code> holds one graph (one organism, one snapshot). Keep one <code class="docutils literal notranslate"><span class="pre">API</span></code> per organism if you need several at once.</p></li>
 </ul>
 </section>
 <section id="What-a-graph-file-is">
 <h3>What a graph file is<a class="headerlink" href="#What-a-graph-file-is" title="Link to this heading"></a></h3>
 <ul class="simple">
 <li><p>One <code class="docutils literal notranslate"><span class="pre">.npz</span></code> file per graph, <code class="docutils literal notranslate"><span class="pre">graph_&lt;organism&gt;_assembly&lt;primary</span> <span class="pre">assembly&gt;_min&lt;first</span> <span class="pre">release&gt;_max&lt;snapshot&gt;_narrow.npz</span></code>: graphs of different organisms, snapshots and primary assemblies sit side by side in one local repository.</p></li>
-<li><p>The file records what it was built from: the selection of external databases that takes effect (from your external YAML), the organism table, the graph format and the package version, the tables, and the corrections made to Ensembl’s id history (<code class="docutils literal notranslate"><span class="pre">api.track.graph.graph['manifest']</span></code>). Loading a file under the expected name that was built from something else (another YAML selection, another organism table, an older graph format) raises <code class="docutils literal notranslate"><span class="pre">idtrack.GraphMismatchError</span></code>, which names the
-differences: IDTrack never answers from another graph and never starts a build of hours on its own. To build it again, move the file away and call <code class="docutils literal notranslate"><span class="pre">build_graph</span></code>.</p></li>
+<li><p>The file records what it was built from: the selection of external databases that takes effect (from your external YAML), the organism table, the graph format and the package version, the tables, and the corrections made to Ensembl’s id history (<code class="docutils literal notranslate"><span class="pre">api.describe()</span></code>, and the whole record in <code class="docutils literal notranslate"><span class="pre">api.graph.manifest</span></code>). Loading a file under the expected name that was built from something else (another YAML selection, another organism table, an older graph format) raises
+<code class="docutils literal notranslate"><span class="pre">idtrack.GraphMismatchError</span></code>, which names the differences: IDTrack never answers from another graph and never starts a build of hours on its own. To build it again, move the file away and call <code class="docutils literal notranslate"><span class="pre">API.build(...,</span> <span class="pre">rebuild=True)</span></code>.</p></li>
 <li><p>Graph files of IDTrack 0.0.5 (<code class="docutils literal notranslate"><span class="pre">graph_*.pickle</span></code>) and its table cache (<code class="docutils literal notranslate"><span class="pre">&lt;organism&gt;_assembly-&lt;key&gt;.h5</span></code>) are not read; build the graphs again with this version.</p></li>
 </ul>
 </section>
@@ -847,18 +873,7 @@ graph_*.npz (5):
    graph_mus_musculus_assembly39_min48_max115_narrow.npz
    graph_sus_scrofa_assembly111_min56_max115_narrow.npz
 
-idtrack_tables/* (14):
-   homo_sapiens_assembly-36
-   homo_sapiens_assembly-37
-   homo_sapiens_assembly-38
-   macaca_fascicularis_assembly-5
-   macaca_fascicularis_assembly-6
-   macaca_mulatta_assembly-1
-   macaca_mulatta_assembly-10
-   macaca_mulatta_assembly-801
-   mus_musculus_assembly-37
-   mus_musculus_assembly-38
-  ...
+idtrack_tables/* (0):
 
 *_externals_modified.yml (5):
    homo_sapiens_externals_modified.yml

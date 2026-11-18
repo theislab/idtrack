@@ -1,0 +1,366 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>idtrack.ids &mdash; idtrack 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=6a604523" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="../../_static/tutorials.css?v=0e72a3a5" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../_static/design-tabs.js?v=fcb327ea"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />  
+<!-- Google tag (gtag.js) -->
+<script
+    async
+    src="https://www.googletagmanager.com/gtag/js?id=G-FYKLWNJBVK"
+></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() {
+        dataLayer.push(arguments);
+    }
+    gtag("js", new Date());
+
+    gtag("config", "G-FYKLWNJBVK");
+</script>
+
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            idtrack
+              <img src="../../_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../changes.html">Changes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_of_conduct.html">Code of Conduct</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">idtrack</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">idtrack.ids</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for idtrack.ids</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""The vocabulary of idtrack's graph and the one rule of Ensembl ids with versions (``&lt;id&gt;.&lt;version&gt;``).</span>
+
+<span class="sd">Node types, the marks of a gene id's birth and retirement (``&lt;id&gt;.Void``, ``&lt;id&gt;.Retired``), the prefix under which</span>
+<span class="sd">the graph keeps synonyms, and the functions that join and split an Ensembl id and its version. Every module that</span>
+<span class="sd">needs one of these takes it from here.</span>
+
+<span class="sd">This module imports nothing of idtrack except :py:mod:`idtrack.errors`.</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numbers</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">types</span><span class="w"> </span><span class="kn">import</span> <span class="n">MappingProxyType</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">IntegrityError</span><span class="p">,</span> <span class="n">TableFormatError</span>
+
+<span class="c1">#: The character between an Ensembl stable id and its version (``ENSG00000141510.18``).</span>
+<span class="n">ID_VERSION_DELIMITER</span> <span class="o">=</span> <span class="s2">"."</span>
+
+<span class="c1">#: The prefix of the graph's synonym nodes (``synonym_id::TP53``): the graph's bookkeeping, never part of an id.</span>
+<span class="n">SYNONYM_PREFIX</span> <span class="o">=</span> <span class="s2">"synonym_id::"</span>
+
+<span class="c1">#: The version of the node before the first version of a gene id (its birth).</span>
+<span class="n">VOID</span> <span class="o">=</span> <span class="s2">"Void"</span>
+<span class="c1">#: The version of the node after the last version of a gene id (its retirement).</span>
+<span class="n">RETIRED</span> <span class="o">=</span> <span class="s2">"Retired"</span>
+<span class="c1">#: Both marks: versions that no release holds.</span>
+<span class="n">SENTINEL_VERSIONS</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="n">VOID</span><span class="p">,</span> <span class="n">RETIRED</span><span class="p">})</span>
+
+<span class="c1">#: The key of a node's type among its attributes.</span>
+<span class="n">NODE_TYPE_KEY</span> <span class="o">=</span> <span class="s2">"node_type"</span>
+<span class="c1">#: The key of an edge's cross-reference record among its attributes.</span>
+<span class="n">CONNECTION_KEY</span> <span class="o">=</span> <span class="s2">"connection"</span>
+
+<span class="c1">#: The node type of an identifier of an external database (a symbol, an accession, ...).</span>
+<span class="n">EXTERNAL</span> <span class="o">=</span> <span class="s2">"external"</span>
+<span class="c1">#: Ensembl's forms, in the order in which one leads to the next (a translation belongs to a transcript, which</span>
+<span class="c1">#: belongs to a gene).</span>
+<span class="n">FORMS</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"gene"</span><span class="p">,</span> <span class="s2">"transcript"</span><span class="p">,</span> <span class="s2">"translation"</span><span class="p">)</span>
+<span class="c1">#: The form whose history is the backbone of the graph.</span>
+<span class="n">BACKBONE_FORM</span> <span class="o">=</span> <span class="s2">"gene"</span>
+
+<span class="c1">#: Form to the node type of its versioned ids (``gene`` -&gt; ``ensembl_gene``).</span>
+<span class="n">ENSEMBL_TYPE</span> <span class="o">=</span> <span class="n">MappingProxyType</span><span class="p">({</span><span class="n">form</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"ensembl_</span><span class="si">{</span><span class="n">form</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">form</span> <span class="ow">in</span> <span class="n">FORMS</span><span class="p">})</span>
+<span class="c1">#: Node type of versioned ids to its form (``ensembl_gene`` -&gt; ``gene``).</span>
+<span class="n">FORM_OF_ENSEMBL_TYPE</span> <span class="o">=</span> <span class="n">MappingProxyType</span><span class="p">({</span><span class="n">node_type</span><span class="p">:</span> <span class="n">form</span> <span class="k">for</span> <span class="n">form</span><span class="p">,</span> <span class="n">node_type</span> <span class="ow">in</span> <span class="n">ENSEMBL_TYPE</span><span class="o">.</span><span class="n">items</span><span class="p">()})</span>
+<span class="c1">#: Form to the node type of its ids without version (``gene`` -&gt; ``base_ensembl_gene``).</span>
+<span class="n">BASE_ENSEMBL_TYPE</span> <span class="o">=</span> <span class="n">MappingProxyType</span><span class="p">({</span><span class="n">form</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"base_ensembl_</span><span class="si">{</span><span class="n">form</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">form</span> <span class="ow">in</span> <span class="n">FORMS</span><span class="p">})</span>
+
+<span class="c1">#: The node type of versioned gene ids, the backbone.</span>
+<span class="n">GENE</span> <span class="o">=</span> <span class="n">ENSEMBL_TYPE</span><span class="p">[</span><span class="n">BACKBONE_FORM</span><span class="p">]</span>
+<span class="c1">#: The node type of gene ids without version.</span>
+<span class="n">BASE_GENE</span> <span class="o">=</span> <span class="n">BASE_ENSEMBL_TYPE</span><span class="p">[</span><span class="n">BACKBONE_FORM</span><span class="p">]</span>
+
+<span class="c1">#: Beginnings of the names of the external databases whose ids are sequence accessions, which their sources write</span>
+<span class="c1">#: with a version (``NM_000546.6``, ``P04637.4``, ``CCDS11118.1``). Only an id of such a database is looked up</span>
+<span class="c1">#: without a version suffix that the graph does not hold; a gene symbol never is.</span>
+<span class="n">ACCESSION_DATABASE_PREFIXES</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"RefSeq_"</span><span class="p">,</span> <span class="s2">"Uniprot/"</span><span class="p">,</span> <span class="s2">"CCDS"</span><span class="p">,</span> <span class="s2">"EMBL"</span><span class="p">,</span> <span class="s2">"protein_id"</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_is_missing</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Tell whether a version cell holds nothing (``None``, NaN, ``pandas.NA``, an empty string)."""</span>
+    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"NAType"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">numbers</span><span class="o">.</span><span class="n">Real</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">numbers</span><span class="o">.</span><span class="n">Integral</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+    <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">value</span> <span class="o">==</span> <span class="s2">""</span>
+
+
+<div class="viewcode-block" id="join">
+<a class="viewcode-back" href="../../reference.html#idtrack.ids.join">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">join</span><span class="p">(</span><span class="n">stable_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">version</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the node name of an Ensembl id and its version: ``&lt;id&gt;.&lt;version&gt;``.</span>
+
+<span class="sd">    A whole number (also a float such as ``3.0`` read from a table) is written as an integer; ``Void`` and</span>
+<span class="sd">    ``Retired`` are written as they are; a missing version (``None``, NaN, an empty string: the empty id of a</span>
+<span class="sd">    transcript without a translation) gives the id alone.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        stable_id: The stable id.</span>
+<span class="sd">        version: The version.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: The node name.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        TableFormatError: If the version is a number with a fractional part (a malformed table).</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">_is_missing</span><span class="p">(</span><span class="n">version</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">stable_id</span>
+    <span class="k">if</span> <span class="n">version</span> <span class="ow">in</span> <span class="n">SENTINEL_VERSIONS</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">stable_id</span><span class="si">}{</span><span class="n">ID_VERSION_DELIMITER</span><span class="si">}{</span><span class="n">version</span><span class="si">}</span><span class="s2">"</span>
+    <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">version</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">float</span><span class="p">(</span><span class="n">version</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">TableFormatError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Version is floating: </span><span class="si">{</span><span class="p">(</span><span class="n">stable_id</span><span class="p">,</span><span class="w"> </span><span class="n">version</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">stable_id</span><span class="si">}{</span><span class="n">ID_VERSION_DELIMITER</span><span class="si">}{</span><span class="nb">int</span><span class="p">(</span><span class="n">version</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span></div>
+
+
+
+<div class="viewcode-block" id="join_columns">
+<a class="viewcode-back" href="../../reference.html#idtrack.ids.join_columns">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">join_columns</span><span class="p">(</span><span class="n">stable_ids</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">versions</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return the node names of two columns of a table (stable ids and versions), as :py:func:`join` writes them.</span>
+
+<span class="sd">    Numeric versions (missing ones as NaN) are joined column-wise; any other column element by element.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        stable_ids: The stable ids (a sequence or array of strings).</span>
+<span class="sd">        versions: Their versions, in the same order (a sequence or array).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        list[str]: One node name per row.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        TableFormatError: If a version is a number with a fractional part.</span>
+<span class="sd">    """</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+    <span class="n">names</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">stable_ids</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">)</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>  <span class="c1"># never write into the caller's column</span>
+    <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">versions</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">number</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">join</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">names</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">values</span><span class="o">.</span><span class="n">tolist</span><span class="p">())]</span>
+    <span class="n">has</span> <span class="o">=</span> <span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">has</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+        <span class="n">numbers</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">has</span><span class="p">]</span>
+        <span class="n">whole</span> <span class="o">=</span> <span class="n">numbers</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">whole</span> <span class="o">!=</span> <span class="n">numbers</span><span class="p">):</span>
+            <span class="n">bad</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">whole</span> <span class="o">!=</span> <span class="n">numbers</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">raise</span> <span class="n">TableFormatError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Version is floating: </span><span class="si">{</span><span class="p">(</span><span class="n">names</span><span class="p">[</span><span class="n">has</span><span class="p">][</span><span class="n">bad</span><span class="p">],</span><span class="w"> </span><span class="n">numbers</span><span class="p">[</span><span class="n">bad</span><span class="p">])</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="n">names</span><span class="p">[</span><span class="n">has</span><span class="p">]</span> <span class="o">=</span> <span class="n">names</span><span class="p">[</span><span class="n">has</span><span class="p">]</span> <span class="o">+</span> <span class="n">ID_VERSION_DELIMITER</span> <span class="o">+</span> <span class="n">whole</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">object</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">names</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="is_versioned_name">
+<a class="viewcode-back" href="../../reference.html#idtrack.ids.is_versioned_name">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">is_versioned_name</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Tell whether a name has the form of an Ensembl node name with version: exactly one delimiter.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        name: A node name.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        bool: Whether :py:func:`split` reads it.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">name</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">ID_VERSION_DELIMITER</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span></div>
+
+
+
+<div class="viewcode-block" id="split">
+<a class="viewcode-back" href="../../reference.html#idtrack.ids.split">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">split</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return the stable id and the version of an Ensembl node name ``&lt;id&gt;.&lt;version&gt;``.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        name: The node name.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple[str, str]: ``(stable id, version)``; the version as written (digits, ``Void`` or ``Retired``).</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        IntegrityError: If the name does not hold exactly one delimiter.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">is_versioned_name</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">IntegrityError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"An Ensembl node name must be `&lt;id&gt;</span><span class="si">{</span><span class="n">ID_VERSION_DELIMITER</span><span class="si">}</span><span class="s2">&lt;version&gt;`; </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> has "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">ID_VERSION_DELIMITER</span><span class="p">)</span><span class="si">}</span><span class="s2"> delimiters (</span><span class="si">{</span><span class="n">ID_VERSION_DELIMITER</span><span class="si">!r}</span><span class="s2">)."</span>
+        <span class="p">)</span>
+    <span class="n">stable_id</span><span class="p">,</span> <span class="n">version</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">ID_VERSION_DELIMITER</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">stable_id</span><span class="p">,</span> <span class="n">version</span></div>
+
+
+
+<div class="viewcode-block" id="versions_prefix">
+<a class="viewcode-back" href="../../reference.html#idtrack.ids.versions_prefix">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">versions_prefix</span><span class="p">(</span><span class="n">stable_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the beginning shared by the node names of every version of a stable id (``&lt;id&gt;.``).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        stable_id: The stable id.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: The prefix; a name that starts with it and continues with digits only is a version of the id.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">stable_id</span><span class="si">}{</span><span class="n">ID_VERSION_DELIMITER</span><span class="si">}</span><span class="s2">"</span></div>
+
+
+
+<div class="viewcode-block" id="stable_id_of">
+<a class="viewcode-back" href="../../reference.html#idtrack.ids.stable_id_of">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">stable_id_of</span><span class="p">(</span><span class="n">identifier</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return an identifier without the synonym prefix and, for an Ensembl or LRG id, without its version.</span>
+
+<span class="sd">    This is how a conversion result is compared with the identifier it started from ("did the identifier change?"):</span>
+<span class="sd">    an Ensembl id is recognised by its prefix (``ENS``, ``LRG_``), so that a query without version, or in another</span>
+<span class="sd">    letter case, that maps to itself counts as unchanged.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        identifier: An identifier or node name.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: The identifier to compare.</span>
+<span class="sd">    """</span>
+    <span class="n">identifier</span> <span class="o">=</span> <span class="n">identifier</span><span class="o">.</span><span class="n">removeprefix</span><span class="p">(</span><span class="n">SYNONYM_PREFIX</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">identifier</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">((</span><span class="s2">"ENS"</span><span class="p">,</span> <span class="s2">"LRG_"</span><span class="p">)):</span>
+        <span class="n">head</span><span class="p">,</span> <span class="n">sep</span><span class="p">,</span> <span class="n">tail</span> <span class="o">=</span> <span class="n">identifier</span><span class="o">.</span><span class="n">rpartition</span><span class="p">(</span><span class="n">ID_VERSION_DELIMITER</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">sep</span> <span class="ow">and</span> <span class="n">tail</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+            <span class="k">return</span> <span class="n">head</span>
+    <span class="k">return</span> <span class="n">identifier</span></div>
+
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">"ACCESSION_DATABASE_PREFIXES"</span><span class="p">,</span>
+    <span class="s2">"BACKBONE_FORM"</span><span class="p">,</span>
+    <span class="s2">"BASE_ENSEMBL_TYPE"</span><span class="p">,</span>
+    <span class="s2">"BASE_GENE"</span><span class="p">,</span>
+    <span class="s2">"CONNECTION_KEY"</span><span class="p">,</span>
+    <span class="s2">"ENSEMBL_TYPE"</span><span class="p">,</span>
+    <span class="s2">"EXTERNAL"</span><span class="p">,</span>
+    <span class="s2">"FORMS"</span><span class="p">,</span>
+    <span class="s2">"FORM_OF_ENSEMBL_TYPE"</span><span class="p">,</span>
+    <span class="s2">"GENE"</span><span class="p">,</span>
+    <span class="s2">"ID_VERSION_DELIMITER"</span><span class="p">,</span>
+    <span class="s2">"NODE_TYPE_KEY"</span><span class="p">,</span>
+    <span class="s2">"RETIRED"</span><span class="p">,</span>
+    <span class="s2">"SENTINEL_VERSIONS"</span><span class="p">,</span>
+    <span class="s2">"SYNONYM_PREFIX"</span><span class="p">,</span>
+    <span class="s2">"VOID"</span><span class="p">,</span>
+    <span class="s2">"is_versioned_name"</span><span class="p">,</span>
+    <span class="s2">"join"</span><span class="p">,</span>
+    <span class="s2">"join_columns"</span><span class="p">,</span>
+    <span class="s2">"split"</span><span class="p">,</span>
+    <span class="s2">"stable_id_of"</span><span class="p">,</span>
+    <span class="s2">"versions_prefix"</span><span class="p">,</span>
+<span class="p">]</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Kemal Inecik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,786 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>idtrack.organisms &mdash; idtrack 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=6a604523" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="../../_static/tutorials.css?v=0e72a3a5" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../_static/design-tabs.js?v=fcb327ea"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />  
+<!-- Google tag (gtag.js) -->
+<script
+    async
+    src="https://www.googletagmanager.com/gtag/js?id=G-FYKLWNJBVK"
+></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() {
+        dataLayer.push(arguments);
+    }
+    gtag("js", new Date());
+
+    gtag("config", "G-FYKLWNJBVK");
+</script>
+
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            idtrack
+              <img src="../../_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../changes.html">Changes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_of_conduct.html">Code of Conduct</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">idtrack</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">idtrack.organisms</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for idtrack.organisms</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""The organisms idtrack knows: their genome assemblies, release ranges and order, symbol databases and short names.</span>
+
+<span class="sd">The one table of organisms is :py:data:`ORGANISM_TABLE` (``{organism: {assembly key: entry}}``); change it only with</span>
+<span class="sd">:py:func:`register_organism`, which validates the whole table first and recomputes what is derived from it. The</span>
+<span class="sd">functions of this module answer questions about it (the first release of an organism, its assemblies by priority,</span>
+<span class="sd">the assembly that serves a release) without the network, and :py:func:`resolve_organism` turns an organism's name or</span>
+<span class="sd">short name into the name of the table.</span>
+
+<span class="sd">This module imports only :py:mod:`idtrack.errors`, :py:mod:`idtrack.ids` and :py:mod:`idtrack.settings`.</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numbers</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Sequence</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack</span><span class="w"> </span><span class="kn">import</span> <span class="n">ids</span><span class="p">,</span> <span class="n">settings</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">InvalidArgumentError</span><span class="p">,</span> <span class="n">UnknownAssemblyError</span><span class="p">,</span> <span class="n">UnknownOrganismError</span><span class="p">,</span> <span class="n">UnknownReleaseError</span>
+
+<span class="n">ORGANISM_TABLE</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="c1"># The one table of organisms. Change it with `register_organism`, which validates it and recomputes everything</span>
+    <span class="c1"># derived from it (`supported_organisms()`, the `assembly_&lt;key&gt;_ensembl_&lt;form&gt;` node types).</span>
+    <span class="c1">#</span>
+    <span class="c1"># Keys and fields</span>
+    <span class="c1"># ---------------</span>
+    <span class="c1"># - The key of an assembly entry is an integer that is unique within the organism. It is what the rest of</span>
+    <span class="c1">#   idtrack sees: node types (`assembly_&lt;key&gt;_ensembl_gene`), table folders</span>
+    <span class="c1">#   (`idtrack_tables/&lt;organism&gt;_assembly-&lt;key&gt;/`), graph file names (`graph_&lt;organism&gt;_assembly&lt;key&gt;_...`), the</span>
+    <span class="c1">#   assembly keys of the externals YAML files and the `assembly` argument of `DatabaseManager`.</span>
+    <span class="c1"># - Core databases are named `&lt;organism&gt;_core_&lt;release&gt;_&lt;DbSuffix&gt;[patch letter]` (e.g. `..._37a`); patch</span>
+    <span class="c1">#   letters belong to the same assembly. `DbSuffix` defaults to the key, and the key equals Ensembl's code</span>
+    <span class="c1">#   wherever that is unambiguous. The code is species-specific (`38` is GRCh38 for human, GRCm38 for mouse).</span>
+    <span class="c1"># - Where Ensembl reuses one code for two assemblies of an organism, the earlier assembly gets a key of its</span>
+    <span class="c1">#   own and its `DbSuffix` names the shared code; `ReleaseRange` then tells the two apart. Rhesus macaque is</span>
+    <span class="c1">#   the example: `macaca_mulatta_core_&lt;release&gt;_10` is MMUL_1 up to release 85 and Mmul_10 from release</span>
+    <span class="c1">#   98, so Mmul_10 keeps key 10 and MMUL_1 has key 1 with `DbSuffix: "10"`. Entries that share a suffix</span>
+    <span class="c1">#   must have non-overlapping release ranges.</span>
+    <span class="c1"># - "ReleaseRange" is the [first, last] Ensembl release of the assembly; None as last means "current latest</span>
+    <span class="c1">#   and beyond". Both discovery paths (MySQL and HTTPS dumps) only accept releases inside it. Releases before</span>
+    <span class="c1">#   48 are out of reach regardless (`idtrack.settings.ENSEMBL.mysql_port_min_release`).</span>
+    <span class="c1"># - "Ports" are the MySQL ports to try in preference order; DatabaseManager picks the first port that</span>
+    <span class="c1">#   contains the requested release. A port of `idtrack.settings.ENSEMBL.mysql_port_assembly` may be listed only by its</span>
+    <span class="c1">#   assembly.</span>
+    <span class="c1">#   "Priority" orders the assemblies of an organism (1 = preferred, newest).</span>
+    <span class="c1"># - "Name" is the assembly name as Ensembl gives it (`assembly.default` in the core database's `meta`</span>
+    <span class="c1">#   table). idtrack does not read it at run time; the live MySQL tests check it against every core database</span>
+    <span class="c1">#   the table attributes to the assembly.</span>
+    <span class="s2">"homo_sapiens"</span><span class="p">:</span> <span class="p">{</span>
+        <span class="c1"># GRCh38 (Ensembl release 76+; primary assembly since release 76)</span>
+        <span class="mi">38</span><span class="p">:</span> <span class="p">{</span><span class="s2">"Name"</span><span class="p">:</span> <span class="s2">"GRCh38"</span><span class="p">,</span> <span class="s2">"Ports"</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">"Priority"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">"ReleaseRange"</span><span class="p">:</span> <span class="p">[</span><span class="mi">76</span><span class="p">,</span> <span class="kc">None</span><span class="p">]},</span>
+        <span class="c1"># GRCh37 (Ensembl release 55+; archive since release 76): the one parallel assembly Ensembl maintains,</span>
+        <span class="c1"># on its archive port 3337 (`idtrack.settings.ENSEMBL.mysql_port_assembly`).</span>
+        <span class="c1"># - MySQL port 3337 hosts GRCh37 **release 79 onwards** (archive service).</span>
+        <span class="c1"># - Some GRCh37 schemas can also appear on the main ports (3306/5306) for select releases; keep them</span>
+        <span class="c1">#   as fallbacks for environments where 3337 is unreachable.</span>
+        <span class="c1"># - Releases 55–78 are accessed via the HTTPS/FTP MySQL dumps (DatabaseManager FTP fallback).</span>
+        <span class="mi">37</span><span class="p">:</span> <span class="p">{</span><span class="s2">"Name"</span><span class="p">:</span> <span class="s2">"GRCh37"</span><span class="p">,</span> <span class="s2">"Ports"</span><span class="p">:</span> <span class="p">[</span><span class="mi">3337</span><span class="p">,</span> <span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">"Priority"</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">"ReleaseRange"</span><span class="p">:</span> <span class="p">[</span><span class="mi">55</span><span class="p">,</span> <span class="kc">None</span><span class="p">]},</span>
+        <span class="c1"># NCBI36 (historic; clean handoff to GRCh37 at Ensembl release 55)</span>
+        <span class="c1"># - Ensembl FTP contains releases 48–54 under directory names like</span>
+        <span class="c1">#   `homo_sapiens_core_&lt;release&gt;_36&lt;patch&gt;` (e.g. `homo_sapiens_core_54_36p`).</span>
+        <span class="c1"># - Not expected to be available on the live public MySQL service anymore; accessed via HTTPS/FTP dumps.</span>
+        <span class="mi">36</span><span class="p">:</span> <span class="p">{</span><span class="s2">"Name"</span><span class="p">:</span> <span class="s2">"NCBI36"</span><span class="p">,</span> <span class="s2">"Ports"</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">"Priority"</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span class="s2">"ReleaseRange"</span><span class="p">:</span> <span class="p">[</span><span class="mi">48</span><span class="p">,</span> <span class="mi">54</span><span class="p">]},</span>
+    <span class="p">},</span>
+    <span class="s2">"mus_musculus"</span><span class="p">:</span> <span class="p">{</span>
+        <span class="c1"># GRCm39 (Ensembl release 103+; clean handoff from GRCm38 at release 103)</span>
+        <span class="mi">39</span><span class="p">:</span> <span class="p">{</span><span class="s2">"Name"</span><span class="p">:</span> <span class="s2">"GRCm39"</span><span class="p">,</span> <span class="s2">"Ports"</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">"Priority"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">"ReleaseRange"</span><span class="p">:</span> <span class="p">[</span><span class="mi">103</span><span class="p">,</span> <span class="kc">None</span><span class="p">]},</span>
+        <span class="c1"># GRCm38 (Ensembl release 68–102)</span>
+        <span class="mi">38</span><span class="p">:</span> <span class="p">{</span><span class="s2">"Name"</span><span class="p">:</span> <span class="s2">"GRCm38"</span><span class="p">,</span> <span class="s2">"Ports"</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">"Priority"</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">"ReleaseRange"</span><span class="p">:</span> <span class="p">[</span><span class="mi">68</span><span class="p">,</span> <span class="mi">102</span><span class="p">]},</span>
+        <span class="c1"># NCBIM37 (Ensembl release 48–67; clean handoff to GRCm38 at release 68)</span>
+        <span class="c1"># - Early releases can carry a patch-letter suffix (e.g. `..._37a`) and are handled by DatabaseManager.</span>
+        <span class="mi">37</span><span class="p">:</span> <span class="p">{</span><span class="s2">"Name"</span><span class="p">:</span> <span class="s2">"NCBIM37"</span><span class="p">,</span> <span class="s2">"Ports"</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">"Priority"</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span class="s2">"ReleaseRange"</span><span class="p">:</span> <span class="p">[</span><span class="mi">48</span><span class="p">,</span> <span class="mi">67</span><span class="p">]},</span>
+    <span class="p">},</span>
+    <span class="s2">"sus_scrofa"</span><span class="p">:</span> <span class="p">{</span>
+        <span class="c1"># Sscrofa11.1 (Ensembl release 90+; clean handoff from Sscrofa10.2 at release 90)</span>
+        <span class="mi">111</span><span class="p">:</span> <span class="p">{</span><span class="s2">"Name"</span><span class="p">:</span> <span class="s2">"Sscrofa11.1"</span><span class="p">,</span> <span class="s2">"Ports"</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">"Priority"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">"ReleaseRange"</span><span class="p">:</span> <span class="p">[</span><span class="mi">90</span><span class="p">,</span> <span class="kc">None</span><span class="p">]},</span>
+        <span class="c1"># Sscrofa10.2 (Ensembl release 67–89). Core databases named `sus_scrofa_core_90_102` to `..._99_102`</span>
+        <span class="c1"># exist only on the archive port 3337: frozen copies, not annotation of those releases, and excluded on</span>
+        <span class="c1"># purpose (see `idtrack.settings.ENSEMBL.mysql_port_assembly`).</span>
+        <span class="mi">102</span><span class="p">:</span> <span class="p">{</span><span class="s2">"Name"</span><span class="p">:</span> <span class="s2">"Sscrofa10.2"</span><span class="p">,</span> <span class="s2">"Ports"</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">"Priority"</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">"ReleaseRange"</span><span class="p">:</span> <span class="p">[</span><span class="mi">67</span><span class="p">,</span> <span class="mi">89</span><span class="p">]},</span>
+        <span class="c1"># Sscrofa9 (historic; clean handoff to Sscrofa10.2 at release 67)</span>
+        <span class="c1"># - Ensembl FTP contains releases 56–66 under directory names like</span>
+        <span class="c1">#   `sus_scrofa_core_&lt;release&gt;_9&lt;patch&gt;` (e.g. `sus_scrofa_core_60_9d`).</span>
+        <span class="c1"># - Not expected to be available on the live public MySQL service anymore; accessed via HTTPS/FTP dumps.</span>
+        <span class="mi">9</span><span class="p">:</span> <span class="p">{</span><span class="s2">"Name"</span><span class="p">:</span> <span class="s2">"Sscrofa9"</span><span class="p">,</span> <span class="s2">"Ports"</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">"Priority"</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span class="s2">"ReleaseRange"</span><span class="p">:</span> <span class="p">[</span><span class="mi">56</span><span class="p">,</span> <span class="mi">66</span><span class="p">]},</span>
+    <span class="p">},</span>
+    <span class="s2">"macaca_mulatta"</span><span class="p">:</span> <span class="p">{</span>
+        <span class="c1"># Rhesus macaque. Clean handoffs: MMUL_1 up to 85, Mmul_8.0.1 86–97, Mmul_10 from 98 (one assembly per</span>
+        <span class="c1"># release in the dump listings). Ports 3306/5306 serve releases 48+ (3337: see</span>
+        <span class="c1"># `idtrack.settings.ENSEMBL.mysql_port_assembly`).</span>
+        <span class="c1"># Mmul_10 (Ensembl release 98+)</span>
+        <span class="mi">10</span><span class="p">:</span> <span class="p">{</span><span class="s2">"Name"</span><span class="p">:</span> <span class="s2">"Mmul_10"</span><span class="p">,</span> <span class="s2">"Ports"</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">"Priority"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">"ReleaseRange"</span><span class="p">:</span> <span class="p">[</span><span class="mi">98</span><span class="p">,</span> <span class="kc">None</span><span class="p">]},</span>
+        <span class="c1"># Mmul_8.0.1 (Ensembl release 86–97)</span>
+        <span class="mi">801</span><span class="p">:</span> <span class="p">{</span><span class="s2">"Name"</span><span class="p">:</span> <span class="s2">"Mmul_8.0.1"</span><span class="p">,</span> <span class="s2">"Ports"</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">"Priority"</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">"ReleaseRange"</span><span class="p">:</span> <span class="p">[</span><span class="mi">86</span><span class="p">,</span> <span class="mi">97</span><span class="p">]},</span>
+        <span class="c1"># MMUL_1 (Ensembl release 47–85; 48 is idtrack's floor). Its core databases share the code `10` with</span>
+        <span class="c1"># Mmul_10 (`macaca_mulatta_core_63_10`; `..._48_10g` to `..._62_10q` carry patch letters), so it has</span>
+        <span class="c1"># its own key 1 and names the shared code in `DbSuffix`.</span>
+        <span class="mi">1</span><span class="p">:</span> <span class="p">{</span><span class="s2">"Name"</span><span class="p">:</span> <span class="s2">"MMUL_1"</span><span class="p">,</span> <span class="s2">"DbSuffix"</span><span class="p">:</span> <span class="s2">"10"</span><span class="p">,</span> <span class="s2">"Ports"</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">"Priority"</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span class="s2">"ReleaseRange"</span><span class="p">:</span> <span class="p">[</span><span class="mi">48</span><span class="p">,</span> <span class="mi">85</span><span class="p">]},</span>
+    <span class="p">},</span>
+    <span class="s2">"macaca_fascicularis"</span><span class="p">:</span> <span class="p">{</span>
+        <span class="c1"># Cynomolgus (crab-eating) macaque. Clean handoff from 5.0 to 6.0 at release 103.</span>
+        <span class="c1"># Macaca_fascicularis_6.0 (Ensembl release 103+)</span>
+        <span class="mi">6</span><span class="p">:</span> <span class="p">{</span><span class="s2">"Name"</span><span class="p">:</span> <span class="s2">"Macaca_fascicularis_6.0"</span><span class="p">,</span> <span class="s2">"Ports"</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">"Priority"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">"ReleaseRange"</span><span class="p">:</span> <span class="p">[</span><span class="mi">103</span><span class="p">,</span> <span class="kc">None</span><span class="p">]},</span>
+        <span class="c1"># Macaca_fascicularis_5.0 (Ensembl release 91–102)</span>
+        <span class="mi">5</span><span class="p">:</span> <span class="p">{</span><span class="s2">"Name"</span><span class="p">:</span> <span class="s2">"Macaca_fascicularis_5.0"</span><span class="p">,</span> <span class="s2">"Ports"</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">"Priority"</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">"ReleaseRange"</span><span class="p">:</span> <span class="p">[</span><span class="mi">91</span><span class="p">,</span> <span class="mi">102</span><span class="p">]},</span>
+    <span class="p">},</span>
+<span class="p">}</span>
+
+
+<span class="c1">#: Ordered gene-symbol databases per organism (names as in the externals YAML files). The first one is the default</span>
+<span class="c1">#: final database of :py:class:`idtrack.harmonize.HarmonizeFeatures`. Set together with the table by</span>
+<span class="c1">#: :py:func:`register_organism`.</span>
+<span class="n">SYMBOL_DATABASES</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"homo_sapiens"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"HGNC Symbol"</span><span class="p">,),</span>
+    <span class="s2">"mus_musculus"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"MGI Symbol"</span><span class="p">,),</span>
+    <span class="c1"># Pig and the macaques carry VGNC symbols on their current assemblies and HGNC symbols on earlier ones.</span>
+    <span class="s2">"sus_scrofa"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"VGNC Symbol"</span><span class="p">,</span> <span class="s2">"HGNC Symbol"</span><span class="p">),</span>
+    <span class="s2">"macaca_mulatta"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"VGNC Symbol"</span><span class="p">,</span> <span class="s2">"HGNC Symbol"</span><span class="p">),</span>
+    <span class="s2">"macaca_fascicularis"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"VGNC Symbol"</span><span class="p">,</span> <span class="s2">"HGNC Symbol"</span><span class="p">),</span>
+<span class="p">}</span>
+
+<span class="c1">#: Short names of the organisms. A declared alias names its organism wherever an organism is asked for, without the</span>
+<span class="c1">#: network, and wins over what Ensembl lists under the same word (``"pig"`` is the common name of every pig breed</span>
+<span class="c1">#: there). Lower case, unique across organisms.</span>
+<span class="n">ALIASES</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"homo_sapiens"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"human"</span><span class="p">,),</span>
+    <span class="s2">"mus_musculus"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"mouse"</span><span class="p">,),</span>
+    <span class="s2">"sus_scrofa"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"pig"</span><span class="p">,),</span>
+    <span class="s2">"macaca_mulatta"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"rhesus"</span><span class="p">,),</span>
+    <span class="s2">"macaca_fascicularis"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"cynomolgus"</span><span class="p">,),</span>
+<span class="p">}</span>
+
+<span class="c1">#: Node type of each form of each assembly key, ``{assembly: {form: "assembly_&lt;key&gt;_ensembl_&lt;form&gt;"}}`` (derived from</span>
+<span class="c1">#: the table; updated in place by :py:func:`register_organism`).</span>
+<span class="n">ASSEMBLY_NODE_TYPES</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+
+<span class="n">_ENTRY_FIELDS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"Name"</span><span class="p">,</span> <span class="s2">"DbSuffix"</span><span class="p">,</span> <span class="s2">"Ports"</span><span class="p">,</span> <span class="s2">"Priority"</span><span class="p">,</span> <span class="s2">"ReleaseRange"</span><span class="p">)</span>
+<span class="n">_REQUIRED_FIELDS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"Ports"</span><span class="p">,</span> <span class="s2">"Priority"</span><span class="p">,</span> <span class="s2">"ReleaseRange"</span><span class="p">)</span>
+<span class="n">_state</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"version"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">"supported"</span><span class="p">:</span> <span class="p">()}</span>
+
+
+<div class="viewcode-block" id="supported_organisms">
+<a class="viewcode-back" href="../../reference.html#idtrack.organisms.supported_organisms">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">supported_organisms</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return the organisms of the table, sorted.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple[str, ...]: Ensembl production names (``homo_sapiens``, ...).</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">_state</span><span class="p">[</span><span class="s2">"supported"</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="table_version">
+<a class="viewcode-back" href="../../reference.html#idtrack.organisms.table_version">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">table_version</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return a number that changes whenever :py:func:`register_organism` changes the table.</span>
+
+<span class="sd">    Caches derived from the table (the index of Ensembl's core databases) are keyed by it.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        int: The version of the table in this process.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">_state</span><span class="p">[</span><span class="s2">"version"</span><span class="p">]</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_invalid</span><span class="p">(</span><span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">InvalidArgumentError</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">InvalidArgumentError</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="n">argument</span><span class="o">=</span><span class="s2">"organism table"</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_validate</span><span class="p">(</span>
+    <span class="n">table</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">symbol_databases</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">aliases</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Check the organism table and the symbol-database table for consistency.</span>
+
+<span class="sd">    Rules: organism names are lower-case Ensembl production names; every organism has at least one assembly;</span>
+<span class="sd">    assembly keys are positive integers; each entry carries ``Ports`` (known MySQL ports,</span>
+<span class="sd">    :py:attr:`idtrack.settings.EnsemblSettings.mysql_port_min_release`, and none that</span>
+<span class="sd">    :py:attr:`idtrack.settings.EnsemblSettings.mysql_port_assembly` reserves for another assembly), ``Priority`` and</span>
+<span class="sd">    ``ReleaseRange``, plus optionally ``Name`` and ``DbSuffix`` and nothing else; priorities are unique per organism and</span>
+<span class="sd">    start at 1; release ranges are ``[first, last]`` with ``last`` ``None`` or not smaller than ``first``; entries of one</span>
+<span class="sd">    organism that share a ``DbSuffix`` have non-overlapping release ranges; the symbol-database table names exactly</span>
+<span class="sd">    the organisms of the organism table; aliases belong to organisms of the table, are lower-case words that are no</span>
+<span class="sd">    organism name, and no alias is declared for two organisms.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        table: Candidate value of :py:data:`ORGANISM_TABLE`.</span>
+<span class="sd">        symbol_databases: Candidate value of :py:data:`SYMBOL_DATABASES`.</span>
+<span class="sd">        aliases: Candidate value of :py:data:`ALIASES`; ``None`` for a table without aliases.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        InvalidArgumentError: If any rule is violated; the message names the organism, the assembly and the rule.</span>
+<span class="sd">    """</span>
+    <span class="n">port_min_release</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">ENSEMBL</span><span class="o">.</span><span class="n">mysql_port_min_release</span>
+    <span class="n">port_assembly</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">ENSEMBL</span><span class="o">.</span><span class="n">mysql_port_assembly</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">table</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">_invalid</span><span class="p">(</span><span class="s2">"The organism table must be a non-empty mapping {organism: {assembly key: {...}}}."</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">organism</span><span class="p">,</span> <span class="n">assemblies</span> <span class="ow">in</span> <span class="n">table</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">organism</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[a-z][a-z0-9_]*"</span><span class="p">,</span> <span class="n">organism</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">_invalid</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Organism name </span><span class="si">{</span><span class="n">organism</span><span class="si">!r}</span><span class="s2"> must be an Ensembl production name (lower case, e.g. 'homo_sapiens')."</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">assemblies</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">assemblies</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">_invalid</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Organism </span><span class="si">{</span><span class="n">organism</span><span class="si">!r}</span><span class="s2"> must declare at least one assembly."</span><span class="p">)</span>
+
+        <span class="n">priorities</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">windows_by_suffix</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">assemblies</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">where</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">organism</span><span class="si">!r}</span><span class="s2"> assembly </span><span class="si">{</span><span class="n">key</span><span class="si">!r}</span><span class="s2">"</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span> <span class="n">key</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">_invalid</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: assembly keys must be positive integers."</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">_invalid</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: the entry must be a mapping."</span><span class="p">)</span>
+            <span class="n">unknown</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">_ENTRY_FIELDS</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">unknown</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">_invalid</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: unknown fields </span><span class="si">{</span><span class="n">unknown</span><span class="si">}</span><span class="s2">; allowed: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">_ENTRY_FIELDS</span><span class="p">)</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
+            <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">_REQUIRED_FIELDS</span> <span class="k">if</span> <span class="n">f</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">entry</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">_invalid</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: missing required fields </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
+
+            <span class="n">ports</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"Ports"</span><span class="p">]</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ports</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">))</span>
+                <span class="ow">or</span> <span class="ow">not</span> <span class="n">ports</span>
+                <span class="ow">or</span> <span class="nb">any</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">ports</span><span class="p">)</span>
+                <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">ports</span><span class="p">))</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">ports</span><span class="p">)</span>
+            <span class="p">):</span>
+                <span class="k">raise</span> <span class="n">_invalid</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: 'Ports' must be a non-empty list of distinct integers."</span><span class="p">)</span>
+            <span class="n">unknown_ports</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">ports</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">port_min_release</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">unknown_ports</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">_invalid</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: unknown MySQL ports </span><span class="si">{</span><span class="n">unknown_ports</span><span class="si">}</span><span class="s2">; known: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">port_min_release</span><span class="p">)</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
+            <span class="n">foreign_ports</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">ports</span> <span class="k">if</span> <span class="n">port_assembly</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="p">(</span><span class="n">organism</span><span class="p">,</span> <span class="n">key</span><span class="p">))</span> <span class="o">!=</span> <span class="p">(</span><span class="n">organism</span><span class="p">,</span> <span class="n">key</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">foreign_ports</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">_invalid</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: MySQL ports </span><span class="si">{</span><span class="n">foreign_ports</span><span class="si">}</span><span class="s2"> serve only </span><span class="si">{</span><span class="p">[</span><span class="n">port_assembly</span><span class="p">[</span><span class="n">p</span><span class="p">]</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">foreign_ports</span><span class="p">]</span><span class="si">}</span><span class="s2"> "</span>
+                    <span class="s2">"(see `idtrack.settings.ENSEMBL.mysql_port_assembly`)."</span>
+                <span class="p">)</span>
+
+            <span class="n">priority</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"Priority"</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">priority</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">priority</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">_invalid</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: 'Priority' must be an integer."</span><span class="p">)</span>
+            <span class="n">priorities</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">priority</span><span class="p">)</span>
+
+            <span class="n">window</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"ReleaseRange"</span><span class="p">]</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">window</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">))</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">window</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">_invalid</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: 'ReleaseRange' must be [first, last] (last may be None)."</span><span class="p">)</span>
+            <span class="n">first</span><span class="p">,</span> <span class="n">last</span> <span class="o">=</span> <span class="n">window</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span> <span class="n">first</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">_invalid</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: the first release of 'ReleaseRange' must be a positive integer."</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">last</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">last</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">last</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span> <span class="n">last</span> <span class="o">&lt;</span> <span class="n">first</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">_invalid</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: the last release of 'ReleaseRange' must be None or &gt;= </span><span class="si">{</span><span class="n">first</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
+
+            <span class="n">name</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"Name"</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="p">(</span><span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">name</span><span class="o">.</span><span class="n">strip</span><span class="p">()):</span>
+                <span class="k">raise</span> <span class="n">_invalid</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: 'Name' must be a non-empty string."</span><span class="p">)</span>
+
+            <span class="n">suffix</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"DbSuffix"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">))</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">suffix</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[0-9]+"</span><span class="p">,</span> <span class="n">suffix</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">_invalid</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: 'DbSuffix' must be a string of digits (e.g. '10')."</span><span class="p">)</span>
+            <span class="n">windows_by_suffix</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">suffix</span><span class="p">,</span> <span class="p">[])</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">first</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="s2">"inf"</span><span class="p">)</span> <span class="k">if</span> <span class="n">last</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="n">last</span><span class="p">),</span> <span class="n">key</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">priorities</span><span class="p">))</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">priorities</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">min</span><span class="p">(</span><span class="n">priorities</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">_invalid</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Organism </span><span class="si">{</span><span class="n">organism</span><span class="si">!r}</span><span class="s2">: priorities must be unique and start at 1 (got </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">priorities</span><span class="p">)</span><span class="si">}</span><span class="s2">)."</span>
+            <span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">suffix</span><span class="p">,</span> <span class="n">windows</span> <span class="ow">in</span> <span class="n">windows_by_suffix</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">windows</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">_first_a</span><span class="p">,</span> <span class="n">last_a</span><span class="p">,</span> <span class="n">key_a</span><span class="p">),</span> <span class="p">(</span><span class="n">first_b</span><span class="p">,</span> <span class="n">_last_b</span><span class="p">,</span> <span class="n">key_b</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">windows</span><span class="p">,</span> <span class="n">windows</span><span class="p">[</span><span class="mi">1</span><span class="p">:]):</span>
+                <span class="k">if</span> <span class="n">first_b</span> <span class="o">&lt;=</span> <span class="n">last_a</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">_invalid</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">"Organism </span><span class="si">{</span><span class="n">organism</span><span class="si">!r}</span><span class="s2">: assemblies </span><span class="si">{</span><span class="n">key_a</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">key_b</span><span class="si">}</span><span class="s2"> share the core-database suffix "</span>
+                        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">suffix</span><span class="si">!r}</span><span class="s2"> and their release ranges overlap; give them disjoint 'ReleaseRange's."</span>
+                    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">symbol_databases</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">_invalid</span><span class="p">(</span><span class="s2">"The symbol-database table must be a mapping {organism: (database, ...)}."</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="n">symbol_databases</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">set</span><span class="p">(</span><span class="n">table</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">_invalid</span><span class="p">(</span>
+            <span class="s2">"The symbol-database table must name exactly the organisms of the organism table "</span>
+            <span class="sa">f</span><span class="s2">"(missing: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">table</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nb">set</span><span class="p">(</span><span class="n">symbol_databases</span><span class="p">))</span><span class="si">}</span><span class="s2">, "</span>
+            <span class="sa">f</span><span class="s2">"extra: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">symbol_databases</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nb">set</span><span class="p">(</span><span class="n">table</span><span class="p">))</span><span class="si">}</span><span class="s2">)."</span>
+        <span class="p">)</span>
+    <span class="k">for</span> <span class="n">organism</span><span class="p">,</span> <span class="n">databases</span> <span class="ow">in</span> <span class="n">symbol_databases</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">databases</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">databases</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">_invalid</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Organism </span><span class="si">{</span><span class="n">organism</span><span class="si">!r}</span><span class="s2">: symbol databases must be a sequence of names."</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">d</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">databases</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">databases</span><span class="p">))</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">databases</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">_invalid</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Organism </span><span class="si">{</span><span class="n">organism</span><span class="si">!r}</span><span class="s2">: symbol databases must be distinct non-empty strings."</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">aliases</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">aliases</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">set</span><span class="p">(</span><span class="n">aliases</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="nb">set</span><span class="p">(</span><span class="n">table</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">_invalid</span><span class="p">(</span><span class="s2">"The alias table must be a mapping {organism of the organism table: (alias, ...)}."</span><span class="p">)</span>
+    <span class="n">owner_of</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">organism</span><span class="p">,</span> <span class="n">names</span> <span class="ow">in</span> <span class="n">aliases</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">names</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">names</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">_invalid</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Organism </span><span class="si">{</span><span class="n">organism</span><span class="si">!r}</span><span class="s2">: aliases must be a sequence of names."</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">alias</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">alias</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">alias</span> <span class="ow">or</span> <span class="n">alias</span> <span class="o">!=</span> <span class="n">alias</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">or</span> <span class="n">alias</span> <span class="ow">in</span> <span class="n">table</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">_invalid</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"Organism </span><span class="si">{</span><span class="n">organism</span><span class="si">!r}</span><span class="s2">: alias </span><span class="si">{</span><span class="n">alias</span><span class="si">!r}</span><span class="s2"> must be a non-empty lower-case name that is not "</span>
+                    <span class="s2">"an organism name."</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="n">owner_of</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">alias</span><span class="p">,</span> <span class="n">organism</span><span class="p">)</span> <span class="o">!=</span> <span class="n">organism</span> <span class="ow">or</span> <span class="nb">list</span><span class="p">(</span><span class="n">names</span><span class="p">)</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">alias</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">_invalid</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Alias </span><span class="si">{</span><span class="n">alias</span><span class="si">!r}</span><span class="s2"> is declared twice (</span><span class="si">{</span><span class="n">owner_of</span><span class="p">[</span><span class="n">alias</span><span class="p">]</span><span class="si">!r}</span><span class="s2">, </span><span class="si">{</span><span class="n">organism</span><span class="si">!r}</span><span class="s2">)."</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_rebuild</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Validate the organism table and recompute everything derived from it (at import and on registration).</span>
+
+<span class="sd">    The derived dictionaries are updated in place, and :py:func:`register_organism` changes the table and</span>
+<span class="sd">    :py:data:`SYMBOL_DATABASES` in place too, so references to any of them taken earlier stay current.</span>
+<span class="sd">    """</span>
+    <span class="n">_validate</span><span class="p">(</span><span class="n">ORGANISM_TABLE</span><span class="p">,</span> <span class="n">SYMBOL_DATABASES</span><span class="p">,</span> <span class="n">ALIASES</span><span class="p">)</span>
+    <span class="n">_state</span><span class="p">[</span><span class="s2">"supported"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">ORGANISM_TABLE</span><span class="p">))</span>
+    <span class="n">assemblies</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">({</span><span class="nb">int</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="k">for</span> <span class="n">entries</span> <span class="ow">in</span> <span class="n">ORGANISM_TABLE</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">entries</span><span class="p">})</span>
+    <span class="n">ASSEMBLY_NODE_TYPES</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">assemblies</span><span class="p">:</span>
+        <span class="n">ASSEMBLY_NODE_TYPES</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="n">form</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"assembly_</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">_ensembl_</span><span class="si">{</span><span class="n">form</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">form</span> <span class="ow">in</span> <span class="n">ids</span><span class="o">.</span><span class="n">FORMS</span><span class="p">}</span>
+
+
+<div class="viewcode-block" id="register_organism">
+<a class="viewcode-back" href="../../reference.html#idtrack.organisms.register_organism">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">register_organism</span><span class="p">(</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">assemblies</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span>
+    <span class="n">symbol_databases</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">aliases</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Add an organism to the organism table, or replace its entry, and recompute what is derived from the table.</span>
+
+<span class="sd">    This is the supported way to try an organism that idtrack does not declare (or to change a declared one) within a</span>
+<span class="sd">    Python session; to make it permanent, add the same entry to :py:data:`ORGANISM_TABLE` in</span>
+<span class="sd">    ``idtrack/organisms.py``. The whole table is validated before anything changes, so a rejected entry leaves the</span>
+<span class="sd">    table as it was. The table, :py:data:`SYMBOL_DATABASES` and the derived values are updated in place, so references</span>
+<span class="sd">    to them taken earlier stay current.</span>
+
+<span class="sd">    Example:</span>
+<span class="sd">        &gt;&gt;&gt; from idtrack import organisms</span>
+<span class="sd">        &gt;&gt;&gt; organisms.register_organism(</span>
+<span class="sd">        ...     "danio_rerio",</span>
+<span class="sd">        ...     {11: {"Name": "GRCz11", "Ports": [3306, 5306], "Priority": 1, "ReleaseRange": [92, None]}},</span>
+<span class="sd">        ...     symbol_databases=["ZFIN"],</span>
+<span class="sd">        ... )</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        name: Ensembl production name of the organism (e.g. ``"danio_rerio"``).</span>
+<span class="sd">        assemblies: ``{assembly key: entry}`` with the fields described in the comment block of</span>
+<span class="sd">            :py:data:`ORGANISM_TABLE`.</span>
+<span class="sd">        symbol_databases: Ordered gene-symbol databases of the organism (names as in its externals YAML). Required</span>
+<span class="sd">            for a new organism (an empty list if it has none, in which case</span>
+<span class="sd">            :py:class:`idtrack.harmonize.HarmonizeFeatures` needs an explicit ``final_database``). When an organism</span>
+<span class="sd">            already in the table is replaced and this is omitted (``None``), its current symbol databases are kept.</span>
+<span class="sd">        aliases: Short names of the organism (lower case, e.g. ``["zebrafish"]``), which then resolve to it wherever</span>
+<span class="sd">            an organism is asked for. ``None`` keeps the aliases of an organism that is replaced and gives a new</span>
+<span class="sd">            organism none.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        InvalidArgumentError: If *symbol_databases* is omitted for a new organism, or if the resulting table violates</span>
+<span class="sd">            a rule of the table.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">symbol_databases</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">SYMBOL_DATABASES</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">_invalid</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Organism </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> is new: pass `symbol_databases` (its ordered gene-symbol databases, e.g. "</span>
+                <span class="s2">"['VGNC Symbol', 'HGNC Symbol'], or an empty list if it has none)."</span>
+            <span class="p">)</span>
+        <span class="n">symbol_databases</span> <span class="o">=</span> <span class="n">SYMBOL_DATABASES</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+    <span class="c1"># The validator only reads, so the candidate table may hold the caller's mappings as they are; the stored entry</span>
+    <span class="c1"># is a copy made of plain dictionaries, whatever mapping types the caller passed.</span>
+    <span class="n">table</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">ORGANISM_TABLE</span><span class="p">)</span>
+    <span class="n">table</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">assemblies</span>
+    <span class="n">symbols</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">SYMBOL_DATABASES</span><span class="p">)</span>
+    <span class="n">symbols</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">symbol_databases</span><span class="p">)</span>
+    <span class="n">declared</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">ALIASES</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">aliases</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">declared</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">aliases</span>
+    <span class="n">_validate</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">symbols</span><span class="p">,</span> <span class="n">declared</span><span class="p">)</span>
+
+    <span class="n">ORGANISM_TABLE</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">key</span><span class="p">):</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">entry</span><span class="p">))</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">assemblies</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+    <span class="n">SYMBOL_DATABASES</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">symbols</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">declared</span><span class="p">:</span>
+        <span class="n">ALIASES</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">declared</span><span class="p">[</span><span class="n">name</span><span class="p">])</span>
+    <span class="n">_state</span><span class="p">[</span><span class="s2">"version"</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="n">_rebuild</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="check_organism">
+<a class="viewcode-back" href="../../reference.html#idtrack.organisms.check_organism">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">check_organism</span><span class="p">(</span><span class="n">organism</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return *organism* if it is an organism of the table, else raise naming the organisms there are.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        organism: The value given.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: The organism.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        UnknownOrganismError: If it is not an organism of the table.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">organism</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="n">organism</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ORGANISM_TABLE</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">UnknownOrganismError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"Organism </span><span class="si">{</span><span class="n">organism</span><span class="si">!r}</span><span class="s2"> is not configured. Supported organisms: </span><span class="si">{</span><span class="n">supported_organisms</span><span class="p">()</span><span class="si">}</span><span class="s2">. "</span>
+            <span class="s2">"Add it with `idtrack.organisms.register_organism`."</span><span class="p">,</span>
+            <span class="n">argument</span><span class="o">=</span><span class="s2">"organism"</span><span class="p">,</span>
+            <span class="n">value</span><span class="o">=</span><span class="n">organism</span><span class="p">,</span>
+            <span class="n">allowed</span><span class="o">=</span><span class="n">supported_organisms</span><span class="p">(),</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">organism</span></div>
+
+
+
+<div class="viewcode-block" id="resolve_organism">
+<a class="viewcode-back" href="../../reference.html#idtrack.organisms.resolve_organism">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">resolve_organism</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the organism of the table that a name means, without the network.</span>
+
+<span class="sd">    Accepted: the Ensembl production name (``homo_sapiens``), the same with spaces or capitals (``Homo sapiens``),</span>
+<span class="sd">    and a declared short name (``human``, :py:data:`ALIASES`). Ensembl's other names (taxon ids, common names it</span>
+<span class="sd">    lists, assembly names) need Ensembl's species list: :py:meth:`idtrack.API.ensembl_organism`.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        name: The name.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: The organism's production name.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        UnknownOrganismError: If the name means no organism of the table.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[\s_]+"</span><span class="p">,</span> <span class="s2">"_"</span><span class="p">,</span> <span class="n">name</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">ORGANISM_TABLE</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">key</span>
+        <span class="k">for</span> <span class="n">organism</span><span class="p">,</span> <span class="n">names</span> <span class="ow">in</span> <span class="n">ALIASES</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">name</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">organism</span>
+    <span class="k">raise</span> <span class="n">UnknownOrganismError</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> names no organism of idtrack's table (</span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">supported_organisms</span><span class="p">())</span><span class="si">}</span><span class="s2">, or a short name: "</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">a</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">names</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">ALIASES</span><span class="o">.</span><span class="n">values</span><span class="p">()</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">names</span><span class="p">)</span><span class="si">}</span><span class="s2">)."</span><span class="p">,</span>
+        <span class="n">argument</span><span class="o">=</span><span class="s2">"organism"</span><span class="p">,</span>
+        <span class="n">value</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+        <span class="n">allowed</span><span class="o">=</span><span class="n">supported_organisms</span><span class="p">(),</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="assembly_key">
+<a class="viewcode-back" href="../../reference.html#idtrack.organisms.assembly_key">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">assembly_key</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return *value* as an assembly key of the organism table, refusing values that only look like one.</span>
+
+<span class="sd">    Accepted: an integer (also a NumPy integer), an integral float (``38.0``) or a string of digits (as read from</span>
+<span class="sd">    YAML or JSON). Booleans and fractional numbers are refused: ``int(True)`` and ``int(38.9)`` would silently name</span>
+<span class="sd">    another assembly (``1`` is rhesus MMUL_1). This is the one rule for every place that takes an assembly from a</span>
+<span class="sd">    caller.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        value: The value given by the caller.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        int: The assembly key.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        InvalidArgumentError: For any other value.</span>
+<span class="sd">    """</span>
+    <span class="c1"># NumPy booleans are neither `bool` nor registered numbers, so they reach the last line like any other type.</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">numbers</span><span class="o">.</span><span class="n">Integral</span><span class="p">):</span>
+            <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">numbers</span><span class="o">.</span><span class="n">Real</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">is_integer</span><span class="p">():</span>
+            <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">value</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+            <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+    <span class="k">raise</span> <span class="n">InvalidArgumentError</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">"Genome assembly must be an integer key of the organism table, got </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">."</span><span class="p">,</span>
+        <span class="n">argument</span><span class="o">=</span><span class="s2">"assembly"</span><span class="p">,</span>
+        <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_entry</span><span class="p">(</span><span class="n">organism</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">assembly</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return the table entry of ``(organism, assembly)`` or raise naming what is configured."""</span>
+    <span class="n">entries</span> <span class="o">=</span> <span class="n">ORGANISM_TABLE</span><span class="p">[</span><span class="n">check_organism</span><span class="p">(</span><span class="n">organism</span><span class="p">)]</span>
+    <span class="n">key</span> <span class="o">=</span> <span class="n">assembly_key</span><span class="p">(</span><span class="n">assembly</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">entries</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">UnknownAssemblyError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"Genome assembly </span><span class="si">{</span><span class="n">assembly</span><span class="si">!r}</span><span class="s2"> is not configured for organism </span><span class="si">{</span><span class="n">organism</span><span class="si">!r}</span><span class="s2">. "</span>
+            <span class="sa">f</span><span class="s2">"Supported assemblies: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">entries</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+            <span class="n">argument</span><span class="o">=</span><span class="s2">"assembly"</span><span class="p">,</span>
+            <span class="n">value</span><span class="o">=</span><span class="n">assembly</span><span class="p">,</span>
+            <span class="n">allowed</span><span class="o">=</span><span class="nb">sorted</span><span class="p">(</span><span class="n">entries</span><span class="p">),</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">entries</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="db_suffix">
+<a class="viewcode-back" href="../../reference.html#idtrack.organisms.db_suffix">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">db_suffix</span><span class="p">(</span><span class="n">organism</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">assembly</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the assembly code used in core database names (``DbSuffix``, defaulting to the key).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        organism: Ensembl production name.</span>
+<span class="sd">        assembly: Assembly key.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: The code.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">_entry</span><span class="p">(</span><span class="n">organism</span><span class="p">,</span> <span class="n">assembly</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"DbSuffix"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">assembly_key</span><span class="p">(</span><span class="n">assembly</span><span class="p">))))</span></div>
+
+
+
+<div class="viewcode-block" id="release_range">
+<a class="viewcode-back" href="../../reference.html#idtrack.organisms.release_range">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">release_range</span><span class="p">(</span><span class="n">organism</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">assembly</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return the configured ``(first, last)`` release of an assembly; ``last`` is ``None`` when open-ended.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        organism: Ensembl production name.</span>
+<span class="sd">        assembly: Assembly key.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple[int, int | None]: The release range.</span>
+<span class="sd">    """</span>
+    <span class="n">first</span><span class="p">,</span> <span class="n">last</span> <span class="o">=</span> <span class="n">_entry</span><span class="p">(</span><span class="n">organism</span><span class="p">,</span> <span class="n">assembly</span><span class="p">)[</span><span class="s2">"ReleaseRange"</span><span class="p">]</span>
+    <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">first</span><span class="p">),</span> <span class="p">(</span><span class="kc">None</span> <span class="k">if</span> <span class="n">last</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">int</span><span class="p">(</span><span class="n">last</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="assemblies_by_priority">
+<a class="viewcode-back" href="../../reference.html#idtrack.organisms.assemblies_by_priority">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">assemblies_by_priority</span><span class="p">(</span><span class="n">organism</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return the assembly keys of an organism ordered by ``Priority`` (preferred first).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        organism: Ensembl production name.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        list[int]: The assembly keys.</span>
+<span class="sd">    """</span>
+    <span class="n">entries</span> <span class="o">=</span> <span class="n">ORGANISM_TABLE</span><span class="p">[</span><span class="n">check_organism</span><span class="p">(</span><span class="n">organism</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="nb">sorted</span><span class="p">((</span><span class="nb">int</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">entries</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">k</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">entries</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="s2">"Priority"</span><span class="p">]))</span></div>
+
+
+
+<div class="viewcode-block" id="first_release">
+<a class="viewcode-back" href="../../reference.html#idtrack.organisms.first_release">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">first_release</span><span class="p">(</span><span class="n">organism</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the first Ensembl release of an organism in the organism table (over all its assemblies).</span>
+
+<span class="sd">    This is the default start of every release window (``first_release`` of</span>
+<span class="sd">    :py:class:`idtrack.build.DatabaseManager` and of the graphs :py:meth:`idtrack.API.build` builds): a window that</span>
+<span class="sd">    starts there covers the whole history that idtrack can read for the organism.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        organism: Ensembl production name.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        int: The smallest first release of the ``ReleaseRange`` of the organism's assemblies.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="nb">min</span><span class="p">(</span><span class="n">release_range</span><span class="p">(</span><span class="n">organism</span><span class="p">,</span> <span class="n">assembly</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">assembly</span> <span class="ow">in</span> <span class="n">assemblies_by_priority</span><span class="p">(</span><span class="n">organism</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="primary_assembly">
+<a class="viewcode-back" href="../../reference.html#idtrack.organisms.primary_assembly">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">primary_assembly</span><span class="p">(</span><span class="n">organism</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the preferred assembly of an organism that has a release: the primary assembly of a graph.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        organism: Ensembl production name.</span>
+<span class="sd">        snapshot_release: The last release of the graph.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        int: The assembly key.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        UnknownReleaseError: If no assembly of the organism has the release.</span>
+<span class="sd">    """</span>
+    <span class="k">for</span> <span class="n">assembly</span> <span class="ow">in</span> <span class="n">assemblies_by_priority</span><span class="p">(</span><span class="n">organism</span><span class="p">):</span>
+        <span class="n">first</span><span class="p">,</span> <span class="n">last</span> <span class="o">=</span> <span class="n">release_range</span><span class="p">(</span><span class="n">organism</span><span class="p">,</span> <span class="n">assembly</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">first</span> <span class="o">&lt;=</span> <span class="n">snapshot_release</span> <span class="ow">and</span> <span class="p">(</span><span class="n">last</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">snapshot_release</span> <span class="o">&lt;=</span> <span class="n">last</span><span class="p">):</span>
+            <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">assembly</span><span class="p">)</span>
+    <span class="k">raise</span> <span class="n">UnknownReleaseError</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">"No assembly of </span><span class="si">{</span><span class="n">organism</span><span class="si">}</span><span class="s2"> has release </span><span class="si">{</span><span class="n">snapshot_release</span><span class="si">}</span><span class="s2"> in the organism table."</span><span class="p">,</span>
+        <span class="n">argument</span><span class="o">=</span><span class="s2">"snapshot_release"</span><span class="p">,</span>
+        <span class="n">value</span><span class="o">=</span><span class="n">snapshot_release</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="assembly_name">
+<a class="viewcode-back" href="../../reference.html#idtrack.organisms.assembly_name">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">assembly_name</span><span class="p">(</span><span class="n">organism</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">assembly</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return Ensembl's name of an assembly (e.g. ``"Mmul_10"``), or ``None`` if the table does not give one.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        organism: Ensembl production name.</span>
+<span class="sd">        assembly: Assembly key.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str | None: The name.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">_entry</span><span class="p">(</span><span class="n">organism</span><span class="p">,</span> <span class="n">assembly</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"Name"</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="core_db_name_pattern">
+<a class="viewcode-back" href="../../reference.html#idtrack.organisms.core_db_name_pattern">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">core_db_name_pattern</span><span class="p">(</span><span class="n">organism</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">assembly</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">re</span><span class="o">.</span><span class="n">Pattern</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return the regular expression of the assembly's core database names.</span>
+
+<span class="sd">    The pattern is ``^&lt;organism&gt;_core_(?P&lt;release&gt;[0-9]+)_&lt;DbSuffix&gt;(?P&lt;patch&gt;[a-z]*)$``. It does not apply the</span>
+<span class="sd">    release range.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        organism: Ensembl production name.</span>
+<span class="sd">        assembly: Assembly key of the organism.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        re.Pattern[str]: Compiled pattern with the groups ``release`` and ``patch``.</span>
+<span class="sd">    """</span>
+    <span class="n">suffix</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">db_suffix</span><span class="p">(</span><span class="n">organism</span><span class="p">,</span> <span class="n">assembly</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">rf</span><span class="s2">"^</span><span class="si">{</span><span class="n">re</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">organism</span><span class="p">)</span><span class="si">}</span><span class="s2">_core_(?P&lt;release&gt;[0-9]+)_</span><span class="si">{</span><span class="n">suffix</span><span class="si">}</span><span class="s2">(?P&lt;patch&gt;[a-z]*)$"</span><span class="p">)</span></div>
+
+
+
+<span class="n">_rebuild</span><span class="p">()</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">"ALIASES"</span><span class="p">,</span>
+    <span class="s2">"ASSEMBLY_NODE_TYPES"</span><span class="p">,</span>
+    <span class="s2">"ORGANISM_TABLE"</span><span class="p">,</span>
+    <span class="s2">"SYMBOL_DATABASES"</span><span class="p">,</span>
+    <span class="s2">"assemblies_by_priority"</span><span class="p">,</span>
+    <span class="s2">"assembly_key"</span><span class="p">,</span>
+    <span class="s2">"assembly_name"</span><span class="p">,</span>
+    <span class="s2">"check_organism"</span><span class="p">,</span>
+    <span class="s2">"core_db_name_pattern"</span><span class="p">,</span>
+    <span class="s2">"db_suffix"</span><span class="p">,</span>
+    <span class="s2">"first_release"</span><span class="p">,</span>
+    <span class="s2">"primary_assembly"</span><span class="p">,</span>
+    <span class="s2">"register_organism"</span><span class="p">,</span>
+    <span class="s2">"release_range"</span><span class="p">,</span>
+    <span class="s2">"resolve_organism"</span><span class="p">,</span>
+    <span class="s2">"supported_organisms"</span><span class="p">,</span>
+    <span class="s2">"table_version"</span><span class="p">,</span>
+<span class="p">]</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Kemal Inecik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -75,7 +75,7 @@ Bug Report Template
 .. code-block:: markdown
 
     ## Environment
-    - IDTrack version: 0.0.x (run `python -c "import idtrack; print(idtrack.__version__)"`)
+    - IDTrack version: 0.1.x (run `python -c "import idtrack; print(idtrack.__version__)"`)
     - Python version: 3.12.x (run `python --version`)
     - OS: Ubuntu 22.04 / macOS 14.x / Windows 11
 
@@ -307,8 +307,7 @@ Tests are located in the ``tests/`` directory:
     ├── _real_tables.py           # Serves real Ensembl tables, cut down to a few hundred genes, to DatabaseManager
     ├── data/real/                # Per organism: the cut tables, the gene list, the expected answers, the build script
     ├── test_main.py              # Command-line entry point
-    ├── test_external_mappers.py  # External mapping backends (slow classes query live services)
-    ├── unit/                     # Offline tests, one file per module (test_api.py, test_db.py, ...) and test_real_*.py
+    ├── unit/                     # Offline tests, one file per module (test_api.py, ...) and test_real_*.py
     └── integration/              # Network-backed tests against Ensembl (MySQL and HTTPS dumps)
 
 Markers: ``slow`` (skipped unless ``--runslow`` or ``IDTRACK_SKIP_SLOW=0``), ``network``, ``integration``,
@@ -317,11 +316,11 @@ typeguard session, where typeguard refuses the argument first).
 
 The tests that can catch a wrong mapping are ``tests/unit/test_real_*.py``. They need no network:
 ``tests/_real_tables.py`` serves real Ensembl tables of pig and human, cut down to a few hundred genes
-(``tests/data/real/<organism>.tables.json.xz``, each under 500 kB), to :py:class:`idtrack.DatabaseManager`, so the
+(``tests/data/real/<organism>.tables.json.xz``, each under 500 kB), to :py:class:`idtrack.build.DatabaseManager`, so the
 graphs of both organisms are built by the production code (tables, history, graph file, engine, API) in the test
 session. Conversions are compared with expected answers that were derived from Ensembl's own files
 (``tests/data/real/<organism>.truth.jsonl``) and with the tables themselves, read by independent code; the package's
-self-tests (:py:class:`idtrack.TrackTests`) run on the same graphs.
+self-tests (:py:class:`idtrack.checks.GraphChecks`) run on the same graphs.
 
 To write a table file again from a gene list (``tests/data/real/<organism>.genes.txt``), for example after adding
 genes that a new test needs:
@@ -523,25 +522,25 @@ IDTrack follows these conventions:
       - Type annotations for public APIs; mypy (``nox --session=mypy``)
     * - **Docstrings**
       - Google style (``docstring-convention = google``); every argument, return value and raised error documented
-        (darglint checks it); cross-references with the ``:py:meth:``, ``:py:class:`` ... roles
+        cross-references with the ``:py:meth:``, ``:py:class:`` ... roles
 
 The pre-commit session (``nox --session=pre-commit``) runs all of these.
 
 Example Function
 ~~~~~~~~~~~~~~~~
 
-A docstring in the style of the package (modelled on :py:meth:`idtrack.API.valid_final_databases`):
+A docstring in the style of the package (modelled on :py:meth:`idtrack.API.final_databases`):
 
 .. code-block:: python
 
-    def valid_final_databases(self, to_release: int | None = None) -> list[str]:
+    def final_databases(self, to_release: int | None = None) -> list[str]:
         """Return the values accepted as ``final_database`` for a target release, sorted.
 
-        These are the external databases of the genome assembly that is primary at *to_release* and the two
-        Ensembl gene namespaces (versioned ``ensembl_gene`` and ``base_ensembl_gene``).
+        These are the external databases of the genome assembly that serves *to_release* and the two Ensembl gene
+        namespaces (versioned ``ensembl_gene`` and ``base_ensembl_gene``).
 
         Args:
-            to_release (int | None): The target release; ``None`` means the graph's snapshot release.
+            to_release: The target release; ``None`` means the graph's snapshot release.
 
         Returns:
             list[str]: The database names.
@@ -551,8 +550,8 @@ A docstring in the style of the package (modelled on :py:meth:`idtrack.API.valid
 Adding Organism Support
 -----------------------
 
-An organism is declared in one place, the organism table ``DB.assembly_mysqlport_priority`` in
-``idtrack/_db.py``; everything else (supported organisms, assembly node types, assembly priorities) is derived
+An organism is declared in one place, the organism table ``ORGANISM_TABLE`` in ``idtrack/organisms.py``
+(:py:data:`idtrack.organisms.ORGANISM_TABLE`); everything else (supported organisms, assembly node types, assembly priorities) is derived
 from it. Rhesus and cynomolgus macaque were added this way. The recipe:
 
 1. **Establish the assemblies.** List the organism's core databases in Ensembl's dump listings
@@ -575,19 +574,20 @@ from it. Rhesus and cynomolgus macaque were added this way. The recipe:
    the organism (rhesus ``_10`` is MMUL_1 up to 85 and Mmul_10 from 98), the earlier assembly gets its own key
    and names the shared code in ``DbSuffix``; their ``ReleaseRange`` values must not overlap. ``Ports`` are the
    public MySQL ports in preference order (3306 and 5306 serve release 48 onwards; 3337 is the GRCh37 archive
-   and may be listed for human GRCh37 only, see ``DB.mysql_port_assembly``); ``Priority`` 1 is the preferred, newest
-   assembly. Add the organism's symbol databases to ``DB.symbol_databases`` (e.g. ``("VGNC Symbol", "HGNC
-   Symbol")``) and its short names to ``DB.organism_aliases`` (lower case, unique across organisms, e.g.
+   and may be listed for human GRCh37 only, see :py:attr:`idtrack.settings.EnsemblSettings.mysql_port_assembly`); ``Priority`` 1 is the preferred, newest
+   assembly. Add the organism's symbol databases to ``SYMBOL_DATABASES`` (e.g. ``("VGNC Symbol", "HGNC
+   Symbol")``) and its short names to ``ALIASES`` (lower case, unique across organisms, e.g.
    ``("rhesus",)``). The table is validated at import. IDTrack reads Ensembl ids with versions: an organism whose ids
    carry no versions is not supported.
 
-3. **Try it without editing the package.** ``idtrack.DB.register_organism(name, assemblies,
+3. **Try it without editing the package.** ``idtrack.organisms.register_organism(name, assemblies,
    symbol_databases, aliases)`` adds the same entry for the running Python session, validates it, and recomputes
    everything derived from the table.
 
 4. **Make the externals file.** Generate the template over every release and form
-   (``DatabaseManager.create_database_content()`` and ``ExternalDatabases.create_template_yaml()``), switch on the
-   allowlisted databases with ``idtrack._default_externals.apply_allowlist`` (add the organism's allowlist to
+   (``DatabaseManager.create_database_content()`` and ``ExternalDatabases.create_template_yaml()`` of
+   :py:mod:`idtrack.build`), switch on the allowlisted databases with
+   :py:func:`idtrack.build.default_externals.apply_allowlist` (add the organism's allowlist to
    ``DEFAULT_EXTERNALS`` there and to tutorial 02), and ship ``<organism>_externals_template.yml`` and
    ``<organism>_externals_modified.yml`` in ``idtrack/default_config/``. See
    :doc:`_notebooks/02_prepare_new_external_yaml`. When Ensembl publishes a new release, extend the shipped files

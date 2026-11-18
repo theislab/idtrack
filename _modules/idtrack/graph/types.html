@@ -1,0 +1,402 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>idtrack.graph.types &mdash; idtrack 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=6a604523" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/tutorials.css?v=0e72a3a5" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../../_static/design-tabs.js?v=fcb327ea"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />  
+<!-- Google tag (gtag.js) -->
+<script
+    async
+    src="https://www.googletagmanager.com/gtag/js?id=G-FYKLWNJBVK"
+></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() {
+        dataLayer.push(arguments);
+    }
+    gtag("js", new Date());
+
+    gtag("config", "G-FYKLWNJBVK");
+</script>
+
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            idtrack
+              <img src="../../../_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../changes.html">Changes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../code_of_conduct.html">Code of Conduct</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">idtrack</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">idtrack.graph.types</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for idtrack.graph.types</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Value types of the graph: release sets, cross-reference records, history edges, and the serving line.</span>
+
+<span class="sd">:py:class:`ReleaseSet` (a set of Ensembl releases kept as a bit mask), :py:class:`Connection` (which databases link two</span>
+<span class="sd">nodes on which assemblies at which releases), :py:class:`HistoryEdge` (one event of Ensembl's id history), and the one</span>
+<span class="sd">rule for where a cross-reference counts (:py:func:`served_mask`).</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">hashlib</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Mapping</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">NamedTuple</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack</span><span class="w"> </span><span class="kn">import</span> <span class="n">ids</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">IntegrityError</span>
+
+<span class="n">_ASSEMBLY_TYPE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^assembly_(-?[0-9]+)_ensembl_([a-z]+)$"</span><span class="p">)</span>
+<span class="n">_INF</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s2">"inf"</span><span class="p">)</span>
+<span class="n">_NAN</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s2">"nan"</span><span class="p">)</span>
+<span class="c1"># The kinds of edges of a store: an event of the id history, a cross-reference, anything else (graphs made by hand).</span>
+<span class="n">_KIND_HISTORY</span><span class="p">,</span> <span class="n">_KIND_XREF</span><span class="p">,</span> <span class="n">_KIND_OTHER</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span>
+
+
+<div class="viewcode-block" id="ReleaseSet">
+<a class="viewcode-back" href="../../../reference.html#idtrack.graph.ReleaseSet">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ReleaseSet</span><span class="p">(</span><span class="nb">frozenset</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""An immutable set of Ensembl releases with its bit mask, one object per distinct value.</span>
+
+<span class="sd">    It is a :py:class:`frozenset` (membership, iteration, ``|``, ``&amp;``, ``min``, ``max`` and comparison with any set</span>
+<span class="sd">    work as usual) that also carries :py:attr:`mask`, an ``int`` whose bit ``r`` is set when release ``r`` is in the</span>
+<span class="sd">    set, so that ``mask &gt;&gt; r &amp; 1`` tests membership and ``|``/``&amp;`` on masks combine sets without building them. Equal</span>
+<span class="sd">    sets are the same object: a graph with millions of edges holds a few thousand of them.</span>
+<span class="sd">    """</span>
+
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"mask"</span><span class="p">,)</span>
+    <span class="n">mask</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">_interned</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">ReleaseSet</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+<div class="viewcode-block" id="ReleaseSet.from_mask">
+<a class="viewcode-back" href="../../../reference.html#idtrack.graph.ReleaseSet.from_mask">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_mask</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">mask</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ReleaseSet</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return the set of the releases whose bits are set in ``mask``."""</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_interned</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">found</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">mask</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">IntegrityError</span><span class="p">(</span><span class="s2">"A release mask cannot be negative."</span><span class="p">)</span>
+            <span class="n">releases</span><span class="p">,</span> <span class="n">rest</span><span class="p">,</span> <span class="n">release</span> <span class="o">=</span> <span class="p">[],</span> <span class="n">mask</span><span class="p">,</span> <span class="mi">0</span>
+            <span class="k">while</span> <span class="n">rest</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">rest</span> <span class="o">&amp;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">releases</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">release</span><span class="p">)</span>
+                <span class="n">rest</span> <span class="o">&gt;&gt;=</span> <span class="mi">1</span>
+                <span class="n">release</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">found</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">releases</span><span class="p">)</span>
+            <span class="n">found</span><span class="o">.</span><span class="n">mask</span> <span class="o">=</span> <span class="n">mask</span>
+            <span class="bp">cls</span><span class="o">.</span><span class="n">_interned</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">found</span>
+        <span class="k">return</span> <span class="n">found</span></div>
+
+
+<div class="viewcode-block" id="ReleaseSet.of">
+<a class="viewcode-back" href="../../../reference.html#idtrack.graph.ReleaseSet.of">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">of</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">releases</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">ReleaseSet</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return the set of the given releases (non-negative integers)."""</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">releases</span><span class="p">,</span> <span class="n">ReleaseSet</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">releases</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">release</span> <span class="ow">in</span> <span class="n">releases</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">release</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">release</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">))</span> <span class="ow">or</span> <span class="n">release</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">IntegrityError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"A release must be a non-negative integer, got </span><span class="si">{</span><span class="n">release</span><span class="si">!r}</span><span class="s2">."</span><span class="p">)</span>
+            <span class="n">mask</span> <span class="o">|=</span> <span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="nb">int</span><span class="p">(</span><span class="n">release</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">from_mask</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__reduce__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Pickle and copy through the mask, so that a restored set is the interned object."""</span>
+        <span class="k">return</span> <span class="n">ReleaseSet</span><span class="o">.</span><span class="n">from_mask</span><span class="p">,</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mask</span><span class="p">,)</span></div>
+
+
+
+<span class="n">_NO_RELEASES</span> <span class="o">=</span> <span class="n">ReleaseSet</span><span class="o">.</span><span class="n">from_mask</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="Connection">
+<a class="viewcode-back" href="../../../reference.html#idtrack.graph.Connection">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Connection</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""What one cross-reference edge says: in which releases which database links the two nodes on which assembly.</span>
+
+<span class="sd">    Instances are immutable and shared: all edges that carry the same information hold the same object.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        items (tuple[tuple[str, int, ReleaseSet], ...]): ``(database, assembly, releases)`` triples.</span>
+<span class="sd">        releases (ReleaseSet): All releases of the edge, whatever the database and assembly.</span>
+<span class="sd">        as_dict (dict[str, dict[int, ReleaseSet]]): The same as ``{database: {assembly: releases}}``. Do not change.</span>
+<span class="sd">        databases (frozenset[str]): The database names of the edge.</span>
+<span class="sd">    """</span>
+
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"items"</span><span class="p">,</span> <span class="s2">"releases"</span><span class="p">,</span> <span class="s2">"as_dict"</span><span class="p">,</span> <span class="s2">"databases"</span><span class="p">,</span> <span class="s2">"_attr"</span><span class="p">)</span>
+    <span class="n">items</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">ReleaseSet</span><span class="p">],</span> <span class="o">...</span><span class="p">]</span>
+    <span class="n">releases</span><span class="p">:</span> <span class="n">ReleaseSet</span>
+    <span class="n">as_dict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">ReleaseSet</span><span class="p">]]</span>
+    <span class="n">databases</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+    <span class="n">_attr</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">_interned</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">,</span> <span class="n">Connection</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+<div class="viewcode-block" id="Connection.of">
+<a class="viewcode-back" href="../../../reference.html#idtrack.graph.Connection.of">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">of</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">items</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">Any</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">Connection</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return the connection of the ``(database, assembly, releases)`` triples, in the order given.</span>
+
+<span class="sd">        ``releases`` is a :py:class:`ReleaseSet`, any iterable of releases, or a bit mask (an ``int``).</span>
+<span class="sd">        """</span>
+        <span class="n">normal</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
+            <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">db</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">asm</span><span class="p">),</span> <span class="n">ReleaseSet</span><span class="o">.</span><span class="n">from_mask</span><span class="p">(</span><span class="n">rs</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rs</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="k">else</span> <span class="n">ReleaseSet</span><span class="o">.</span><span class="n">of</span><span class="p">(</span><span class="n">rs</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">db</span><span class="p">,</span> <span class="n">asm</span><span class="p">,</span> <span class="n">rs</span> <span class="ow">in</span> <span class="n">items</span>
+        <span class="p">)</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">((</span><span class="n">db</span><span class="p">,</span> <span class="n">asm</span><span class="p">,</span> <span class="n">rs</span><span class="o">.</span><span class="n">mask</span><span class="p">)</span> <span class="k">for</span> <span class="n">db</span><span class="p">,</span> <span class="n">asm</span><span class="p">,</span> <span class="n">rs</span> <span class="ow">in</span> <span class="n">normal</span><span class="p">)</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_interned</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">found</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">found</span> <span class="o">=</span> <span class="nb">object</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>
+            <span class="n">as_dict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">ReleaseSet</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">mask</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">db</span><span class="p">,</span> <span class="n">asm</span><span class="p">,</span> <span class="n">rs</span> <span class="ow">in</span> <span class="n">normal</span><span class="p">:</span>
+                <span class="n">per_db</span> <span class="o">=</span> <span class="n">as_dict</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">db</span><span class="p">,</span> <span class="p">{})</span>
+                <span class="k">if</span> <span class="n">asm</span> <span class="ow">in</span> <span class="n">per_db</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">IntegrityError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Database </span><span class="si">{</span><span class="n">db</span><span class="si">!r}</span><span class="s2"> and assembly </span><span class="si">{</span><span class="n">asm</span><span class="si">!r}</span><span class="s2"> occur twice in one connection."</span><span class="p">)</span>
+                <span class="n">per_db</span><span class="p">[</span><span class="n">asm</span><span class="p">]</span> <span class="o">=</span> <span class="n">rs</span>
+                <span class="n">mask</span> <span class="o">|=</span> <span class="n">rs</span><span class="o">.</span><span class="n">mask</span>
+            <span class="n">found</span><span class="o">.</span><span class="n">items</span> <span class="o">=</span> <span class="n">normal</span>
+            <span class="n">found</span><span class="o">.</span><span class="n">releases</span> <span class="o">=</span> <span class="n">ReleaseSet</span><span class="o">.</span><span class="n">from_mask</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span>
+            <span class="n">found</span><span class="o">.</span><span class="n">as_dict</span> <span class="o">=</span> <span class="n">as_dict</span>
+            <span class="n">found</span><span class="o">.</span><span class="n">databases</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">as_dict</span><span class="p">)</span>
+            <span class="n">found</span><span class="o">.</span><span class="n">_attr</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="bp">cls</span><span class="o">.</span><span class="n">_interned</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">found</span>
+        <span class="k">return</span> <span class="n">found</span></div>
+
+
+<div class="viewcode-block" id="Connection.of_dict">
+<a class="viewcode-back" href="../../../reference.html#idtrack.graph.Connection.of_dict">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">of_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">connection</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Connection</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return the connection of a ``{database: {assembly: releases}}`` mapping, in its own order."""</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">of</span><span class="p">((</span><span class="n">db</span><span class="p">,</span> <span class="n">asm</span><span class="p">,</span> <span class="n">rs</span><span class="p">)</span> <span class="k">for</span> <span class="n">db</span><span class="p">,</span> <span class="n">per_db</span> <span class="ow">in</span> <span class="n">connection</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">for</span> <span class="n">asm</span><span class="p">,</span> <span class="n">rs</span> <span class="ow">in</span> <span class="n">per_db</span><span class="o">.</span><span class="n">items</span><span class="p">())</span></div>
+
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">attr</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""The attributes of the edge as networkx shows them.</span>
+
+<span class="sd">        ``connection`` is :py:attr:`as_dict` and ``available_releases`` is :py:attr:`releases`: the same shared,</span>
+<span class="sd">        immutable objects that the accessors return.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_attr</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_attr</span> <span class="o">=</span> <span class="p">{</span><span class="n">ids</span><span class="o">.</span><span class="n">CONNECTION_KEY</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">as_dict</span><span class="p">,</span> <span class="s2">"available_releases"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">releases</span><span class="p">}</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_attr</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__reduce__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Pickle and copy through the triples, so that a restored connection is the interned object."""</span>
+        <span class="k">return</span> <span class="n">Connection</span><span class="o">.</span><span class="n">of</span><span class="p">,</span> <span class="p">(</span><span class="nb">tuple</span><span class="p">((</span><span class="n">db</span><span class="p">,</span> <span class="n">asm</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">rs</span><span class="p">)))</span> <span class="k">for</span> <span class="n">db</span><span class="p">,</span> <span class="n">asm</span><span class="p">,</span> <span class="n">rs</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="p">),)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Show the triples."""</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">"Connection(</span><span class="si">{</span><span class="p">[(</span><span class="n">db</span><span class="p">,</span><span class="w"> </span><span class="n">asm</span><span class="p">,</span><span class="w"> </span><span class="nb">sorted</span><span class="p">(</span><span class="n">rs</span><span class="p">))</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">db</span><span class="p">,</span><span class="w"> </span><span class="n">asm</span><span class="p">,</span><span class="w"> </span><span class="n">rs</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="p">]</span><span class="si">}</span><span class="s2">)"</span></div>
+
+
+
+<div class="viewcode-block" id="serving_line">
+<a class="viewcode-back" href="../../../reference.html#idtrack.graph.serving_line">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">serving_line</span><span class="p">(</span><span class="n">serving_assembly</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">ReleaseSet</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return, per genome assembly, the releases that the assembly serves in the backbone.</span>
+
+<span class="sd">    A release belongs to one assembly: the one that serves it in the backbone of the graph</span>
+<span class="sd">    (:py:attr:`TheGraph.serving_assembly`). An earlier assembly that Ensembl keeps listing beside the primary one</span>
+<span class="sd">    (human GRCh37, frozen with its annotation of release 75 and listed at every later release) serves none of the</span>
+<span class="sd">    releases that the primary assembly has.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        serving_assembly (Mapping[int, int]): ``{release: assembly}``.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dict[int, ReleaseSet]: ``{assembly: releases}`` for the assemblies that serve a release.</span>
+<span class="sd">    """</span>
+    <span class="n">masks</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">release</span><span class="p">,</span> <span class="n">assembly</span> <span class="ow">in</span> <span class="n">serving_assembly</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">masks</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">assembly</span><span class="p">)]</span> <span class="o">=</span> <span class="n">masks</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">assembly</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="nb">int</span><span class="p">(</span><span class="n">release</span><span class="p">))</span>
+    <span class="k">return</span> <span class="p">{</span><span class="n">assembly</span><span class="p">:</span> <span class="n">ReleaseSet</span><span class="o">.</span><span class="n">from_mask</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span> <span class="k">for</span> <span class="n">assembly</span><span class="p">,</span> <span class="n">mask</span> <span class="ow">in</span> <span class="n">masks</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span></div>
+
+
+
+<div class="viewcode-block" id="served_mask">
+<a class="viewcode-back" href="../../../reference.html#idtrack.graph.served_mask">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">served_mask</span><span class="p">(</span>
+    <span class="n">items</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">ReleaseSet</span><span class="p">]],</span>
+    <span class="n">line</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">ReleaseSet</span><span class="p">],</span>
+    <span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">exclude</span><span class="p">:</span> <span class="nb">frozenset</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(),</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the releases at which a cross-reference link holds, each counted on the assembly that serves it.</span>
+
+<span class="sd">    This is the one rule for where a link counts. The builder chooses the spelling of a release by it, the engine</span>
+<span class="sd">    follows a link by it, and the name resolution says by it whether an identifier exists at a release: a link</span>
+<span class="sd">    that an assembly lists at a release it does not serve (:py:func:`serving_line`) is not a link of that release.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        items (Iterable[tuple[str, int, ReleaseSet]]): ``(database, assembly, releases)`` of a link</span>
+<span class="sd">            (:py:attr:`Connection.items`).</span>
+<span class="sd">        line (Mapping[int, ReleaseSet]): The releases each assembly serves (:py:func:`serving_line`).</span>
+<span class="sd">        database (str | None): Count this database only. ``None``: every database.</span>
+<span class="sd">        exclude (frozenset): Databases that do not count.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        int: The bit mask of the releases (bit ``r`` set: the link holds at release ``r``).</span>
+<span class="sd">    """</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">item_database</span><span class="p">,</span> <span class="n">assembly</span><span class="p">,</span> <span class="n">releases</span> <span class="ow">in</span> <span class="n">items</span><span class="p">:</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">database</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">item_database</span> <span class="o">==</span> <span class="n">database</span><span class="p">)</span> <span class="ow">and</span> <span class="n">item_database</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">exclude</span><span class="p">:</span>
+            <span class="n">served</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">assembly</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">served</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">mask</span> <span class="o">|=</span> <span class="n">releases</span><span class="o">.</span><span class="n">mask</span> <span class="o">&amp;</span> <span class="n">served</span><span class="o">.</span><span class="n">mask</span>
+    <span class="k">return</span> <span class="n">mask</span></div>
+
+
+
+<div class="viewcode-block" id="HistoryEdge">
+<a class="viewcode-back" href="../../../reference.html#idtrack.graph.HistoryEdge">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">HistoryEdge</span><span class="p">(</span><span class="n">NamedTuple</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""One edge of the gene history as seen from a node: the other end and the release pair.</span>
+
+<span class="sd">    The fields: ``node``, the node at the other end of the edge; ``old_release``, the last release of the source side</span>
+<span class="sd">    of the event; ``new_release``, the first release of the target side (``float("inf")`` on the self-loop of an id</span>
+<span class="sd">    that is alive at the last release of the graph); ``weight``, Ensembl's mapping score of the event (NaN where there</span>
+<span class="sd">    is none); ``key``, the key of the edge among the parallel edges between the two nodes.</span>
+<span class="sd">    """</span>
+
+    <span class="n">node</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">old_release</span><span class="p">:</span> <span class="n">Any</span>
+    <span class="n">new_release</span><span class="p">:</span> <span class="n">Any</span>
+    <span class="n">weight</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">key</span><span class="p">:</span> <span class="nb">int</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_stable_hash</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return a 64-bit hash of ``text`` that is the same in every process (unlike ``hash``)."""</span>
+    <span class="k">return</span> <span class="nb">int</span><span class="o">.</span><span class="n">from_bytes</span><span class="p">(</span><span class="n">hashlib</span><span class="o">.</span><span class="n">blake2b</span><span class="p">(</span><span class="n">text</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="s2">"surrogatepass"</span><span class="p">),</span> <span class="n">digest_size</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span><span class="o">.</span><span class="n">digest</span><span class="p">(),</span> <span class="s2">"little"</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_has_id_and_version</span><span class="p">(</span><span class="n">node_type</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Tell whether nodes of this type are Ensembl ``&lt;id&gt;.&lt;version&gt;`` nodes."""</span>
+    <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node_type</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span>
+        <span class="n">node_type</span> <span class="ow">in</span> <span class="n">ids</span><span class="o">.</span><span class="n">FORM_OF_ENSEMBL_TYPE</span> <span class="ow">or</span> <span class="nb">bool</span><span class="p">(</span><span class="n">_ASSEMBLY_TYPE</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">node_type</span><span class="p">))</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_is_assembly_gene</span><span class="p">(</span><span class="n">node_type</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Tell whether the type is the gene type of one assembly (``assembly_&lt;key&gt;_ensembl_gene``)."""</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node_type</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="n">found</span> <span class="o">=</span> <span class="n">_ASSEMBLY_TYPE</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">node_type</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">found</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">found</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">==</span> <span class="n">ids</span><span class="o">.</span><span class="n">BACKBONE_FORM</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_assembly_label</span><span class="p">(</span><span class="n">form</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">assembly</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the database name of an Ensembl relation on one assembly (``assembly_&lt;key&gt;_ensembl_&lt;form&gt;``)."""</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"assembly_</span><span class="si">{</span><span class="n">assembly</span><span class="si">}</span><span class="s2">_ensembl_</span><span class="si">{</span><span class="n">form</span><span class="si">}</span><span class="s2">"</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_is_release</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">))</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Kemal Inecik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IDTrack &mdash; idtrack 0.0.5 documentation</title>
+  <title>IDTrack &mdash; idtrack 0.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=6a604523" />
@@ -16,7 +16,7 @@
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=282f96c0"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
       <script src="_static/doctools.js?v=fd6eb6e6"></script>
       <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="_static/design-tabs.js?v=fcb327ea"></script>
@@ -70,7 +70,7 @@
 <li class="toctree-l1"><a class="reference internal" href="changes.html">Changes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributor Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="authors.html">Credits</a></li>
-<li class="toctree-l1"><a class="reference internal" href="code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="code_of_conduct.html">Code of Conduct</a></li>
 </ul>
 
         </div>
@@ -100,6 +100,8 @@
   <section id="idtrack">
 <h1><strong>IDTrack</strong><a class="headerlink" href="#idtrack" title="Link to this heading"></a></h1>
 <p><a class="reference external" href="https://pypi.org/project/idtrack/"><img alt="PyPI" src="https://img.shields.io/pypi/v/idtrack.svg" /></a> <a class="reference external" href="https://pepy.tech/project/idtrack"><img alt="downloads" src="https://pepy.tech/badge/idtrack" /></a> <a class="reference external" href="https://pypi.org/project/idtrack"><img alt="Python Version" src="https://img.shields.io/pypi/pyversions/idtrack" /></a> <a class="reference external" href="https://opensource.org/licenses/BSD-3-Clause"><img alt="License" src="https://img.shields.io/github/license/theislab/idtrack" /></a> <a class="reference external" href="https://idtrack.readthedocs.io/"><img alt="Read the documentation at https://idtrack.readthedocs.io/" src="https://img.shields.io/readthedocs/idtrack/latest.svg?label=Read%20the%20Docs" /></a> <a class="reference external" href="https://github.com/theislab/idtrack/actions/workflows/build_package.yml"><img alt="Build Package Status" src="https://github.com/theislab/idtrack/actions/workflows/build_package.yml/badge.svg?branch=main" /></a> <a class="reference external" href="https://github.com/theislab/idtrack/actions/workflows/run_tests.yml"><img alt="Tests status" src="https://github.com/theislab/idtrack/actions/workflows/run_tests.yml/badge.svg?branch=main" /></a> <a class="reference external" href="https://codecov.io/gh/theislab/idtrack"><img alt="Codecov" src="https://codecov.io/gh/theislab/idtrack/branch/main/graph/badge.svg" /></a></p>
+<a class="reference internal image-reference" href="https://raw.githubusercontent.com/theislab/idtrack/main/docs/_logo/logo.png"><img alt="IDTrack logo" src="https://raw.githubusercontent.com/theislab/idtrack/main/docs/_logo/logo.png" width="350" />
+</a>
 <section id="cross-temporal-and-cross-database-biological-identifier-mapping">
 <h2>Cross-Temporal and Cross-Database Biological Identifier Mapping<a class="headerlink" href="#cross-temporal-and-cross-database-biological-identifier-mapping" title="Link to this heading"></a></h2>
 <p>Modern biology constantly mixes identifiers from different years, databases, and genome builds. The result is a familiar set of problems:
@@ -138,31 +140,36 @@ instead of silently forcing a single answer.</p>
 </section>
 <section id="installation-and-a-first-conversion">
 <h2>Installation and a first conversion<a class="headerlink" href="#installation-and-a-first-conversion" title="Link to this heading"></a></h2>
-<p>IDTrack runs on Python 3.12 to 3.15 and supports human, mouse, pig, rhesus macaque and cynomolgus macaque.</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>idtrack
-<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"git+https://github.com/theislab/idtrack.git@main"</span><span class="w">   </span><span class="c1"># or: the code of the main branch</span>
+<p>IDTrack runs on Python 3.12 to 3.15 and supports human, mouse, pig, rhesus macaque and cynomolgus macaque. Install it
+from GitHub (with the <code class="docutils literal notranslate"><span class="pre">harmonize</span></code> extra for harmonizing <code class="docutils literal notranslate"><span class="pre">.h5ad</span></code> datasets, which brings anndata and scipy):</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"git+https://github.com/theislab/idtrack.git"</span>
+<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"idtrack[harmonize] @ git+https://github.com/theislab/idtrack.git"</span>
 </pre></div>
 </div>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
+<p>The release on PyPI (<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">idtrack</span></code>, version 0.0.5) is an older, different version with another API; use
+GitHub until version 0.1.0 is published on PyPI.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 
-<span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="s2">"./idtrack_cache"</span><span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack</span><span class="w"> </span><span class="kn">import</span> <span class="n">API</span>
+
+<span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="s2">"./idtrack_cache"</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>  <span class="c1"># the local repository: downloaded tables and graph files</span>
 <span class="c1"># Built from Ensembl's tables the first time (about 2 hours for human), loaded from disk in seconds afterwards.</span>
-<span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="s2">"homo_sapiens"</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="mi">115</span><span class="p">)</span>
+<span class="n">api</span> <span class="o">=</span> <span class="n">API</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="s2">"homo_sapiens"</span><span class="p">,</span> <span class="mi">115</span><span class="p">,</span> <span class="s2">"./idtrack_cache"</span><span class="p">)</span>
+<span class="c1"># A graph file on disk loads without any network: api = API.load(API.graph_path("homo_sapiens", 115, "./idtrack_cache"))</span>
 
-<span class="n">result</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="s2">"TP53"</span><span class="p">)</span>  <span class="c1"># to the snapshot release</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s2">"target_id"</span><span class="p">])</span>                <span class="c1"># ['ENSG00000141510.20']</span>
-<span class="n">result</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="s2">"ENSG00000141510"</span><span class="p">,</span> <span class="n">from_release</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">final_database</span><span class="o">=</span><span class="s2">"HGNC Symbol"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s2">"target_id"</span><span class="p">])</span>                <span class="c1"># ['TP53']</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s2">"TP53"</span><span class="p">)</span>  <span class="c1"># to the snapshot release</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">targets</span><span class="p">())</span>       <span class="c1"># ('ENSG00000141510.20',)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s2">"ENSG00000141510"</span><span class="p">,</span> <span class="n">from_release</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">final_database</span><span class="o">=</span><span class="s2">"HGNC Symbol"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">targets</span><span class="p">())</span>       <span class="c1"># ('TP53',)</span>
 </pre></div>
 </div>
 </section>
-<section id="start-here">
-<h2>Start here<a class="headerlink" href="#start-here" title="Link to this heading"></a></h2>
+<section id="documentation-and-tutorials">
+<h2>Documentation and tutorials<a class="headerlink" href="#documentation-and-tutorials" title="Link to this heading"></a></h2>
+<p>The documentation includes a <strong>full tutorial suite</strong> designed to be the primary learning resource:</p>
 <ul class="simple">
-<li><p><a class="reference internal" href="tutorials.html"><span class="doc">Tutorials</span></a> — the full tutorial suite (Part 0 → Part 7); primary learning resource</p></li>
-<li><p><a class="reference internal" href="usage.html"><span class="doc">Quickstart</span></a> — a minimal quickstart</p></li>
-<li><p><a class="reference internal" href="installation.html"><span class="doc">Installation</span></a> — installation, Ensembl access (MySQL or HTTPS), troubleshooting</p></li>
-<li><p><a class="reference internal" href="changes.html"><span class="doc">Changes</span></a> — what changed, and what a user of an earlier version must do</p></li>
+<li><p>Documentation: <a class="reference external" href="https://idtrack.readthedocs.io/">Documentation</a></p></li>
+<li><p>Tutorials: start from the “Tutorials” section in the docs (Part 0 → Part 7).</p></li>
 </ul>
 </section>
 </section>

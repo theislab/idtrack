@@ -1,0 +1,694 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>idtrack.results &mdash; idtrack 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=6a604523" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="../../_static/tutorials.css?v=0e72a3a5" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../_static/design-tabs.js?v=fcb327ea"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />  
+<!-- Google tag (gtag.js) -->
+<script
+    async
+    src="https://www.googletagmanager.com/gtag/js?id=G-FYKLWNJBVK"
+></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() {
+        dataLayer.push(arguments);
+    }
+    gtag("js", new Date());
+
+    gtag("config", "G-FYKLWNJBVK");
+</script>
+
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            idtrack
+              <img src="../../_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../changes.html">Changes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_of_conduct.html">Code of Conduct</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">idtrack</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">idtrack.results</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for idtrack.results</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""The typed results of idtrack's public calls: frozen dataclasses with a lossless, strict-JSON ``to_dict()``.</span>
+
+<span class="sd">Every result is plain data: strings, integers, floats (never NaN or infinity: a missing number is ``None``),</span>
+<span class="sd">booleans, ``None``, tuples and nested results. ``to_dict()`` turns a result into ``dict``/``list``/scalars that</span>
+<span class="sd">``json.dumps(..., allow_nan=False)`` writes, and ``from_dict()`` reads it back into an equal result.</span>
+
+<span class="sd">- :py:class:`ConversionResult`: one identifier converted (:py:meth:`idtrack.API.convert`). Its</span>
+<span class="sd">  :py:attr:`~ConversionResult.candidates` are every target the search reached, ranked, the best marked</span>
+<span class="sd">  (:py:attr:`Candidate.best`); ``best`` and ``all`` are two views of the one search</span>
+<span class="sd">  (:py:meth:`ConversionResult.view`). :py:attr:`~ConversionResult.decided_by` names the criterion that put the best</span>
+<span class="sd">  answer before the runner-up, and :py:attr:`~ConversionResult.status` with :py:attr:`~ConversionResult.reason`</span>
+<span class="sd">  says why a result has no target.</span>
+<span class="sd">- :py:class:`ExplainedPath`: the path of every candidate as data, one graph per conversion (nodes and steps).</span>
+<span class="sd">- :py:class:`GraphDescription`: what a loaded graph holds, without the network.</span>
+<span class="sd">- :py:class:`NameMatch`: a name of an external database attached to a gene at releases.</span>
+
+<span class="sd">This module imports only :py:mod:`idtrack.errors`.</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">dataclasses</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">types</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">typing</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">IntegrityError</span><span class="p">,</span> <span class="n">InvalidArgumentError</span>
+
+<span class="c1">#: The outcome of a conversion.</span>
+<span class="n">STATUSES</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"converted"</span><span class="p">,</span> <span class="s2">"tie"</span><span class="p">,</span> <span class="s2">"no_target"</span><span class="p">,</span> <span class="s2">"not_found"</span><span class="p">,</span> <span class="s2">"unknown_version"</span><span class="p">,</span> <span class="s2">"no_conversion"</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">)</span>
+
+<span class="c1">#: Why a conversion has no target (:py:attr:`ConversionResult.reason`).</span>
+<span class="n">REASONS</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"not_in_graph"</span><span class="p">:</span> <span class="s2">"The identifier is not an identifier of this graph at any release."</span><span class="p">,</span>
+    <span class="s2">"unknown_version"</span><span class="p">:</span> <span class="s2">"The identifier is an Ensembl id with a version this graph does not hold."</span><span class="p">,</span>
+    <span class="s2">"not_an_id_of_database"</span><span class="p">:</span> <span class="s2">"The identifier is an Ensembl id, not an id of the database named as its source."</span><span class="p">,</span>
+    <span class="s2">"never_active"</span><span class="p">:</span> <span class="s2">"The identifier is never active on the assemblies that serve the releases of this graph."</span><span class="p">,</span>
+    <span class="s2">"no_gene_at_start"</span><span class="p">:</span> <span class="s2">"At the release it is read at, the identifier is attached to no gene."</span><span class="p">,</span>
+    <span class="s2">"no_path_to_target"</span><span class="p">:</span> <span class="s2">"Ensembl's history (and the bridges allowed) leads to no gene at the target release."</span><span class="p">,</span>
+    <span class="s2">"no_id_in_final_database"</span><span class="p">:</span> <span class="s2">"The genes reached have no id in the requested database."</span><span class="p">,</span>
+    <span class="s2">"error"</span><span class="p">:</span> <span class="s2">"The conversion of this identifier raised an error (see `error`)."</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="c1">#: Why a step of an explained path was taken (:py:attr:`PathStep.reason`).</span>
+<span class="n">STEP_REASONS</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"identity"</span><span class="p">:</span> <span class="s2">"The gene exists at the target release."</span><span class="p">,</span>
+    <span class="s2">"entry"</span><span class="p">:</span> <span class="s2">"The identifier is attached to this gene at the release it is read at."</span><span class="p">,</span>
+    <span class="s2">"new_version"</span><span class="p">:</span> <span class="s2">"Ensembl's id history: a new version of the id."</span><span class="p">,</span>
+    <span class="s2">"replaced"</span><span class="p">:</span> <span class="s2">"Ensembl's id history: the id was replaced by another."</span><span class="p">,</span>
+    <span class="s2">"split"</span><span class="p">:</span> <span class="s2">"Ensembl's id history: a split."</span><span class="p">,</span>
+    <span class="s2">"merge"</span><span class="p">:</span> <span class="s2">"Ensembl's id history: a merge."</span><span class="p">,</span>
+    <span class="s2">"split_and_merge"</span><span class="p">:</span> <span class="s2">"Ensembl's id history: a split and a merge."</span><span class="p">,</span>
+    <span class="s2">"self_loop"</span><span class="p">:</span> <span class="s2">"Ensembl re-mapped the gene to itself with a score."</span><span class="p">,</span>
+    <span class="s2">"bridge_near"</span><span class="p">:</span> <span class="p">(</span>
+        <span class="s2">"The history reaches no gene at the target release: the walk leaves the gene through an id it carries."</span>
+    <span class="p">),</span>
+    <span class="s2">"bridge_far"</span><span class="p">:</span> <span class="s2">"The walk enters another gene that carries the same id."</span><span class="p">,</span>
+    <span class="s2">"final"</span><span class="p">:</span> <span class="s2">"The gene carries the id in the final database at the target release."</span><span class="p">,</span>
+    <span class="s2">"final_other_release"</span><span class="p">:</span> <span class="p">(</span>
+        <span class="s2">"The id is attached at the target release to a transcript or translation the gene had at another release."</span>
+    <span class="p">),</span>
+<span class="p">}</span>
+
+<span class="c1">#: The criteria that order candidates, in the order in which they decide (:py:attr:`ConversionResult.decided_by`).</span>
+<span class="n">CRITERIA</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">"own_version"</span><span class="p">,</span>
+    <span class="s2">"final_confidence"</span><span class="p">,</span>
+    <span class="s2">"bridges"</span><span class="p">,</span>
+    <span class="s2">"bridge_gap"</span><span class="p">,</span>
+    <span class="s2">"entry_support"</span><span class="p">,</span>
+    <span class="s2">"score"</span><span class="p">,</span>
+    <span class="s2">"same_as_query"</span><span class="p">,</span>
+    <span class="s2">"annotation"</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<span class="c1">#: The two views of the candidates of a conversion (:py:meth:`ConversionResult.view`): the best answer, and every</span>
+<span class="c1">#: candidate ranked.</span>
+<span class="n">STRATEGIES</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"best"</span><span class="p">,</span> <span class="s2">"all"</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="check_strategy">
+<a class="viewcode-back" href="../../reference.html#idtrack.results.check_strategy">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">check_strategy</span><span class="p">(</span><span class="n">strategy</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return a ``strategy`` argument, checked: one of :py:data:`STRATEGIES`.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        idtrack.errors.InvalidArgumentError: For anything else.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">strategy</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">STRATEGIES</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidArgumentError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"`strategy`=</span><span class="si">{</span><span class="n">strategy</span><span class="si">!r}</span><span class="s2"> is not a strategy; valid: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">STRATEGIES</span><span class="p">)</span><span class="si">}</span><span class="s2">."</span><span class="p">,</span>
+            <span class="n">argument</span><span class="o">=</span><span class="s2">"strategy"</span><span class="p">,</span>
+            <span class="n">value</span><span class="o">=</span><span class="n">strategy</span><span class="p">,</span>
+            <span class="n">allowed</span><span class="o">=</span><span class="n">STRATEGIES</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">strategy</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_plain</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Turn a field value into JSON data (tuples to lists, results to dicts); refuse what JSON cannot hold exactly."""</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">_Result</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">value</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">_plain</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">value</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">value</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">IntegrityError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"A result holds a mapping with keys that are not strings: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">repr</span><span class="p">,</span><span class="w"> </span><span class="n">value</span><span class="p">))</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">_plain</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">value</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">math</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">IntegrityError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"A result holds a number that is not finite: </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">str</span><span class="p">)):</span>
+        <span class="k">return</span> <span class="n">value</span>
+    <span class="k">raise</span> <span class="n">IntegrityError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"A result holds a value of type </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_read</span><span class="p">(</span><span class="n">annotation</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">scope</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Read a JSON value back into the type of a field (the inverse of :py:func:`_plain`)."""</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">annotation</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">annotation</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">annotation</span><span class="p">,</span> <span class="n">scope</span><span class="p">)</span>  <span class="c1"># noqa: S307 - the annotations of this module's own dataclasses</span>
+    <span class="n">origin</span> <span class="o">=</span> <span class="n">typing</span><span class="o">.</span><span class="n">get_origin</span><span class="p">(</span><span class="n">annotation</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">origin</span> <span class="ow">in</span> <span class="p">(</span><span class="n">typing</span><span class="o">.</span><span class="n">Union</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">UnionType</span><span class="p">):</span>
+        <span class="n">options</span> <span class="o">=</span> <span class="p">[</span><span class="n">a</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">typing</span><span class="o">.</span><span class="n">get_args</span><span class="p">(</span><span class="n">annotation</span><span class="p">)</span> <span class="k">if</span> <span class="n">a</span> <span class="ow">is</span> <span class="ow">not</span> <span class="nb">type</span><span class="p">(</span><span class="kc">None</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="n">_read</span><span class="p">(</span><span class="n">options</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">value</span><span class="p">,</span> <span class="n">scope</span><span class="p">)</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">options</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">value</span>
+    <span class="k">if</span> <span class="n">origin</span> <span class="ow">is</span> <span class="nb">tuple</span><span class="p">:</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="n">typing</span><span class="o">.</span><span class="n">get_args</span><span class="p">(</span><span class="n">annotation</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">args</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">is</span> <span class="bp">Ellipsis</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">_read</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">v</span><span class="p">,</span> <span class="n">scope</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">value</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">_read</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">scope</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">origin</span> <span class="ow">is</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">value_type</span> <span class="o">=</span> <span class="n">typing</span><span class="o">.</span><span class="n">get_args</span><span class="p">(</span><span class="n">annotation</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">_read</span><span class="p">(</span><span class="n">value_type</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">scope</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">value</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">annotation</span><span class="p">,</span> <span class="nb">type</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">annotation</span><span class="p">,</span> <span class="n">_Result</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">annotation</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">value</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_Result</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Common behaviour of the result dataclasses: strict JSON out and back."""</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Return the result as plain JSON data (``json.dumps(..., allow_nan=False)`` writes it).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict[str, Any]: One key per field, in the order of the fields.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="p">{</span><span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">_plain</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">))</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">dataclasses</span><span class="o">.</span><span class="n">fields</span><span class="p">(</span><span class="bp">self</span><span class="p">)}</span>  <span class="c1"># type: ignore[arg-type]</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Read a result back from :py:meth:`to_dict`'s data.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            data: The data.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The result, equal to the one that wrote the data.</span>
+<span class="sd">        """</span>
+        <span class="n">hints</span> <span class="o">=</span> <span class="n">typing</span><span class="o">.</span><span class="n">get_type_hints</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>
+        <span class="n">scope</span> <span class="o">=</span> <span class="nb">globals</span><span class="p">()</span>
+        <span class="c1"># Every subclass is a dataclass, which the type of this mixin cannot say (as in `to_dict`).</span>
+        <span class="n">fields</span> <span class="o">=</span> <span class="n">dataclasses</span><span class="o">.</span><span class="n">fields</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>  <span class="c1"># type: ignore[arg-type]</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="o">**</span><span class="p">{</span><span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">_read</span><span class="p">(</span><span class="n">hints</span><span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">],</span> <span class="n">data</span><span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">],</span> <span class="n">scope</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">fields</span><span class="p">})</span>
+
+
+<div class="viewcode-block" id="ErrorInfo">
+<a class="viewcode-back" href="../../reference.html#idtrack.results.ErrorInfo">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ErrorInfo</span><span class="p">(</span><span class="n">_Result</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""An error that stopped the conversion of one identifier in a batch.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        type (str): The class of the error.</span>
+<span class="sd">        message (str): Its message.</span>
+<span class="sd">        input_error (bool): ``True`` when the error is the caller's (:py:class:`idtrack.errors.InputError`), ``False``</span>
+<span class="sd">            for any other (an exceeded budget, an internal error).</span>
+<span class="sd">    """</span>
+
+    <span class="nb">type</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">message</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">input_error</span><span class="p">:</span> <span class="nb">bool</span></div>
+
+
+
+<div class="viewcode-block" id="Candidate">
+<a class="viewcode-back" href="../../reference.html#idtrack.results.Candidate">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Candidate</span><span class="p">(</span><span class="n">_Result</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""One target of a conversion: a gene at the target release and its id in the requested database.</span>
+
+<span class="sd">    The fields after :py:attr:`best` are the ranking record of the candidate: what the engine compared.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        gene (str): The Ensembl gene (``&lt;id&gt;.&lt;version&gt;``) at the target release through which the target was reached.</span>
+<span class="sd">        target (str): The id in the final database, as that database wrote it at the target release (the gene itself</span>
+<span class="sd">            for ``ensembl_gene``).</span>
+<span class="sd">        best (bool): Part of the best answer (several candidates are best in a tie).</span>
+<span class="sd">        entry_gene (str): The gene the identifier was read as at the starting release, from which this gene was</span>
+<span class="sd">            reached.</span>
+<span class="sd">        entry_support (int): The number of databases that attach the identifier to the entry gene at the starting</span>
+<span class="sd">            release (1 for an Ensembl id).</span>
+<span class="sd">        own_version (bool): The gene is the queried gene id's own version at the target release (an id that exists</span>
+<span class="sd">            at the target release is its own answer).</span>
+<span class="sd">        final_confidence (int | None): 0: the target is attached to the gene at the target release; 1: attached to a</span>
+<span class="sd">            transcript or translation that belonged to the gene at another release; ``None``: no gene has an id in</span>
+<span class="sd">            the requested database and the gene itself is the target.</span>
+<span class="sd">        bridges (int): The bridges through external ids (or shared transcripts) on the path; 0 is Ensembl's history</span>
+<span class="sd">            alone.</span>
+<span class="sd">        bridge_gap (int): The releases between leaving a gene and entering the next, summed over the bridges.</span>
+<span class="sd">        score (float): The product of Ensembl's mapping scores along the history of the path (1.0 without a scored</span>
+<span class="sd">            event).</span>
+<span class="sd">        same_as_query (bool): The target is the identifier itself (or the gene id it was read as).</span>
+<span class="sd">        external_steps (int): Cross-reference edges on the path.</span>
+<span class="sd">        history_steps (int): History edges on the path.</span>
+<span class="sd">        annotation (tuple[int, ...] | None): ``(-external ids, -transcripts, -translations)`` of the gene at the</span>
+<span class="sd">            target release, where the engine compared it (between successors of one entry gene that are equal in</span>
+<span class="sd">            everything else); ``None`` where it did not.</span>
+<span class="sd">        path (tuple[int, ...]): With ``explain``: the indices of :py:attr:`ExplainedPath.steps` from the identifier</span>
+<span class="sd">            to :py:attr:`gene`, in order; empty otherwise.</span>
+<span class="sd">        final_path (tuple[int, ...]): With ``explain``: the indices of the steps from :py:attr:`gene` to</span>
+<span class="sd">            :py:attr:`target` (empty when the gene is the target).</span>
+<span class="sd">    """</span>
+
+    <span class="n">gene</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">target</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">best</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">entry_gene</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">entry_support</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">own_version</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">final_confidence</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">bridges</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">bridge_gap</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">score</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">same_as_query</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">external_steps</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">history_steps</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">annotation</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">path</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
+    <span class="n">final_path</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="PathNode">
+<a class="viewcode-back" href="../../reference.html#idtrack.results.PathNode">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">PathNode</span><span class="p">(</span><span class="n">_Result</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""A node of an explained path.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        id (str): The node as the graph names it.</span>
+<span class="sd">        kind (str): ``ensembl_gene``, ``base_ensembl_gene``, ``ensembl_transcript``, ``ensembl_translation``,</span>
+<span class="sd">            ``external`` or ``synonym`` (an external id recorded as a synonym), or the graph's type of a node of an</span>
+<span class="sd">            assembly-only form.</span>
+<span class="sd">        label (str): The name to show for the node. This version shows the graph's name, the same as :py:attr:`id`</span>
+<span class="sd">            (a synonym with the graph's prefix ``synonym_id::``).</span>
+<span class="sd">        databases (tuple[str, ...]): For an external id, the databases that attach it to an Ensembl id at some</span>
+<span class="sd">            release, as the graph names them; empty otherwise.</span>
+<span class="sd">        active (tuple[tuple[int, int | None], ...]): For an Ensembl gene with version, the inclusive release ranges in</span>
+<span class="sd">            which it exists (``None``: still active at the last release of the graph); empty otherwise.</span>
+<span class="sd">        assemblies (tuple[int, ...]): For an Ensembl gene with version, the assemblies that serve its active releases.</span>
+<span class="sd">        non_reference (tuple[tuple[int, int], ...]): For an Ensembl gene, the release ranges in which it lies outside</span>
+<span class="sd">            the reference sequence (an alternative locus, a patch, an LRG record).</span>
+<span class="sd">    """</span>
+
+    <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">kind</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">label</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">databases</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
+    <span class="n">active</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">],</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
+    <span class="n">assemblies</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
+    <span class="n">non_reference</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="PathStep">
+<a class="viewcode-back" href="../../reference.html#idtrack.results.PathStep">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">PathStep</span><span class="p">(</span><span class="n">_Result</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""A step of an explained path.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        kind (str): ``identity`` (the gene is its own answer), ``entry`` (from the identifier to the gene it stands</span>
+<span class="sd">            for), ``history`` (an event of Ensembl's id history), ``self_loop`` (a scored re-mapping of a gene to</span>
+<span class="sd">            itself), ``bridge_near`` and ``bridge_far`` (the two sides of a bridge through an id two genes carry),</span>
+<span class="sd">            ``final`` (from the gene to its id in the final database).</span>
+<span class="sd">        source (str | None): The node the step leaves (``None`` for ``identity``).</span>
+<span class="sd">        target (str): The node the step enters.</span>
+<span class="sd">        key (int | None): The key of a history edge (Ensembl events between the same two ids); ``None`` otherwise.</span>
+<span class="sd">        release (int | None): The release at which a cross-reference step holds (``None`` for a final step of</span>
+<span class="sd">            confidence 1, which holds at another release).</span>
+<span class="sd">        old_release (int | None): For a history step: the old side of Ensembl's event, the last release of the</span>
+<span class="sd">            event's earlier id. Ensembl's events run forward in time, the walk may not: walking forward the earlier</span>
+<span class="sd">            id is :py:attr:`source`, walking backward (to an earlier target release) it is :py:attr:`target`.</span>
+<span class="sd">        new_release (int | None): For a history step: the new side of the event, the first release of the event's</span>
+<span class="sd">            later id (:py:attr:`target` walking forward, :py:attr:`source` walking backward).</span>
+<span class="sd">        weight (float | None): For a history step: Ensembl's mapping score (``None``: none given).</span>
+<span class="sd">        splits (int): For a history step: the other ids that the event's earlier id passed to at</span>
+<span class="sd">            :py:attr:`old_release` (a split), whatever the direction of the walk.</span>
+<span class="sd">        merges (int): For a history step: the other ids that passed to the event's later id at</span>
+<span class="sd">            :py:attr:`new_release` (a merge), whatever the direction of the walk.</span>
+<span class="sd">        databases (tuple[str, ...]): For a cross-reference step: the databases that link the two nodes at the release</span>
+<span class="sd">            on the assembly that serves it, as the graph names them (a synonym's database with the prefix</span>
+<span class="sd">            ``synonym_id::``).</span>
+<span class="sd">        assembly (int | None): The assembly that serves :py:attr:`release` (or, for a history step,</span>
+<span class="sd">            :py:attr:`new_release`, the event's new side).</span>
+<span class="sd">        old_assembly (int | None): For a history step: the assembly that serves :py:attr:`old_release`, the event's</span>
+<span class="sd">            old side (it differs from :py:attr:`assembly` where the event crosses from one assembly to the next);</span>
+<span class="sd">            ``None`` otherwise.</span>
+<span class="sd">        reason (str): Why the step was taken: a key of :py:data:`STEP_REASONS`.</span>
+<span class="sd">    """</span>
+
+    <span class="n">kind</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">source</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">target</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">key</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">release</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">old_release</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">new_release</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">weight</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">splits</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">merges</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">databases</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
+    <span class="n">assembly</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">old_assembly</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">reason</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span></div>
+
+
+
+<div class="viewcode-block" id="ExplainedPath">
+<a class="viewcode-back" href="../../reference.html#idtrack.results.ExplainedPath">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ExplainedPath</span><span class="p">(</span><span class="n">_Result</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""The paths of a conversion as one graph: every node and step once; candidates refer to steps by index.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        nodes (tuple[PathNode, ...]): The nodes of every step, ordered by first use.</span>
+<span class="sd">        steps (tuple[PathStep, ...]): The steps of every candidate's path, each once, ordered by first use.</span>
+<span class="sd">    """</span>
+
+    <span class="n">nodes</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">PathNode</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+    <span class="n">steps</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">PathStep</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="ConversionResult">
+<a class="viewcode-back" href="../../reference.html#idtrack.results.ConversionResult">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ConversionResult</span><span class="p">(</span><span class="n">_Result</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""One identifier converted to a target release and database (:py:meth:`idtrack.API.convert`).</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        query_id (str): The identifier as given.</span>
+<span class="sd">        graph_id (str | None): The graph node the identifier was read as (``None``: not found). For an Ensembl</span>
+<span class="sd">            transcript or translation id without version this is its version of the starting release. A synonym is</span>
+<span class="sd">            named as the graph names it, with the prefix ``synonym_id::``.</span>
+<span class="sd">        match (str | None): How the identifier matched ``graph_id``: ``exact``, ``case``, ``separator``, ``version``</span>
+<span class="sd">            (each also after ``synonym:`` for a synonym), or ``version_newer_than_graph``; ``None`` when it is not in</span>
+<span class="sd">            the graph.</span>
+<span class="sd">        known_versions (tuple[str, ...]): For an Ensembl id written with a version the graph does not hold: the</span>
+<span class="sd">            versions that exist (the identifier is not answered with another version's gene).</span>
+<span class="sd">        from_release (int | None): The release at which the identifier was read.</span>
+<span class="sd">        from_release_inferred (bool): The release was chosen by the engine, not given.</span>
+<span class="sd">        from_release_given (int | None): The release given.</span>
+<span class="sd">        from_release_fallback (bool): The release given was set aside because the graph does not hold the identifier</span>
+<span class="sd">            there; it was read where the graph holds it.</span>
+<span class="sd">        from_databases (tuple[str, ...]): For an external id, the databases through which it was read at that release</span>
+<span class="sd">            (a synonym's database with the graph's prefix ``synonym_id::``).</span>
+<span class="sd">        to_release (int): The target release.</span>
+<span class="sd">        final_database (str | None): The database of the targets: the requested one, ``ensembl_gene`` when the genes</span>
+<span class="sd">            reached have no id in it (``no_target``), ``None`` when nothing was found.</span>
+<span class="sd">        candidates (tuple[Candidate, ...]): Every target reached, ranked, the best first and marked.</span>
+<span class="sd">        tie (bool): The best answer is shared by several genes or targets equal in all evidence.</span>
+<span class="sd">        decided_by (str | None): The criterion (:py:data:`CRITERIA`) that put the best answer before the runner-up;</span>
+<span class="sd">            ``None`` without a runner-up.</span>
+<span class="sd">        alternative_locus_genes (tuple[str, ...]): Copies on alternative loci and patches, and LRG records, that the</span>
+<span class="sd">            identifier also leads to beside genes of the reference sequence; not candidates.</span>
+<span class="sd">        no_target (bool): Genes were reached, but none has an id in the requested database; the candidates are the</span>
+<span class="sd">            genes.</span>
+<span class="sd">        no_target_genes (tuple[str, ...]): Genes reached without an id in the requested database while others have</span>
+<span class="sd">            one; not candidates.</span>
+<span class="sd">        status (str): One of :py:data:`STATUSES`.</span>
+<span class="sd">        reason (str | None): For a result without a target in the requested database (no candidates, or</span>
+<span class="sd">            ``no_target``: genes stand in for the missing id), a key of :py:data:`REASONS`; ``None`` otherwise.</span>
+<span class="sd">        error (ErrorInfo | None): In a batch, the error that stopped this identifier's conversion.</span>
+<span class="sd">        path (ExplainedPath | None): With ``explain``: the paths of the candidates (no node and no step when there</span>
+<span class="sd">            is no candidate); ``None`` without ``explain``.</span>
+<span class="sd">    """</span>
+
+    <span class="n">query_id</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">graph_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">match</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">known_versions</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+    <span class="n">from_release</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">from_release_inferred</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">from_release_given</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">from_release_fallback</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">from_databases</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+    <span class="n">to_release</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">final_database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">candidates</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Candidate</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+    <span class="n">tie</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">decided_by</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">alternative_locus_genes</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+    <span class="n">no_target</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">no_target_genes</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+    <span class="n">status</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">reason</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">error</span><span class="p">:</span> <span class="n">ErrorInfo</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">path</span><span class="p">:</span> <span class="n">ExplainedPath</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="ConversionResult.view">
+<a class="viewcode-back" href="../../reference.html#idtrack.results.ConversionResult.view">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">view</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">strategy</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"best"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Candidate</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Return the candidates of a strategy: ``best`` (the best answer) or ``all`` (every candidate, ranked).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            strategy: ``"best"`` or ``"all"``.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple[Candidate, ...]: The candidates, in rank order.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            idtrack.errors.InvalidArgumentError: For another strategy.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="n">check_strategy</span><span class="p">(</span><span class="n">strategy</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"best"</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">candidates</span> <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">best</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">candidates</span></div>
+
+
+<div class="viewcode-block" id="ConversionResult.targets">
+<a class="viewcode-back" href="../../reference.html#idtrack.results.ConversionResult.targets">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">targets</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">strategy</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"best"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Return the target ids of a strategy, each once, in rank order.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            strategy: ``"best"`` or ``"all"``.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple[str, ...]: The targets.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">target</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">strategy</span><span class="p">)))</span></div>
+
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">best</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Candidate</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""The candidates of the best answer (several in a tie)."""</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="s2">"best"</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="NameMatch">
+<a class="viewcode-back" href="../../reference.html#idtrack.results.NameMatch">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">NameMatch</span><span class="p">(</span><span class="n">_Result</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""A name of an external database attached to an Ensembl gene, and the releases at which it is.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        name (str): The name as the graph holds it (a synonym with the graph's prefix ``synonym_id::``).</span>
+<span class="sd">        gene (str): The Ensembl gene with version.</span>
+<span class="sd">        database (str): The database as the graph names it (a synonym's database with the prefix ``synonym_id::``).</span>
+<span class="sd">        synonym (bool): The name is one of the database's synonyms of the gene, not its name.</span>
+<span class="sd">        releases (tuple[int, ...]): The releases at which the database attaches the name to the gene on the assembly</span>
+<span class="sd">            that serves each, and the gene lies on the reference sequence, ascending.</span>
+<span class="sd">    """</span>
+
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">gene</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">database</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">synonym</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">releases</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="AssemblyDescription">
+<a class="viewcode-back" href="../../reference.html#idtrack.results.AssemblyDescription">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">AssemblyDescription</span><span class="p">(</span><span class="n">_Result</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""One genome assembly of a loaded graph.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        assembly (int): The assembly key of idtrack's organism table.</span>
+<span class="sd">        name (str | None): Ensembl's name of the assembly.</span>
+<span class="sd">        releases (tuple[int, ...]): The releases at which the graph holds data of it.</span>
+<span class="sd">        serves (tuple[int, ...]): The releases it serves (is the assembly whose annotation counts).</span>
+<span class="sd">        external_databases (tuple[str, ...]): The external databases of the graph on it, as the graph names them</span>
+<span class="sd">            (the databases of synonyms with the prefix ``synonym_id::``).</span>
+<span class="sd">        synonym_databases (tuple[str, ...]): Those of :py:attr:`external_databases` that hold synonyms.</span>
+<span class="sd">    """</span>
+
+    <span class="n">assembly</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">releases</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+    <span class="n">serves</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+    <span class="n">external_databases</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+    <span class="n">synonym_databases</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="GraphDescription">
+<a class="viewcode-back" href="../../reference.html#idtrack.results.GraphDescription">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GraphDescription</span><span class="p">(</span><span class="n">_Result</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""What a loaded graph holds (:py:meth:`idtrack.API.describe`), read from the graph without the network.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        organism (str): The organism.</span>
+<span class="sd">        primary_assembly (int): The assembly of the graph's snapshot release.</span>
+<span class="sd">        snapshot_release (int): The last release of the graph.</span>
+<span class="sd">        releases (tuple[int, ...]): Every release the graph covers.</span>
+<span class="sd">        assemblies (tuple[AssemblyDescription, ...]): The assemblies, by the organism table's priority.</span>
+<span class="sd">        serving_assembly (dict[str, int]): Release (as a string, a JSON key) to the assembly that serves it.</span>
+<span class="sd">        external_databases (tuple[str, ...]): The external databases of the graph (any assembly), as</span>
+<span class="sd">            :py:meth:`idtrack.API.external_databases` names them.</span>
+<span class="sd">        synonym_databases (tuple[str, ...]): Those of :py:attr:`external_databases` that hold synonyms.</span>
+<span class="sd">        final_databases (tuple[str, ...]): The databases a conversion to the snapshot release can end in.</span>
+<span class="sd">        forms (tuple[str, ...]): The Ensembl forms of the graph (``gene``, ``transcript``, ``translation``).</span>
+<span class="sd">        format_version (int | None): The graph file's format version (``None`` for a graph made in memory).</span>
+<span class="sd">        package_version (str | None): The idtrack version that built the graph.</span>
+<span class="sd">        package_commit (str | None): The git commit of idtrack that built the graph, where it was known.</span>
+<span class="sd">        content_digest (str | None): The digest of the graph's content.</span>
+<span class="sd">        build_date (str | None): When the graph was built.</span>
+<span class="sd">        counts (dict[str, int]): Counts of the build (nodes, edges, ...), as the graph file records them.</span>
+<span class="sd">    """</span>
+
+    <span class="n">organism</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">primary_assembly</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">snapshot_release</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">releases</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+    <span class="n">assemblies</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">AssemblyDescription</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+    <span class="n">serving_assembly</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span>
+    <span class="n">external_databases</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+    <span class="n">synonym_databases</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+    <span class="n">final_databases</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+    <span class="n">forms</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+    <span class="n">format_version</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">package_version</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">package_commit</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">content_digest</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">build_date</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">counts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span></div>
+
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">"CRITERIA"</span><span class="p">,</span>
+    <span class="s2">"REASONS"</span><span class="p">,</span>
+    <span class="s2">"STATUSES"</span><span class="p">,</span>
+    <span class="s2">"STEP_REASONS"</span><span class="p">,</span>
+    <span class="s2">"STRATEGIES"</span><span class="p">,</span>
+    <span class="s2">"AssemblyDescription"</span><span class="p">,</span>
+    <span class="s2">"Candidate"</span><span class="p">,</span>
+    <span class="s2">"ConversionResult"</span><span class="p">,</span>
+    <span class="s2">"ErrorInfo"</span><span class="p">,</span>
+    <span class="s2">"ExplainedPath"</span><span class="p">,</span>
+    <span class="s2">"GraphDescription"</span><span class="p">,</span>
+    <span class="s2">"NameMatch"</span><span class="p">,</span>
+    <span class="s2">"PathNode"</span><span class="p">,</span>
+    <span class="s2">"PathStep"</span><span class="p">,</span>
+    <span class="s2">"check_strategy"</span><span class="p">,</span>
+<span class="p">]</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Kemal Inecik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

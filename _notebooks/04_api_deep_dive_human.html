@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Part 4 — Core API Deep-Dive (Human Example) &mdash; idtrack 0.0.5 documentation</title>
+  <title>Part 4 — Core API Deep-Dive (Human Example) &mdash; idtrack 0.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=6a604523" />
@@ -17,7 +17,7 @@
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=282f96c0"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../_static/design-tabs.js?v=fcb327ea"></script>
@@ -79,15 +79,15 @@
 <li class="toctree-l4"><a class="reference internal" href="#4.2.1-Example:-time-travel-(convert-to-an-older-release)">4.2.1 Example: time travel (convert to an older release)</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#4.2.2-Convert-into-an-external-database-(HGNC)">4.2.2 Convert into an external database (HGNC)</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#4.2.3-How-do-I-know-which-external-databases-are-available?">4.2.3 How do I know which external databases are available?</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#4.2.4-Understanding-the-result-dictionary">4.2.4 Understanding the result dictionary</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#4.2.4-Understanding-the-result">4.2.4 Understanding the result</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#4.2.5-Versions,-spelling-variants-and-releases">4.2.5 Versions, spelling variants and releases</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#4.2.6-Ambiguity-control:-strategy='best'-vs-strategy='all'">4.2.6 Ambiguity control: strategy=’best’ vs strategy=’all’</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#4.2.6-Ambiguity:-the-best-answer-and-every-candidate">4.2.6 Ambiguity: the best answer and every candidate</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#4.3-—-Batch-Conversion">4.3 — Batch Conversion</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#4.4-—-Explainability-&amp;-Auditability">4.4 — Explainability &amp; Auditability</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#4.5-—-Advanced-Conversion-Options">4.5 — Advanced Conversion Options</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#4.5.1-Best-vs-all-(selection-strategy)">4.5.1 Best vs all (selection strategy)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#4.5.1-Best-vs-all">4.5.1 Best vs all</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#4.5.2-Controlling-external-bridging">4.5.2 Controlling external bridging</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#4.5.3-Hyperconnected-nodes">4.5.3 Hyperconnected nodes</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#4.5.4-Assembly-aware-conversions">4.5.4 Assembly-aware conversions</a></li>
@@ -109,7 +109,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../changes.html">Changes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributor Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../authors.html">Credits</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code_of_conduct.html">Code of Conduct</a></li>
 </ul>
 
         </div>
@@ -145,11 +145,11 @@
 <p>This notebook is a <strong>hands-on tutorial</strong> of the public IDTrack API using <strong>human</strong>.</p>
 <p><strong>Learning objectives</strong></p>
 <ul class="simple">
-<li><p>Create the <code class="docutils literal notranslate"><span class="pre">idtrack.API</span></code> façade and understand what it wraps.</p></li>
+<li><p>Load a graph into <code class="docutils literal notranslate"><span class="pre">idtrack.API</span></code> and understand what it wraps.</p></li>
 <li><p>Convert single identifiers (time travel + optional external outputs).</p></li>
 <li><p>Convert batches and summarize outcomes (1→0 / 1→1 / 1→n).</p></li>
 <li><p>Request explanation payloads for audit trails.</p></li>
-<li><p>Learn advanced knobs (external bridging, ambiguity strategy, assembly awareness).</p></li>
+<li><p>Learn advanced knobs (external bridging, the ranking of candidates, search budgets, assembly awareness).</p></li>
 <li><p>Learn introspection helpers (available databases, assemblies, releases, active ranges).</p></li>
 </ul>
 <blockquote>
@@ -160,12 +160,12 @@
 <p><code class="docutils literal notranslate"><span class="pre">idtrack.API</span></code> is the user-facing entry point. It handles:</p>
 <ul class="simple">
 <li><p>organism resolution (species names, common names and taxon IDs of the supported organisms: human, mouse, pig, rhesus and cynomolgus macaque)</p></li>
-<li><p>building or loading a graph snapshot (the reproducible snapshot boundary)</p></li>
-<li><p>conversion helpers like <code class="docutils literal notranslate"><span class="pre">convert_identifier(...)</span></code> and <code class="docutils literal notranslate"><span class="pre">convert_identifier_multiple(...)</span></code></p></li>
+<li><p>building or loading a graph snapshot (<code class="docutils literal notranslate"><span class="pre">API.build</span></code>, <code class="docutils literal notranslate"><span class="pre">API.load</span></code>; the reproducible snapshot boundary)</p></li>
+<li><p>conversions: <code class="docutils literal notranslate"><span class="pre">convert(...)</span></code> and <code class="docutils literal notranslate"><span class="pre">convert_many(...)</span></code>, which return typed results (<code class="docutils literal notranslate"><span class="pre">idtrack.results.ConversionResult</span></code>)</p></li>
 </ul>
 <p>In this notebook we build (or load) the <strong>human</strong> snapshot, then use it for the rest of the examples.</p>
 <blockquote>
-<div><p><strong>Expected result:</strong> after the setup cell runs, <code class="docutils literal notranslate"><span class="pre">api.track</span></code> exists and conversions become available.</p>
+<div><p><strong>Expected result:</strong> after the setup cell runs, <code class="docutils literal notranslate"><span class="pre">api</span></code> holds the graph and conversions become available.</p>
 </div></blockquote>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>1
@@ -177,28 +177,33 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack</span><span class="w"> </span><span class="kn">import</span> <span class="n">API</span>
 
 <span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'IDTRACK_LOCAL_REPO'</span><span class="p">,</span> <span class="s1">'idtrack_cache'</span><span class="p">))</span>
 <span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-<span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
-<span class="n">api</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
+<span class="n">API</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
 
-<span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">'human'</span><span class="p">)</span>
-<span class="n">SNAPSHOT_RELEASE</span> <span class="o">=</span> <span class="mi">115</span>  <span class="c1"># pinned (latest_release is Ensembl's newest release)</span>
+<span class="n">organism</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">organisms</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">'human'</span><span class="p">)</span>  <span class="c1"># offline; API.ensembl_organism also asks Ensembl's newest release</span>
+<span class="n">SNAPSHOT_RELEASE</span> <span class="o">=</span> <span class="mi">115</span>  <span class="c1"># pinned</span>
 
-<span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">organism</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">)</span>
+<span class="n">api</span> <span class="o">=</span> <span class="n">API</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">organism</span><span class="p">,</span> <span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">'Ready:'</span><span class="p">,</span> <span class="n">organism</span><span class="p">,</span> <span class="s1">'snapshot'</span><span class="p">,</span> <span class="n">SNAPSHOT_RELEASE</span><span class="p">)</span>
-<br/></pre></div>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">show</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">strategy</span><span class="o">=</span><span class="s1">'best'</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Print the main fields of a conversion result and its candidates of one view ('best' or 'all')."""</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">query_id</span><span class="si">!r}</span><span class="s1"> read as </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">graph_id</span><span class="si">!r}</span><span class="s1"> (match: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">match</span><span class="si">}</span><span class="s1">) at release </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">from_release</span><span class="si">}</span><span class="s1"> '</span>
+          <span class="sa">f</span><span class="s1">'-&gt; </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">final_database</span><span class="si">}</span><span class="s1"> at </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">to_release</span><span class="si">}</span><span class="s1">: status=</span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">status</span><span class="si">}</span><span class="s1">, tie=</span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">tie</span><span class="si">}</span><span class="s1">, '</span>
+          <span class="sa">f</span><span class="s1">'decided_by=</span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">decided_by</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">strategy</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">'  </span><span class="si">{</span><span class="n">c</span><span class="o">.</span><span class="n">gene</span><span class="si">}</span><span class="s1"> -&gt; </span><span class="si">{</span><span class="n">c</span><span class="o">.</span><span class="n">target</span><span class="si">}</span><span class="s1">  best=</span><span class="si">{</span><span class="n">c</span><span class="o">.</span><span class="n">best</span><span class="si">}</span><span class="s1"> entry=</span><span class="si">{</span><span class="n">c</span><span class="o">.</span><span class="n">entry_gene</span><span class="si">}</span><span class="s1"> bridges=</span><span class="si">{</span><span class="n">c</span><span class="o">.</span><span class="n">bridges</span><span class="si">}</span><span class="s1"> score=</span><span class="si">{</span><span class="n">c</span><span class="o">.</span><span class="n">score</span><span class="si">:</span><span class="s1">.3f</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">alternative_locus_genes</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">'  copies on alternative loci:'</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">alternative_locus_genes</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">reason</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">'  reason:'</span><span class="p">,</span> <span class="n">API</span><span class="o">.</span><span class="n">reason_text</span><span class="p">(</span><span class="n">result</span><span class="p">))</span>
+</pre></div>
 </div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-2026-11-12 15:17:47 INFO:idtrack._verify_organism: Ensembl Rest API query to get the organism names and associated releases.
-</pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
@@ -215,44 +220,21 @@ Ready: homo_sapiens snapshot 115
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>2
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="s1">'TP53'</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">)</span>
-<br/></pre></div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">show</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s1">'TP53'</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">))</span>
+</pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>2
-</pre></div>
+<div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-{&#39;query_id&#39;: &#39;TP53&#39;,
- &#39;graph_id&#39;: &#39;TP53&#39;,
- &#39;match&#39;: &#39;exact&#39;,
- &#39;known_versions&#39;: [],
- &#39;from_release&#39;: 115,
- &#39;from_release_inferred&#39;: True,
- &#39;from_release_given&#39;: None,
- &#39;from_release_fallback&#39;: False,
- &#39;from_databases&#39;: [&#39;HGNC Symbol&#39;,
-  &#39;NCBI gene (formerly Entrezgene)&#39;,
-  &#39;UniProtKB Gene Name&#39;],
- &#39;to_release&#39;: 115,
- &#39;strategy&#39;: &#39;best&#39;,
- &#39;final_database&#39;: &#39;ensembl_gene&#39;,
- &#39;target_id&#39;: [&#39;ENSG00000141510.20&#39;],
- &#39;last_node&#39;: [[&#39;ENSG00000141510.20&#39;, &#39;ENSG00000141510.20&#39;]],
- &#39;ambiguous&#39;: False,
- &#39;tie&#39;: False,
- &#39;alternative_locus_genes&#39;: [&#39;LRG_321.1&#39;],
- &#39;no_corresponding&#39;: False,
- &#39;no_conversion&#39;: False,
- &#39;no_target&#39;: False,
- &#39;no_target_genes&#39;: [],
- &#39;error&#39;: None}
+&#39;TP53&#39; read as &#39;TP53&#39; (match: exact) at release 115 -&gt; ensembl_gene at 115: status=converted, tie=False, decided_by=None
+  ENSG00000141510.20 -&gt; ENSG00000141510.20  best=True entry=ENSG00000141510.20 bridges=0 score=1.000
+  copies on alternative loci: [&#39;LRG_321.1&#39;]
 </pre></div></div>
 </div>
-<p>If you see <code class="docutils literal notranslate"><span class="pre">no_corresponding=True</span></code>, the input could not be matched to any identifier of the graph. IDTrack already tries the letter-case and separator variants (<code class="docutils literal notranslate"><span class="pre">tp53</span></code>, <code class="docutils literal notranslate"><span class="pre">HLA_A</span></code> for <code class="docutils literal notranslate"><span class="pre">HLA-A</span></code>) and says in <code class="docutils literal notranslate"><span class="pre">match</span></code> how the identifier matched; <code class="docutils literal notranslate"><span class="pre">graph_id</span></code> is the identifier of the graph it was read as, and <code class="docutils literal notranslate"><span class="pre">from_release</span></code> the release at which it was read. Without <code class="docutils literal notranslate"><span class="pre">from_release</span></code>, an identifier is read at the target release if it exists there, otherwise at the latest release at which it
-exists.</p>
+<p>If the status is <code class="docutils literal notranslate"><span class="pre">not_found</span></code>, the input could not be matched to any identifier of the graph. IDTrack already tries the letter-case and separator variants (<code class="docutils literal notranslate"><span class="pre">tp53</span></code>, <code class="docutils literal notranslate"><span class="pre">HLA_A</span></code> for <code class="docutils literal notranslate"><span class="pre">HLA-A</span></code>) and says in <code class="docutils literal notranslate"><span class="pre">match</span></code> how the identifier matched; <code class="docutils literal notranslate"><span class="pre">graph_id</span></code> is the identifier of the graph it was read as, and <code class="docutils literal notranslate"><span class="pre">from_release</span></code> the release at which it was read. Without <code class="docutils literal notranslate"><span class="pre">from_release</span></code>, an identifier is read at the target release if it exists there, otherwise at the latest release at which it exists.</p>
 <p><code class="docutils literal notranslate"><span class="pre">alternative_locus_genes</span></code> lists genes the identifier also leads to that are copies on alternative loci, assembly patches or LRG records (<code class="docutils literal notranslate"><span class="pre">LRG_321.1</span></code> for TP53): they are reported apart from the answer, which holds the gene of the reference sequence.</p>
 <section id="4.2.1-Example:-time-travel-(convert-to-an-older-release)">
 <h3>4.2.1 Example: time travel (convert to an older release)<a class="headerlink" href="#4.2.1-Example:-time-travel-(convert-to-an-older-release)" title="Link to this heading"></a></h3>
@@ -263,40 +245,18 @@ exists.</p>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Choose an older release to demonstrate time travel</span>
 <span class="n">older_release</span> <span class="o">=</span> <span class="n">SNAPSHOT_RELEASE</span> <span class="o">-</span> <span class="mi">10</span>
-<span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="s1">'TP53'</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">older_release</span><span class="p">)</span>
-<br/></pre></div>
+<span class="n">show</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s1">'TP53'</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">older_release</span><span class="p">))</span>
+</pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>3
-</pre></div>
+<div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-{&#39;query_id&#39;: &#39;TP53&#39;,
- &#39;graph_id&#39;: &#39;TP53&#39;,
- &#39;match&#39;: &#39;exact&#39;,
- &#39;known_versions&#39;: [],
- &#39;from_release&#39;: 105,
- &#39;from_release_inferred&#39;: True,
- &#39;from_release_given&#39;: None,
- &#39;from_release_fallback&#39;: False,
- &#39;from_databases&#39;: [&#39;HGNC Symbol&#39;,
-  &#39;NCBI gene (formerly Entrezgene)&#39;,
-  &#39;UniProtKB Gene Name&#39;],
- &#39;to_release&#39;: 105,
- &#39;strategy&#39;: &#39;best&#39;,
- &#39;final_database&#39;: &#39;ensembl_gene&#39;,
- &#39;target_id&#39;: [&#39;ENSG00000141510.18&#39;],
- &#39;last_node&#39;: [[&#39;ENSG00000141510.18&#39;, &#39;ENSG00000141510.18&#39;]],
- &#39;ambiguous&#39;: False,
- &#39;tie&#39;: False,
- &#39;alternative_locus_genes&#39;: [&#39;LRG_321.1&#39;],
- &#39;no_corresponding&#39;: False,
- &#39;no_conversion&#39;: False,
- &#39;no_target&#39;: False,
- &#39;no_target_genes&#39;: [],
- &#39;error&#39;: None}
+&#39;TP53&#39; read as &#39;TP53&#39; (match: exact) at release 105 -&gt; ensembl_gene at 105: status=converted, tie=False, decided_by=None
+  ENSG00000141510.18 -&gt; ENSG00000141510.18  best=True entry=ENSG00000141510.18 bridges=0 score=1.000
+  copies on alternative loci: [&#39;LRG_321.1&#39;]
 </pre></div></div>
 </div>
 </section>
@@ -307,104 +267,56 @@ exists.</p>
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>4
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="s1">'ENSG00000141510'</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">final_database</span><span class="o">=</span><span class="s1">'HGNC Symbol'</span><span class="p">)</span>
-<br/></pre></div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">show</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s1">'ENSG00000141510'</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">final_database</span><span class="o">=</span><span class="s1">'HGNC Symbol'</span><span class="p">))</span>
+</pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>4
-</pre></div>
+<div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-{&#39;query_id&#39;: &#39;ENSG00000141510&#39;,
- &#39;graph_id&#39;: &#39;ENSG00000141510&#39;,
- &#39;match&#39;: &#39;exact&#39;,
- &#39;known_versions&#39;: [],
- &#39;from_release&#39;: 115,
- &#39;from_release_inferred&#39;: True,
- &#39;from_release_given&#39;: None,
- &#39;from_release_fallback&#39;: False,
- &#39;from_databases&#39;: [&#39;base_ensembl_gene&#39;],
- &#39;to_release&#39;: 115,
- &#39;strategy&#39;: &#39;best&#39;,
- &#39;final_database&#39;: &#39;HGNC Symbol&#39;,
- &#39;target_id&#39;: [&#39;TP53&#39;],
- &#39;last_node&#39;: [[&#39;ENSG00000141510.20&#39;, &#39;TP53&#39;]],
- &#39;ambiguous&#39;: False,
- &#39;tie&#39;: False,
- &#39;alternative_locus_genes&#39;: [],
- &#39;no_corresponding&#39;: False,
- &#39;no_conversion&#39;: False,
- &#39;no_target&#39;: False,
- &#39;no_target_genes&#39;: [],
- &#39;error&#39;: None}
+&#39;ENSG00000141510&#39; read as &#39;ENSG00000141510&#39; (match: exact) at release 115 -&gt; HGNC Symbol at 115: status=converted, tie=False, decided_by=None
+  ENSG00000141510.20 -&gt; TP53  best=True entry=ENSG00000141510.20 bridges=0 score=1.000
 </pre></div></div>
 </div>
 </section>
 <section id="4.2.3-How-do-I-know-which-external-databases-are-available?">
 <h3>4.2.3 How do I know which external databases are available?<a class="headerlink" href="#4.2.3-How-do-I-know-which-external-databases-are-available?" title="Link to this heading"></a></h3>
-<p>Use the graph itself to list databases currently represented.</p>
+<p>Ask the API: <code class="docutils literal notranslate"><span class="pre">external_databases()</span></code> lists the databases of the graph, <code class="docutils literal notranslate"><span class="pre">final_databases(to_release)</span></code> the values that <code class="docutils literal notranslate"><span class="pre">final_database</span></code> accepts at a target release.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>5
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">g</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span>
-<span class="nb">sorted</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">available_external_databases</span><span class="p">)[:</span><span class="mi">50</span><span class="p">]</span>
-<br/></pre></div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">external_databases</span><span class="p">()[:</span><span class="mi">50</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">final_databases</span><span class="p">(</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">)[:</span><span class="mi">10</span><span class="p">])</span>
+</pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>5
-</pre></div>
+<div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-[&#39;CCDS&#39;,
- &#39;Clone_based_ensembl_gene&#39;,
- &#39;Clone_based_vega_gene&#39;,
- &#39;EntrezGene&#39;,
- &#39;HGNC Symbol&#39;,
- &#39;Havana gene&#39;,
- &#39;Havana transcript&#39;,
- &#39;Havana translation&#39;,
- &#39;NCBI gene&#39;,
- &#39;NCBI gene (formerly Entrezgene)&#39;,
- &#39;RFAM&#39;,
- &#39;RefSeq_mRNA&#39;,
- &#39;RefSeq_mRNA_predicted&#39;,
- &#39;RefSeq_ncRNA&#39;,
- &#39;RefSeq_ncRNA_predicted&#39;,
- &#39;RefSeq_peptide&#39;,
- &#39;RefSeq_peptide_predicted&#39;,
- &#39;UniProtKB Gene Name&#39;,
- &#39;Uniprot/SPTREMBL&#39;,
- &#39;Uniprot/SWISSPROT&#39;,
- &#39;Vega gene&#39;,
- &#39;Vega_gene&#39;,
- &#39;synonym_id::EntrezGene&#39;,
- &#39;synonym_id::HGNC Symbol&#39;,
- &#39;synonym_id::NCBI gene&#39;,
- &#39;synonym_id::NCBI gene (formerly Entrezgene)&#39;,
- &#39;synonym_id::UniProtKB Gene Name&#39;]
+[&#39;CCDS&#39;, &#39;Clone_based_ensembl_gene&#39;, &#39;Clone_based_vega_gene&#39;, &#39;EntrezGene&#39;, &#39;HGNC Symbol&#39;, &#39;Havana gene&#39;, &#39;Havana transcript&#39;, &#39;Havana translation&#39;, &#39;NCBI gene&#39;, &#39;NCBI gene (formerly Entrezgene)&#39;, &#39;RFAM&#39;, &#39;RefSeq_mRNA&#39;, &#39;RefSeq_mRNA_predicted&#39;, &#39;RefSeq_ncRNA&#39;, &#39;RefSeq_ncRNA_predicted&#39;, &#39;RefSeq_peptide&#39;, &#39;RefSeq_peptide_predicted&#39;, &#39;UniProtKB Gene Name&#39;, &#39;Uniprot/SPTREMBL&#39;, &#39;Uniprot/SWISSPROT&#39;, &#39;Vega gene&#39;, &#39;Vega_gene&#39;, &#39;synonym_id::EntrezGene&#39;, &#39;synonym_id::HGNC Symbol&#39;, &#39;synonym_id::NCBI gene&#39;, &#39;synonym_id::NCBI gene (formerly Entrezgene)&#39;, &#39;synonym_id::UniProtKB Gene Name&#39;]
+[&#39;CCDS&#39;, &#39;Clone_based_ensembl_gene&#39;, &#39;Clone_based_vega_gene&#39;, &#39;EntrezGene&#39;, &#39;HGNC Symbol&#39;, &#39;Havana gene&#39;, &#39;Havana transcript&#39;, &#39;Havana translation&#39;, &#39;NCBI gene&#39;, &#39;NCBI gene (formerly Entrezgene)&#39;]
 </pre></div></div>
 </div>
 </section>
-<section id="4.2.4-Understanding-the-result-dictionary">
-<h3>4.2.4 Understanding the result dictionary<a class="headerlink" href="#4.2.4-Understanding-the-result-dictionary" title="Link to this heading"></a></h3>
-<p>Key fields (the docstring of <code class="docutils literal notranslate"><span class="pre">API.convert_identifier</span></code> lists every field):</p>
+<section id="4.2.4-Understanding-the-result">
+<h3>4.2.4 Understanding the result<a class="headerlink" href="#4.2.4-Understanding-the-result" title="Link to this heading"></a></h3>
+<p>A result is an <code class="docutils literal notranslate"><span class="pre">idtrack.results.ConversionResult</span></code> (a frozen dataclass; its docstring lists every field):</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">query_id</span></code>: exactly what you typed</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">graph_id</span></code>: the identifier of the graph it was read as; <code class="docutils literal notranslate"><span class="pre">match</span></code>: how it matched (<code class="docutils literal notranslate"><span class="pre">exact</span></code>, <code class="docutils literal notranslate"><span class="pre">case</span></code>, <code class="docutils literal notranslate"><span class="pre">separator</span></code>, <code class="docutils literal notranslate"><span class="pre">version</span></code>, <code class="docutils literal notranslate"><span class="pre">synonym:...</span></code>, <code class="docutils literal notranslate"><span class="pre">version_newer_than_graph</span></code>)</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">from_release</span></code>: the release it was read at; <code class="docutils literal notranslate"><span class="pre">from_release_inferred</span></code>: chosen by IDTrack (no <code class="docutils literal notranslate"><span class="pre">from_release</span></code> given); <code class="docutils literal notranslate"><span class="pre">from_release_fallback</span></code>: the <code class="docutils literal notranslate"><span class="pre">from_release</span></code> you gave does not hold the identifier, so it was read where the graph holds it</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">target_id</span></code>: list of outputs (can be 0, 1, or many), in a fixed order; <code class="docutils literal notranslate"><span class="pre">last_node</span></code>: <code class="docutils literal notranslate"><span class="pre">[gene,</span> <span class="pre">target]</span></code> pairs</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">ambiguous</span></code>: more than one target; <code class="docutils literal notranslate"><span class="pre">tie</span></code>: the best answer is shared by several genes or targets equal in all evidence</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">candidates</span></code>: every target the search reached, ranked, the best marked (<code class="docutils literal notranslate"><span class="pre">candidate.best</span></code>); <code class="docutils literal notranslate"><span class="pre">targets('best')</span></code> and <code class="docutils literal notranslate"><span class="pre">targets('all')</span></code> are the target ids of the two views (<code class="docutils literal notranslate"><span class="pre">view('best')</span></code>, <code class="docutils literal notranslate"><span class="pre">view('all')</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tie</span></code>: the best answer is shared by several genes or targets equal in all evidence; <code class="docutils literal notranslate"><span class="pre">decided_by</span></code>: the criterion that put the best answer before the runner-up</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">alternative_locus_genes</span></code>: copies on alternative loci and patches reported apart from the answer</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">no_corresponding</span></code>: input didn’t match any identifier of the graph (<code class="docutils literal notranslate"><span class="pre">known_versions</span></code> lists the versions that exist when you gave an Ensembl id with a version the graph does not hold)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">no_conversion</span></code>: input matched, but no gene at the target release descends from it</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">status</span></code>: <code class="docutils literal notranslate"><span class="pre">converted</span></code>, <code class="docutils literal notranslate"><span class="pre">tie</span></code>, <code class="docutils literal notranslate"><span class="pre">no_target</span></code>, <code class="docutils literal notranslate"><span class="pre">not_found</span></code> (input didn’t match any identifier of the graph), <code class="docutils literal notranslate"><span class="pre">unknown_version</span></code> (<code class="docutils literal notranslate"><span class="pre">known_versions</span></code> lists the versions that exist), <code class="docutils literal notranslate"><span class="pre">no_conversion</span></code> (input matched, but no gene at the target release descends from it) or <code class="docutils literal notranslate"><span class="pre">error</span></code>; <code class="docutils literal notranslate"><span class="pre">reason</span></code> says why a result has no candidate</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">no_target</span></code>: genes were reached, but none has an id in the requested database (the targets are then their Ensembl ids); <code class="docutils literal notranslate"><span class="pre">no_target_genes</span></code>: genes without such an id when others have one</p></li>
 </ul>
-<p>Important: <code class="docutils literal notranslate"><span class="pre">target_id</span></code> is a list because ambiguity is real and common. Every result is plain data (<code class="docutils literal notranslate"><span class="pre">json.dumps</span></code> works on it).</p>
+<p>Important: there can be 0, 1 or many targets, because ambiguity is real and common. Every result is strict JSON with <code class="docutils literal notranslate"><span class="pre">result.to_dict()</span></code>, and <code class="docutils literal notranslate"><span class="pre">ConversionResult.from_dict(...)</span></code> reads it back.</p>
 </section>
 <section id="4.2.5-Versions,-spelling-variants-and-releases">
 <h3>4.2.5 Versions, spelling variants and releases<a class="headerlink" href="#4.2.5-Versions,-spelling-variants-and-releases" title="Link to this heading"></a></h3>
@@ -417,7 +329,9 @@ exists.</p>
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>6
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">examples</span> <span class="o">=</span> <span class="p">[</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">InputError</span>
+
+<span class="n">examples</span> <span class="o">=</span> <span class="p">[</span>
     <span class="p">(</span><span class="s1">'ENSG00000141510.5'</span><span class="p">,</span> <span class="p">{}),</span>                      <span class="c1"># an old version: read where it exists (release 54), followed to 115</span>
     <span class="p">(</span><span class="s1">'ENSG00000141510.3'</span><span class="p">,</span> <span class="p">{}),</span>                      <span class="c1"># a version the graph does not hold (its first is .4): nothing</span>
     <span class="p">(</span><span class="s1">'ENSG00000141510.25'</span><span class="p">,</span> <span class="p">{}),</span>                     <span class="c1"># newer than the graph's latest version: read as the latest version</span>
@@ -425,18 +339,18 @@ exists.</p>
     <span class="p">(</span><span class="s1">'NM_000546.9'</span><span class="p">,</span> <span class="p">{}),</span>                            <span class="c1"># a RefSeq accession with a version the graph does not hold</span>
     <span class="p">(</span><span class="s1">'TP53'</span><span class="p">,</span> <span class="p">{</span><span class="s1">'from_release'</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="s1">'to_release'</span><span class="p">:</span> <span class="mi">50</span><span class="p">}),</span>  <span class="c1"># read and converted at an NCBI36 release</span>
     <span class="p">(</span><span class="s1">'ENSG00000141510.20'</span><span class="p">,</span> <span class="p">{</span><span class="s1">'from_release'</span><span class="p">:</span> <span class="mi">100</span><span class="p">}),</span>  <span class="c1"># this version did not exist at 100: read where it exists, flagged</span>
-    <span class="p">(</span><span class="s1">'ENSG00000141510'</span><span class="p">,</span> <span class="p">{</span><span class="s1">'from_release'</span><span class="p">:</span> <span class="mi">40</span><span class="p">}),</span>      <span class="c1"># not a release of the graph: a ValueError names the valid ones</span>
+    <span class="p">(</span><span class="s1">'ENSG00000141510'</span><span class="p">,</span> <span class="p">{</span><span class="s1">'from_release'</span><span class="p">:</span> <span class="mi">40</span><span class="p">}),</span>      <span class="c1"># not a release of the graph: an input error names the valid ones</span>
 <span class="p">]</span>
 <span class="k">for</span> <span class="n">query</span><span class="p">,</span> <span class="n">kwargs</span> <span class="ow">in</span> <span class="n">examples</span><span class="p">:</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">r</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-    <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">query</span><span class="si">!r}</span><span class="s1"> </span><span class="si">{</span><span class="n">kwargs</span><span class="si">}</span><span class="s1"> -&gt; ValueError: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">InputError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">query</span><span class="si">!r}</span><span class="s1"> </span><span class="si">{</span><span class="n">kwargs</span><span class="si">}</span><span class="s1"> -&gt; </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">error</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
         <span class="k">continue</span>
-    <span class="n">versions</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="s1">'known_versions'</span><span class="p">]</span>
+    <span class="n">versions</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">known_versions</span>
     <span class="n">known</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">' known_versions: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">versions</span><span class="p">)</span><span class="si">}</span><span class="s1">, </span><span class="si">{</span><span class="n">versions</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1"> to </span><span class="si">{</span><span class="n">versions</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s1">'</span> <span class="k">if</span> <span class="n">versions</span> <span class="k">else</span> <span class="s1">''</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">query</span><span class="si">!r}</span><span class="s2"> </span><span class="si">{</span><span class="n">kwargs</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">r</span><span class="p">[</span><span class="s1">'target_id'</span><span class="p">]</span><span class="si">}</span><span class="s2"> | graph_id=</span><span class="si">{</span><span class="n">r</span><span class="p">[</span><span class="s1">'graph_id'</span><span class="p">]</span><span class="si">!r}</span><span class="s2"> match=</span><span class="si">{</span><span class="n">r</span><span class="p">[</span><span class="s1">'match'</span><span class="p">]</span><span class="si">!r}</span><span class="s2"> "</span>
-          <span class="sa">f</span><span class="s2">"from_release=</span><span class="si">{</span><span class="n">r</span><span class="p">[</span><span class="s1">'from_release'</span><span class="p">]</span><span class="si">}</span><span class="s2"> fallback=</span><span class="si">{</span><span class="n">r</span><span class="p">[</span><span class="s1">'from_release_fallback'</span><span class="p">]</span><span class="si">}</span><span class="s2"> no_corresponding=</span><span class="si">{</span><span class="n">r</span><span class="p">[</span><span class="s1">'no_corresponding'</span><span class="p">]</span><span class="si">}{</span><span class="n">known</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">query</span><span class="si">!r}</span><span class="s2"> </span><span class="si">{</span><span class="n">kwargs</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">targets</span><span class="p">())</span><span class="si">}</span><span class="s2"> | graph_id=</span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">graph_id</span><span class="si">!r}</span><span class="s2"> match=</span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">match</span><span class="si">!r}</span><span class="s2"> "</span>
+          <span class="sa">f</span><span class="s2">"from_release=</span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">from_release</span><span class="si">}</span><span class="s2"> fallback=</span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">from_release_fallback</span><span class="si">}</span><span class="s2"> status=</span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">status</span><span class="si">}{</span><span class="n">known</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -445,31 +359,45 @@ exists.</p>
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&#39;ENSG00000141510.5&#39; {} -&gt; [&#39;ENSG00000141510.20&#39;] | graph_id=&#39;ENSG00000141510.5&#39; match=&#39;exact&#39; from_release=54 fallback=False no_corresponding=False
-&#39;ENSG00000141510.3&#39; {} -&gt; [] | graph_id=None match=None from_release=None fallback=False no_corresponding=True known_versions: 17, ENSG00000141510.4 to ENSG00000141510.20
-&#39;ENSG00000141510.25&#39; {} -&gt; [&#39;ENSG00000141510.20&#39;] | graph_id=&#39;ENSG00000141510.20&#39; match=&#39;version_newer_than_graph&#39; from_release=115 fallback=False no_corresponding=False
-&#39;hla_a&#39; {} -&gt; [&#39;ENSG00000206503.16&#39;] | graph_id=&#39;HLA-A&#39; match=&#39;separator&#39; from_release=115 fallback=False no_corresponding=False
-&#39;NM_000546.9&#39; {} -&gt; [&#39;ENSG00000141510.20&#39;] | graph_id=&#39;NM_000546&#39; match=&#39;version&#39; from_release=115 fallback=False no_corresponding=False
-&#39;TP53&#39; {&#39;from_release&#39;: 50, &#39;to_release&#39;: 50} -&gt; [&#39;ENSG00000141510.5&#39;] | graph_id=&#39;TP53&#39; match=&#39;exact&#39; from_release=50 fallback=False no_corresponding=False
-&#39;ENSG00000141510.20&#39; {&#39;from_release&#39;: 100} -&gt; [&#39;ENSG00000141510.20&#39;] | graph_id=&#39;ENSG00000141510.20&#39; match=&#39;exact&#39; from_release=115 fallback=True no_corresponding=False
-&#39;ENSG00000141510&#39; {&#39;from_release&#39;: 40} -&gt; ValueError: `from_release`=40 is not a release of the loaded graph; valid releases are 48 to 115.
+&#39;ENSG00000141510.5&#39; {} -&gt; [&#39;ENSG00000141510.20&#39;] | graph_id=&#39;ENSG00000141510.5&#39; match=&#39;exact&#39; from_release=54 fallback=False status=converted
+&#39;ENSG00000141510.3&#39; {} -&gt; [] | graph_id=None match=None from_release=None fallback=False status=unknown_version known_versions: 17, ENSG00000141510.4 to ENSG00000141510.20
+&#39;ENSG00000141510.25&#39; {} -&gt; [&#39;ENSG00000141510.20&#39;] | graph_id=&#39;ENSG00000141510.20&#39; match=&#39;version_newer_than_graph&#39; from_release=115 fallback=False status=converted
+&#39;hla_a&#39; {} -&gt; [&#39;ENSG00000206503.16&#39;] | graph_id=&#39;HLA-A&#39; match=&#39;separator&#39; from_release=115 fallback=False status=converted
+&#39;NM_000546.9&#39; {} -&gt; [&#39;ENSG00000141510.20&#39;] | graph_id=&#39;NM_000546&#39; match=&#39;version&#39; from_release=115 fallback=False status=converted
+&#39;TP53&#39; {&#39;from_release&#39;: 50, &#39;to_release&#39;: 50} -&gt; [&#39;ENSG00000141510.5&#39;] | graph_id=&#39;TP53&#39; match=&#39;exact&#39; from_release=50 fallback=False status=converted
+&#39;ENSG00000141510.20&#39; {&#39;from_release&#39;: 100} -&gt; [&#39;ENSG00000141510.20&#39;] | graph_id=&#39;ENSG00000141510.20&#39; match=&#39;exact&#39; from_release=115 fallback=True status=converted
+&#39;ENSG00000141510&#39; {&#39;from_release&#39;: 40} -&gt; UnknownReleaseError: `from_release`=40 is not a release of this graph, which covers the Ensembl releases 48 to 115.
 </pre></div></div>
 </div>
 </section>
-<section id="4.2.6-Ambiguity-control:-strategy='best'-vs-strategy='all'">
-<h3>4.2.6 Ambiguity control: strategy=’best’ vs strategy=’all’<a class="headerlink" href="#4.2.6-Ambiguity-control:-strategy='best'-vs-strategy='all'" title="Link to this heading"></a></h3>
+<section id="4.2.6-Ambiguity:-the-best-answer-and-every-candidate">
+<h3>4.2.6 Ambiguity: the best answer and every candidate<a class="headerlink" href="#4.2.6-Ambiguity:-the-best-answer-and-every-candidate" title="Link to this heading"></a></h3>
+<p>One conversion returns every candidate the search reached, ranked; the best answer is marked:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">strategy='best'</span></code> (default): returns the best answer: one target, or, when several genes or targets are equal in all evidence, all of them in ascending order of gene and target id with <code class="docutils literal notranslate"><span class="pre">tie=True</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">strategy='all'</span></code>: returns <em>all</em> targets IDTrack found, best first</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">result.view('best')</span></code>: the best answer: one target, or, when several genes or targets are equal in all evidence, all of them with <code class="docutils literal notranslate"><span class="pre">tie=True</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">result.view('all')</span></code>: <em>all</em> targets IDTrack found, best first; each candidate carries its ranking record (final confidence, bridges, gap, support of the entry gene, score, being the query itself, steps)</p></li>
 </ul>
 <p>Use <code class="docutils literal notranslate"><span class="pre">'all'</span></code> when you are doing QC or want to inspect ambiguous mappings.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>7
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="s1">'TP53'</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">strategy</span><span class="o">=</span><span class="s1">'all'</span><span class="p">)</span>
-<br/></pre></div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s1">'TP53'</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">)</span>
+<span class="n">show</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="s1">'all'</span><span class="p">)</span>
+<span class="c1"># The ranking record of the best candidate</span>
+<span class="n">result</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="s1">'best'</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+</pre></div>
 </div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&#39;TP53&#39; read as &#39;TP53&#39; (match: exact) at release 115 -&gt; ensembl_gene at 115: status=converted, tie=False, decided_by=None
+  ENSG00000141510.20 -&gt; ENSG00000141510.20  best=True entry=ENSG00000141510.20 bridges=0 score=1.000
+  copies on alternative loci: [&#39;LRG_321.1&#39;]
+</pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>7
@@ -477,123 +405,50 @@ exists.</p>
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-{&#39;query_id&#39;: &#39;TP53&#39;,
- &#39;graph_id&#39;: &#39;TP53&#39;,
- &#39;match&#39;: &#39;exact&#39;,
- &#39;known_versions&#39;: [],
- &#39;from_release&#39;: 115,
- &#39;from_release_inferred&#39;: True,
- &#39;from_release_given&#39;: None,
- &#39;from_release_fallback&#39;: False,
- &#39;from_databases&#39;: [&#39;HGNC Symbol&#39;,
-  &#39;NCBI gene (formerly Entrezgene)&#39;,
-  &#39;UniProtKB Gene Name&#39;],
- &#39;to_release&#39;: 115,
- &#39;strategy&#39;: &#39;all&#39;,
- &#39;final_database&#39;: &#39;ensembl_gene&#39;,
- &#39;target_id&#39;: [&#39;ENSG00000141510.20&#39;],
- &#39;last_node&#39;: [[&#39;ENSG00000141510.20&#39;, &#39;ENSG00000141510.20&#39;]],
- &#39;ambiguous&#39;: False,
- &#39;tie&#39;: False,
- &#39;alternative_locus_genes&#39;: [&#39;LRG_321.1&#39;],
- &#39;no_corresponding&#39;: False,
- &#39;no_conversion&#39;: False,
- &#39;no_target&#39;: False,
- &#39;no_target_genes&#39;: [],
- &#39;error&#39;: None}
+Candidate(gene=&#39;ENSG00000141510.20&#39;, target=&#39;ENSG00000141510.20&#39;, best=True, entry_gene=&#39;ENSG00000141510.20&#39;, entry_support=3, own_version=False, final_confidence=0, bridges=0, bridge_gap=0, score=1.0, same_as_query=False, external_steps=1, history_steps=0, annotation=None, path=(), final_path=())
 </pre></div></div>
 </div>
 </section>
 </section>
 <section id="4.3-—-Batch-Conversion">
 <h2>4.3 — Batch Conversion<a class="headerlink" href="#4.3-—-Batch-Conversion" title="Link to this heading"></a></h2>
-<p>Most workflows start from a list of identifiers (genes in a count matrix, markers, hits, etc.). IDTrack provides two helpers:</p>
+<p>Most workflows start from a list of identifiers (genes in a count matrix, markers, hits, etc.). IDTrack provides:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">convert_identifier_multiple(...)</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">classify_multiple_conversion(...)</span></code> to summarize outcomes</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">convert_many(...)</span></code>: one result per identifier; an error of one identifier never stops the batch</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">API.classify(...)</span></code> and <code class="docutils literal notranslate"><span class="pre">API.classification_summary(...)</span></code> to summarize outcomes</p></li>
 </ul>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>8
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">genes</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'TP53'</span><span class="p">,</span> <span class="s1">'BRCA1'</span><span class="p">,</span> <span class="s1">'BRCA2'</span><span class="p">,</span> <span class="s1">'BRAF'</span><span class="p">,</span> <span class="s1">'KRAS'</span><span class="p">,</span> <span class="s1">'NOT_A_REAL_GENE'</span><span class="p">]</span>
-<span class="n">results</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert_identifier_multiple</span><span class="p">(</span><span class="n">genes</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">final_database</span><span class="o">=</span><span class="s1">'HGNC Symbol'</span><span class="p">)</span>
-<span class="n">results</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>  <span class="c1"># show first two</span>
-<br/></pre></div>
+<span class="n">results</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert_many</span><span class="p">(</span><span class="n">genes</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">final_database</span><span class="o">=</span><span class="s1">'HGNC Symbol'</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">query_id</span><span class="si">:</span><span class="s1">&lt;16</span><span class="si">}</span><span class="s1"> </span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">status</span><span class="si">:</span><span class="s1">&lt;10</span><span class="si">}</span><span class="s1"> </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">targets</span><span class="p">())</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
+</pre></div>
 </div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-100%|████████████████████████████████████████████████████████████████| 6/6 [00:00&lt;00:00, 155.68it/s]
-</pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>8
-</pre></div>
+<div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-[{&#39;query_id&#39;: &#39;TP53&#39;,
-  &#39;graph_id&#39;: &#39;TP53&#39;,
-  &#39;match&#39;: &#39;exact&#39;,
-  &#39;known_versions&#39;: [],
-  &#39;from_release&#39;: 115,
-  &#39;from_release_inferred&#39;: True,
-  &#39;from_release_given&#39;: None,
-  &#39;from_release_fallback&#39;: False,
-  &#39;from_databases&#39;: [&#39;HGNC Symbol&#39;,
-   &#39;NCBI gene (formerly Entrezgene)&#39;,
-   &#39;UniProtKB Gene Name&#39;],
-  &#39;to_release&#39;: 115,
-  &#39;strategy&#39;: &#39;best&#39;,
-  &#39;final_database&#39;: &#39;HGNC Symbol&#39;,
-  &#39;target_id&#39;: [&#39;TP53&#39;],
-  &#39;last_node&#39;: [[&#39;ENSG00000141510.20&#39;, &#39;TP53&#39;]],
-  &#39;ambiguous&#39;: False,
-  &#39;tie&#39;: False,
-  &#39;alternative_locus_genes&#39;: [&#39;LRG_321.1&#39;],
-  &#39;no_corresponding&#39;: False,
-  &#39;no_conversion&#39;: False,
-  &#39;no_target&#39;: False,
-  &#39;no_target_genes&#39;: [],
-  &#39;error&#39;: None},
- {&#39;query_id&#39;: &#39;BRCA1&#39;,
-  &#39;graph_id&#39;: &#39;BRCA1&#39;,
-  &#39;match&#39;: &#39;exact&#39;,
-  &#39;known_versions&#39;: [],
-  &#39;from_release&#39;: 115,
-  &#39;from_release_inferred&#39;: True,
-  &#39;from_release_given&#39;: None,
-  &#39;from_release_fallback&#39;: False,
-  &#39;from_databases&#39;: [&#39;HGNC Symbol&#39;,
-   &#39;NCBI gene (formerly Entrezgene)&#39;,
-   &#39;UniProtKB Gene Name&#39;],
-  &#39;to_release&#39;: 115,
-  &#39;strategy&#39;: &#39;best&#39;,
-  &#39;final_database&#39;: &#39;HGNC Symbol&#39;,
-  &#39;target_id&#39;: [&#39;BRCA1&#39;],
-  &#39;last_node&#39;: [[&#39;ENSG00000012048.27&#39;, &#39;BRCA1&#39;]],
-  &#39;ambiguous&#39;: False,
-  &#39;tie&#39;: False,
-  &#39;alternative_locus_genes&#39;: [&#39;LRG_292.1&#39;],
-  &#39;no_corresponding&#39;: False,
-  &#39;no_conversion&#39;: False,
-  &#39;no_target&#39;: False,
-  &#39;no_target_genes&#39;: [],
-  &#39;error&#39;: None}]
+TP53             converted  [&#39;TP53&#39;]
+BRCA1            converted  [&#39;BRCA1&#39;]
+BRCA2            converted  [&#39;BRCA2&#39;]
+BRAF             converted  [&#39;BRAF&#39;]
+KRAS             converted  [&#39;KRAS&#39;]
+NOT_A_REAL_GENE  not_found  []
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>9
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">summary</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">classify_multiple_conversion</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
-<span class="c1"># Each bin is a list of per-gene dictionaries</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">summary</span> <span class="o">=</span> <span class="n">API</span><span class="o">.</span><span class="n">classify</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>  <span class="c1"># the bins of the best view; API.classify(results, 'all') for every target</span>
+<span class="c1"># Each bin is a list of results</span>
 <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">summary</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
-<br/></pre></div>
+</pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -612,21 +467,21 @@ exists.</p>
  &#39;input_identifiers&#39;: 6}
 </pre></div></div>
 </div>
-<p>If you want a human-readable report, you can print the summary bins:</p>
+<p>If you want a human-readable report, print the summary of the bins:</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>10
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">api</span><span class="o">.</span><span class="n">print_binned_conversion</span><span class="p">(</span><span class="n">summary</span><span class="p">)</span>
-<br/></pre></div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">API</span><span class="o">.</span><span class="n">classification_summary</span><span class="p">(</span><span class="n">summary</span><span class="p">))</span>
+</pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area stderr docutils container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
-2026-11-12 15:17:52 INFO:idtrack._api:
+
 IDTrack conversion summary:
   Total processed: 6
   1→0: 1 (16.7%)
@@ -637,104 +492,77 @@ IDTrack conversion summary:
   1→n: 0 (0.0%)
     Changed only: 0 (0.0%)
     Alternative targets: 0 (0.0%)
-  Diagnostics:
-    no_corresponding: 1
-    no_conversion:   0
-    no_target:       0
-    errors:          0
+  Statuses:
+    converted: 5
+    not_found: 1
 </pre></div></div>
 </div>
 </section>
 <section id="4.4-—-Explainability-&amp;-Auditability">
 <h2>4.4 — Explainability &amp; Auditability<a class="headerlink" href="#4.4-—-Explainability-&-Auditability" title="Link to this heading"></a></h2>
-<p>When you set <code class="docutils literal notranslate"><span class="pre">explain=True</span></code>, the result includes a <code class="docutils literal notranslate"><span class="pre">the_path</span></code> field: one entry per <code class="docutils literal notranslate"><span class="pre">[gene,</span> <span class="pre">target]</span></code> pair of <code class="docutils literal notranslate"><span class="pre">last_node</span></code>, with the gene the identifier was read as (<code class="docutils literal notranslate"><span class="pre">entry_gene</span></code>), the number of bridges through external identifiers the search needed (<code class="docutils literal notranslate"><span class="pre">external_jump</span></code>; 0 is Ensembl’s history alone), the releases between leaving one gene and entering the next over those bridges (<code class="docutils literal notranslate"><span class="pre">external_gap</span></code>), the product of Ensembl’s mapping scores along the history (<code class="docutils literal notranslate"><span class="pre">score</span></code>), and the edges walked
-(<code class="docutils literal notranslate"><span class="pre">edges</span></code>): <code class="docutils literal notranslate"><span class="pre">[source,</span> <span class="pre">target,</span> <span class="pre">key]</span></code> for a step of Ensembl’s history in walking order, <code class="docutils literal notranslate"><span class="pre">[source,</span> <span class="pre">target,</span> <span class="pre">0,</span> <span class="pre">release]</span></code> for a cross-reference followed at that release.</p>
+<p>When you set <code class="docutils literal notranslate"><span class="pre">explain=True</span></code>, the result includes <code class="docutils literal notranslate"><span class="pre">path</span></code>, an <code class="docutils literal notranslate"><span class="pre">idtrack.results.ExplainedPath</span></code>: one graph per conversion with every node (its kind, label, databases, the releases at which a gene is active and the assemblies that serve them, the releases at which it lies outside the reference sequence) and every step once. A step (<code class="docutils literal notranslate"><span class="pre">idtrack.results.PathStep</span></code>) has its kind (<code class="docutils literal notranslate"><span class="pre">entry</span></code> from the identifier to the gene it stands for, <code class="docutils literal notranslate"><span class="pre">history</span></code> for an event of Ensembl’s id history, <code class="docutils literal notranslate"><span class="pre">self_loop</span></code>,
+<code class="docutils literal notranslate"><span class="pre">bridge_near</span></code> and <code class="docutils literal notranslate"><span class="pre">bridge_far</span></code> for the two sides of a bridge through an id two genes carried, <code class="docutils literal notranslate"><span class="pre">final</span></code> from the gene to its id in the final database, <code class="docutils literal notranslate"><span class="pre">identity</span></code> for a gene that is its own answer), the releases, Ensembl’s mapping score, the splits and merges of a history event, the databases and the assembly of a cross-reference, and the reason it was taken. Each candidate lists its steps by index: <code class="docutils literal notranslate"><span class="pre">path</span></code> from the identifier to the gene, <code class="docutils literal notranslate"><span class="pre">final_path</span></code> from the gene to the target.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>11
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">explained</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="s1">'TP53'</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">final_database</span><span class="o">=</span><span class="s1">'HGNC Symbol'</span><span class="p">,</span> <span class="n">explain</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="nb">list</span><span class="p">(</span><span class="n">explained</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
-<br/></pre></div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">explained</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s1">'TP53'</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">final_database</span><span class="o">=</span><span class="s1">'HGNC Symbol'</span><span class="p">,</span> <span class="n">explain</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">best</span> <span class="o">=</span> <span class="n">explained</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="s1">'best'</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+<span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">best</span><span class="o">.</span><span class="n">path</span> <span class="o">+</span> <span class="n">best</span><span class="o">.</span><span class="n">final_path</span><span class="p">:</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">explained</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">steps</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">kind</span><span class="si">:</span><span class="s1">&lt;8</span><span class="si">}</span><span class="s1"> </span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">source</span><span class="si">}</span><span class="s1"> -&gt; </span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">target</span><span class="si">}</span><span class="s1"> | release </span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">release</span><span class="si">}</span><span class="s1"> | </span><span class="si">{</span><span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">databases</span><span class="p">)</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
+</pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>11
-</pre></div>
+<div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-[&#39;query_id&#39;,
- &#39;graph_id&#39;,
- &#39;match&#39;,
- &#39;known_versions&#39;,
- &#39;from_release&#39;,
- &#39;from_release_inferred&#39;,
- &#39;from_release_given&#39;,
- &#39;from_release_fallback&#39;,
- &#39;from_databases&#39;,
- &#39;to_release&#39;,
- &#39;strategy&#39;,
- &#39;final_database&#39;,
- &#39;target_id&#39;,
- &#39;last_node&#39;,
- &#39;ambiguous&#39;,
- &#39;tie&#39;,
- &#39;alternative_locus_genes&#39;,
- &#39;no_corresponding&#39;,
- &#39;no_conversion&#39;,
- &#39;no_target&#39;,
- &#39;no_target_genes&#39;,
- &#39;error&#39;,
- &#39;the_path&#39;]
+entry    TP53 -&gt; ENSG00000141510.20 | release 115 | HGNC Symbol, NCBI gene (formerly Entrezgene), UniProtKB Gene Name
+final    ENSG00000141510.20 -&gt; TP53 | release 115 | HGNC Symbol, NCBI gene (formerly Entrezgene), UniProtKB Gene Name
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>12
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># One entry per [gene, target] pair of `last_node`, in the same order</span>
-<span class="n">explained</span><span class="p">[</span><span class="s1">'the_path'</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
-<br/></pre></div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># The nodes of the explanation</span>
+<span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">explained</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">kind</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">active</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">databases</span><span class="p">[:</span><span class="mi">3</span><span class="p">])</span>
+</pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>12
-</pre></div>
+<div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-{&#39;ensembl_gene&#39;: &#39;ENSG00000141510.20&#39;,
- &#39;target_id&#39;: &#39;TP53&#39;,
- &#39;entry_gene&#39;: &#39;ENSG00000141510.20&#39;,
- &#39;external_jump&#39;: 0,
- &#39;external_gap&#39;: 0,
- &#39;score&#39;: 1.0,
- &#39;edges&#39;: [[&#39;TP53&#39;, &#39;ENSG00000141510.20&#39;, 0, 115],
-  [&#39;ENSG00000141510.20&#39;, &#39;TP53&#39;, 0, 115]]}
+external TP53 () (&#39;EntrezGene&#39;, &#39;HGNC Symbol&#39;, &#39;NCBI gene&#39;)
+ensembl_gene ENSG00000141510.20 ((115, None),) ()
 </pre></div></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">the_path</span></code> is intentionally detailed. For most users, the summary flags and <code class="docutils literal notranslate"><span class="pre">target_id</span></code> are enough.</p>
+<p>The explanation is intentionally detailed. For most users, <code class="docutils literal notranslate"><span class="pre">status</span></code>, <code class="docutils literal notranslate"><span class="pre">tie</span></code> and the targets are enough.</p>
 </section>
 <section id="4.5-—-Advanced-Conversion-Options">
 <h2>4.5 — Advanced Conversion Options<a class="headerlink" href="#4.5-—-Advanced-Conversion-Options" title="Link to this heading"></a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">api.convert_identifier(...)</span></code> is a convenience wrapper around <code class="docutils literal notranslate"><span class="pre">api.track.convert(...)</span></code>.</p>
-<p>Use the high-level API most of the time. But if you need full control (whether external bridging is allowed, the search budget, deeper path diagnostics), you can call <code class="docutils literal notranslate"><span class="pre">Track.convert</span></code> directly. It is strict where the API is forgiving: a <code class="docutils literal notranslate"><span class="pre">from_release</span></code> at which the identifier does not exist raises <code class="docutils literal notranslate"><span class="pre">idtrack.InactiveAtReleaseError</span></code> (naming the releases where it exists), and an unknown version raises <code class="docutils literal notranslate"><span class="pre">idtrack.UnknownVersionError</span></code>.</p>
-<section id="4.5.1-Best-vs-all-(selection-strategy)">
-<h3>4.5.1 Best vs all (selection strategy)<a class="headerlink" href="#4.5.1-Best-vs-all-(selection-strategy)" title="Link to this heading"></a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">api.convert(...)</span></code> checks the arguments and reads the string, then calls the engine, <code class="docutils literal notranslate"><span class="pre">api.engine.convert(...)</span></code> (<code class="docutils literal notranslate"><span class="pre">idtrack.engine.Track.convert</span></code>).</p>
+<p>Use the high-level API most of the time; it already takes <code class="docutils literal notranslate"><span class="pre">allow_bridges</span></code>, <code class="docutils literal notranslate"><span class="pre">budget_states</span></code> and <code class="docutils literal notranslate"><span class="pre">budget_seconds</span></code>. The engine is strict where the API is forgiving: a <code class="docutils literal notranslate"><span class="pre">from_release</span></code> at which the identifier does not exist raises <code class="docutils literal notranslate"><span class="pre">idtrack.errors.InactiveAtReleaseError</span></code> (naming the releases where it exists), and an unknown version raises <code class="docutils literal notranslate"><span class="pre">idtrack.errors.UnknownVersionError</span></code>.</p>
+<section id="4.5.1-Best-vs-all">
+<h3>4.5.1 Best vs all<a class="headerlink" href="#4.5.1-Best-vs-all" title="Link to this heading"></a></h3>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">strategy='best'</span></code> returns the best answer: one target, or the targets that are equal in all evidence, as a tie (<code class="docutils literal notranslate"><span class="pre">tie=True</span></code>), in a fixed order.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">strategy='all'</span></code> returns all targets reached, best first (useful for ambiguity-aware pipelines).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">result.view('best')</span></code> is the best answer: one target, or the targets that are equal in all evidence, as a tie (<code class="docutils literal notranslate"><span class="pre">tie=True</span></code>), in a fixed order.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">result.view('all')</span></code> is every target reached, best first (useful for ambiguity-aware pipelines); <code class="docutils literal notranslate"><span class="pre">result.decided_by</span></code> names the criterion that put the best answer before the runner-up.</p></li>
 </ul>
 </section>
 <section id="4.5.2-Controlling-external-bridging">
 <h3>4.5.2 Controlling external bridging<a class="headerlink" href="#4.5.2-Controlling-external-bridging" title="Link to this heading"></a></h3>
-<p>The search follows Ensembl’s history first. Only when that leads to no gene at the target release does it pass through an external identifier or a transcript that two genes carried (a bridge): at most two bridges, the fewest possible, in the order of time, never through clone-based names or hyper-connected identifiers. <code class="docutils literal notranslate"><span class="pre">external_jump</span></code> in the result says how many bridges were used. Power users can switch bridging off with <code class="docutils literal notranslate"><span class="pre">go_external=False</span></code> on <code class="docutils literal notranslate"><span class="pre">Track.convert</span></code>. The search is bounded: each
-state is visited once, and a call that needs more than its budget (<code class="docutils literal notranslate"><span class="pre">Track.search_budget_states</span></code>, <code class="docutils literal notranslate"><span class="pre">Track.search_budget_seconds</span></code>) raises <code class="docutils literal notranslate"><span class="pre">idtrack.SearchBudgetExceededError</span></code>.</p>
+<p>The search follows Ensembl’s history first. Only when that leads to no gene at the target release does it pass through an external identifier or a transcript that two genes carried (a bridge): at most two bridges, the fewest possible, in the order of time, never through clone-based names or hyper-connected identifiers. <code class="docutils literal notranslate"><span class="pre">candidate.bridges</span></code> says how many bridges were used. Switch bridging off with <code class="docutils literal notranslate"><span class="pre">allow_bridges=False</span></code>. The search is bounded: each state is visited once, and a call that needs
+more than its budget (<code class="docutils literal notranslate"><span class="pre">idtrack.settings.SearchSettings</span></code>: 200,000 states and 30 s by default; <code class="docutils literal notranslate"><span class="pre">budget_states=</span></code> and <code class="docutils literal notranslate"><span class="pre">budget_seconds=</span></code> of a call) raises <code class="docutils literal notranslate"><span class="pre">idtrack.errors.SearchBudgetExceededError</span></code>.</p>
 </section>
 <section id="4.5.3-Hyperconnected-nodes">
 <h3>4.5.3 Hyperconnected nodes<a class="headerlink" href="#4.5.3-Hyperconnected-nodes" title="Link to this heading"></a></h3>
-<p>Some external identifiers are carried by many genes at the same time (RFAM families, <code class="docutils literal notranslate"><span class="pre">U6</span></code>, <code class="docutils literal notranslate"><span class="pre">5S_rRNA</span></code>, snoRNA names): more than <code class="docutils literal notranslate"><span class="pre">TheGraph.genes_at_once_threshold</span></code> (5) genes in one release. They name a kind of gene, not a gene, so they are never used as bridges and are not counted as annotation of a gene. They can still be queried and returned.</p>
+<p>Some external identifiers are carried by many genes at the same time (RFAM families, <code class="docutils literal notranslate"><span class="pre">U6</span></code>, <code class="docutils literal notranslate"><span class="pre">5S_rRNA</span></code>, snoRNA names): more than the hyper-connectivity threshold of the graph (<code class="docutils literal notranslate"><span class="pre">idtrack.settings.GraphSettings</span></code>, 5) genes in one release. They name a kind of gene, not a gene, so they are never used as bridges and are not counted as annotation of a gene. They can still be queried and returned.</p>
 </section>
 <section id="4.5.4-Assembly-aware-conversions">
 <h3>4.5.4 Assembly-aware conversions<a class="headerlink" href="#4.5.4-Assembly-aware-conversions" title="Link to this heading"></a></h3>
@@ -746,14 +574,12 @@ state is visited once, and a call that needs more than its budget (<code class="
 <li><p>External databases are read for the assembly they belong to; an id is returned as its database wrote it at the target release.</p></li>
 </ul>
 <p>Example (advanced):</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span>
-    <span class="n">from_id</span><span class="o">=</span><span class="s1">'TP53'</span><span class="p">,</span>
-    <span class="n">from_release</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">api</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span>
+    <span class="s1">'TP53'</span><span class="p">,</span>
     <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span>
     <span class="n">final_database</span><span class="o">=</span><span class="s1">'HGNC Symbol'</span><span class="p">,</span>
-    <span class="n">go_external</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="n">return_path</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">from_database</span><span class="o">=</span><span class="s1">'HGNC Symbol'</span><span class="p">,</span>  <span class="c1"># read the identifier as an id of this database only</span>
+    <span class="n">explain</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span>
 </pre></div>
 </div>
@@ -761,13 +587,13 @@ state is visited once, and a call that needs more than its budget (<code class="
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>13
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Advanced demo: inspect hyperconnected nodes and compare `go_external` behavior.</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Advanced demo: inspect hyperconnected nodes and compare `allow_bridges` behavior.</span>
 <span class="c1"># Safe: does not modify your cache; it only runs conversions.</span>
 
-<span class="c1"># 1) Hyperconnected nodes: external ids carried by more than `genes_at_once_threshold` genes in one release</span>
-<span class="n">g</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span>
+<span class="c1"># 1) Hyperconnected nodes: external ids carried by more than the threshold of genes in one release</span>
+<span class="n">g</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">graph</span>
 <span class="n">hc</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">hyperconnective_nodes</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">'Threshold (genes at once):'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">genes_at_once_threshold</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Threshold (genes at once):'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph_settings</span><span class="o">.</span><span class="n">hyperconnective_threshold</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">'Hyperconnected external nodes:'</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">hc</span><span class="p">))</span>
 <span class="n">top</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">hc</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">kv</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="n">kv</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">kv</span><span class="p">[</span><span class="mi">0</span><span class="p">]))[:</span><span class="mi">10</span><span class="p">]</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">'Top 10 by the number of genes they are linked to in one release:'</span><span class="p">)</span>
@@ -776,28 +602,10 @@ state is visited once, and a call that needs more than its budget (<code class="
 
 <span class="c1"># 2) External bridging toggle (often matters when backbone history is disconnected)</span>
 <span class="c1"># For many well-behaved genes, both calls will succeed; the point is the *option* exists.</span>
-<span class="n">res_no_external</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span>
-    <span class="n">from_id</span><span class="o">=</span><span class="s1">'TP53'</span><span class="p">,</span>
-    <span class="n">from_release</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span>
-    <span class="n">final_database</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">go_external</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-    <span class="n">prioritize_to_one_filter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="n">return_path</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-<span class="p">)</span>
-<span class="n">res_with_external</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span>
-    <span class="n">from_id</span><span class="o">=</span><span class="s1">'TP53'</span><span class="p">,</span>
-    <span class="n">from_release</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span>
-    <span class="n">final_database</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">go_external</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="n">prioritize_to_one_filter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="n">return_path</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-<span class="p">)</span>
-
-<span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">res</span> <span class="ow">in</span> <span class="p">((</span><span class="s1">'go_external=False'</span><span class="p">,</span> <span class="n">res_no_external</span><span class="p">),</span> <span class="p">(</span><span class="s1">'go_external=True '</span><span class="p">,</span> <span class="n">res_with_external</span><span class="p">)):</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="s1">'-&gt;'</span><span class="p">,</span> <span class="p">{</span><span class="n">gene</span><span class="p">:</span> <span class="n">value</span><span class="p">[</span><span class="s1">'external_jump'</span><span class="p">]</span> <span class="k">for</span> <span class="n">gene</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">res</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span> <span class="k">if</span> <span class="n">res</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
-<br/></pre></div>
+<span class="k">for</span> <span class="n">allow_bridges</span> <span class="ow">in</span> <span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">):</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s1">'TP53'</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">allow_bridges</span><span class="o">=</span><span class="n">allow_bridges</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">'allow_bridges=</span><span class="si">{</span><span class="n">allow_bridges</span><span class="si">!s:</span><span class="s1">&lt;5</span><span class="si">}</span><span class="s1"> -&gt;'</span><span class="p">,</span> <span class="p">{</span><span class="n">c</span><span class="o">.</span><span class="n">gene</span><span class="p">:</span> <span class="n">c</span><span class="o">.</span><span class="n">bridges</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">res</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="s1">'best'</span><span class="p">)})</span>
+</pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -818,8 +626,8 @@ Top 10 by the number of genes they are linked to in one release:
   615 - RF00001
   480 - RF01210
   480 - snoU13
-go_external=False -&gt; {&#39;ENSG00000141510.20&#39;: 0}
-go_external=True  -&gt; {&#39;ENSG00000141510.20&#39;: 0}
+allow_bridges=False -&gt; {&#39;ENSG00000141510.20&#39;: 0}
+allow_bridges=True  -&gt; {&#39;ENSG00000141510.20&#39;: 0}
 </pre></div></div>
 </div>
 </section>
@@ -840,32 +648,39 @@ go_external=True  -&gt; {&#39;ENSG00000141510.20&#39;: 0}
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Introspection demo</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="s1">'Assemblies in this graph:'</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">list_genome_assemblies</span><span class="p">()))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Assemblies in this graph:'</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">assembly</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">api</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span><span class="o">.</span><span class="n">assemblies</span><span class="p">))</span>
 
-<span class="n">ext_dbs</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">list_external_databases</span><span class="p">())</span>
+<span class="n">ext_dbs</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">external_databases</span><span class="p">()</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">'External DBs enabled (count):'</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">ext_dbs</span><span class="p">))</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">'External DBs (first 25):'</span><span class="p">,</span> <span class="n">ext_dbs</span><span class="p">[:</span><span class="mi">25</span><span class="p">])</span>
 
-<span class="n">forms</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">external_database_forms</span><span class="p">()</span>
+<span class="n">forms</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">database_forms</span><span class="p">()</span>
 <span class="nb">print</span><span class="p">()</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">'External DB connection forms (sample):'</span><span class="p">)</span>
 <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">ext_dbs</span><span class="p">[:</span><span class="mi">10</span><span class="p">]:</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">' '</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="s1">'→'</span><span class="p">,</span> <span class="n">forms</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
 
-<span class="n">rels</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">list_ensembl_releases</span><span class="p">()</span>
+<span class="n">rels</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">releases</span><span class="p">()</span>
 <span class="nb">print</span><span class="p">()</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">'Ensembl releases in snapshot window:'</span><span class="p">,</span> <span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">rels</span><span class="p">),</span> <span class="nb">max</span><span class="p">(</span><span class="n">rels</span><span class="p">))</span> <span class="k">if</span> <span class="n">rels</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">'Releases of each assembly:'</span><span class="p">,</span> <span class="p">{</span><span class="n">a</span><span class="p">:</span> <span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">r</span><span class="p">),</span> <span class="nb">max</span><span class="p">(</span><span class="n">r</span><span class="p">))</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">assembly_releases</span><span class="o">.</span><span class="n">items</span><span class="p">())})</span>
+<span class="n">described</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Releases of each assembly:'</span><span class="p">,</span> <span class="p">{</span><span class="n">a</span><span class="o">.</span><span class="n">assembly</span><span class="p">:</span> <span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">releases</span><span class="p">),</span> <span class="nb">max</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">releases</span><span class="p">))</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">described</span><span class="o">.</span><span class="n">assemblies</span><span class="p">})</span>
 
 <span class="c1"># Active ranges: when was an ID "alive" across releases?</span>
 <span class="c1"># (Useful for provenance documentation.)</span>
-<span class="n">g</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span>
+<span class="n">g</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">graph</span>
 <span class="n">example_gene</span> <span class="o">=</span> <span class="s1">'ENSG00000141510.20'</span>  <span class="c1"># TP53 at the snapshot release</span>
 <span class="nb">print</span><span class="p">()</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">'Versions of ENSG00000141510:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">versions_of</span><span class="p">(</span><span class="s1">'ENSG00000141510'</span><span class="p">))</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">'Active ranges of'</span><span class="p">,</span> <span class="n">example_gene</span><span class="p">,</span> <span class="s1">'(the assembly Ensembl maintained at each release):'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">active_ranges</span><span class="p">(</span><span class="n">example_gene</span><span class="p">))</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">'Active ranges of'</span><span class="p">,</span> <span class="n">example_gene</span><span class="p">,</span> <span class="s1">'(any assembly):'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">get_active_ranges_of_id_ensembl_all_inclusive</span><span class="p">(</span><span class="n">example_gene</span><span class="p">))</span>
-<br/></pre></div>
+
+<span class="c1"># Names per database and release: which genes does a name name, and which names does a gene carry?</span>
+<span class="nb">print</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">match</span> <span class="ow">in</span> <span class="n">api</span><span class="o">.</span><span class="n">genes_named</span><span class="p">(</span><span class="s1">'TP53'</span><span class="p">)[</span><span class="o">-</span><span class="mi">3</span><span class="p">:]:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'genes_named:'</span><span class="p">,</span> <span class="n">match</span><span class="o">.</span><span class="n">database</span><span class="p">,</span> <span class="n">match</span><span class="o">.</span><span class="n">gene</span><span class="p">,</span> <span class="n">match</span><span class="o">.</span><span class="n">releases</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s1">'-'</span><span class="p">,</span> <span class="n">match</span><span class="o">.</span><span class="n">releases</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'names_of:'</span><span class="p">,</span> <span class="p">[(</span><span class="n">m</span><span class="o">.</span><span class="n">database</span><span class="p">,</span> <span class="n">m</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">m</span><span class="o">.</span><span class="n">synonym</span><span class="p">)</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">api</span><span class="o">.</span><span class="n">names_of</span><span class="p">(</span><span class="n">example_gene</span><span class="p">,</span> <span class="n">SNAPSHOT_RELEASE</span><span class="p">)][:</span><span class="mi">6</span><span class="p">])</span>
+</pre></div>
 </div>
 </div>
 <div class="nboutput docutils container">
@@ -873,7 +688,7 @@ go_external=True  -&gt; {&#39;ENSG00000141510.20&#39;: 0}
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2026-11-12 15:17:52 INFO:idtrack._the_graph: Graph-wide table being calculated: assembly_releases
+2026-11-18 05:19:46 INFO:idtrack.graph.graph: Graph-wide table being calculated: assembly_releases
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -898,11 +713,16 @@ External DB connection forms (sample):
   NCBI gene (formerly Entrezgene) → gene
 
 Ensembl releases in snapshot window: (48, 115)
-Releases of each assembly: {36: (48, 54), 37: (55, 115), 38: (76, 115)}
+Releases of each assembly: {38: (&#39;GRCh38&#39;, 76, 115), 37: (&#39;GRCh37&#39;, 55, 115), 36: (&#39;NCBI36&#39;, 48, 54)}
 
 Versions of ENSG00000141510: (&#39;ENSG00000141510.4&#39;, &#39;ENSG00000141510.5&#39;, &#39;ENSG00000141510.6&#39;, &#39;ENSG00000141510.7&#39;, &#39;ENSG00000141510.8&#39;, &#39;ENSG00000141510.9&#39;, &#39;ENSG00000141510.10&#39;, &#39;ENSG00000141510.11&#39;, &#39;ENSG00000141510.12&#39;, &#39;ENSG00000141510.13&#39;, &#39;ENSG00000141510.14&#39;, &#39;ENSG00000141510.15&#39;, &#39;ENSG00000141510.16&#39;, &#39;ENSG00000141510.17&#39;, &#39;ENSG00000141510.18&#39;, &#39;ENSG00000141510.19&#39;, &#39;ENSG00000141510.20&#39;)
 Active ranges of ENSG00000141510.20 (the assembly Ensembl maintained at each release): [[115, inf]]
 Active ranges of ENSG00000141510.20 (any assembly): [[115, 115]]
+
+genes_named: synonym_id::UniProtKB Gene Name ENSG00000141510.13 77 - 77
+genes_named: synonym_id::UniProtKB Gene Name ENSG00000141510.8 63 - 66
+genes_named: synonym_id::UniProtKB Gene Name ENSG00000141510.9 67 - 67
+names_of: [(&#39;EntrezGene&#39;, &#39;7157&#39;, False), (&#39;HGNC Symbol&#39;, &#39;TP53&#39;, False), (&#39;NCBI gene (formerly Entrezgene)&#39;, &#39;TP53&#39;, False), (&#39;UniProtKB Gene Name&#39;, &#39;TP53&#39;, False), (&#39;synonym_id::HGNC Symbol&#39;, &#39;synonym_id::LFS1&#39;, True), (&#39;synonym_id::HGNC Symbol&#39;, &#39;synonym_id::P53&#39;, True)]
 </pre></div></div>
 </div>
 </section>

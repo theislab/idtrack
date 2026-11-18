@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Part 1 — Environment Setup &amp; Installation &mdash; idtrack 0.0.5 documentation</title>
+  <title>Part 1 — Environment Setup &amp; Installation &mdash; idtrack 0.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=6a604523" />
@@ -17,7 +17,7 @@
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=282f96c0"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../_static/design-tabs.js?v=fcb327ea"></script>
@@ -99,7 +99,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../changes.html">Changes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributor Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../authors.html">Credits</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code_of_conduct.html">Code of Conduct</a></li>
 </ul>
 
         </div>
@@ -174,7 +174,7 @@ python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </sp
 <section id="Step-2-—-Install-IDTrack">
 <h3>Step 2 — Install IDTrack<a class="headerlink" href="#Step-2-—-Install-IDTrack" title="Link to this heading"></a></h3>
 <p>If you are installing from PyPI (IDTrack is not on conda-forge; install it with pip in either environment):</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>idtrack
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"git+https://github.com/theislab/idtrack.git"</span>
 </pre></div>
 </div>
 <p>The release on PyPI, 0.0.5, is older than the version these tutorials describe (see “Changes” in the documentation). Until the next release, install the version of the tutorials from GitHub:</p>
@@ -195,8 +195,8 @@ python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </sp
 <blockquote>
 <div><p><strong>Expected result:</strong> If installation succeeded, you will see an IDTrack version. If it failed, you will see a helpful error message (and the notebook continues).</p>
 </div></blockquote>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>1
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">platform</span>
@@ -215,21 +215,11 @@ python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </sp
     <span class="n">IDTRACK_OK</span> <span class="o">=</span> <span class="kc">True</span>
 <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">'idtrack import failed -&gt;'</span><span class="p">,</span> <span class="nb">repr</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">'Fix: confirm you activated the intended environment, then re-run: pip install idtrack'</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Fix: confirm you activated the intended environment, then re-run: '</span>
+          <span class="s1">'pip install "git+https://github.com/theislab/idtrack.git"'</span><span class="p">)</span>
     <span class="n">IDTRACK_OK</span> <span class="o">=</span> <span class="kc">False</span>
-<br/></pre></div>
+</pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-Python: 3.13.18
-Platform: Linux-6.12.0-211.47.1.el10_2.x86_64-x86_64-with-glibc2.39
-idtrack version: 0.0.5
-idtrack imported from: a source checkout
-</pre></div></div>
 </div>
 </section>
 <section id="Step-4-—-Choose-your-local-repository-directory-(IDTRACK_LOCAL_REPO)">
@@ -306,9 +296,9 @@ Write test: OK
     <span class="nb">print</span><span class="p">(</span><span class="s1">'requests not available -&gt;'</span><span class="p">,</span> <span class="nb">repr</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
 
 <span class="k">if</span> <span class="n">IDTRACK_OK</span><span class="p">:</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._db</span><span class="w"> </span><span class="kn">import</span> <span class="n">DB</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">idtrack.settings</span>
 
-    <span class="n">host</span> <span class="o">=</span> <span class="n">DB</span><span class="o">.</span><span class="n">mysql_host</span>
+    <span class="n">host</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ENSEMBL</span><span class="o">.</span><span class="n">mysql_host</span>
     <span class="n">ports</span> <span class="o">=</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">,</span> <span class="mi">3337</span><span class="p">]</span>
     <span class="k">for</span> <span class="n">port</span> <span class="ow">in</span> <span class="n">ports</span><span class="p">:</span>
         <span class="k">try</span><span class="p">:</span>
@@ -318,7 +308,7 @@ Write test: OK
             <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">'Ensembl MySQL: not reachable (</span><span class="si">{</span><span class="n">host</span><span class="si">}</span><span class="s1">:</span><span class="si">{</span><span class="n">port</span><span class="si">}</span><span class="s1">) -&gt; </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
 <span class="k">else</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">'Skipping MySQL check (IDTrack not imported).'</span><span class="p">)</span>
-<br/></pre></div>
+</pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">

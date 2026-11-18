@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Part 6 — Cross-Species Workflows: Humanization &mdash; idtrack 0.0.5 documentation</title>
+  <title>Part 6 — Cross-Species Workflows: Humanization &mdash; idtrack 0.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=6a604523" />
@@ -17,7 +17,7 @@
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=282f96c0"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../_static/design-tabs.js?v=fcb327ea"></script>
@@ -79,10 +79,10 @@
 <li class="toctree-l3"><a class="reference internal" href="#6.1-—-Humanization-workflow-(what-it-is,-and-when-to-use-it)">6.1 — Humanization workflow (what it is, and when to use it)</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#6.1.1-Pre-requisites">6.1.1 Pre-requisites</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#6.1.1.1-IDTrack-graphs">6.1.1.1 IDTrack graphs</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#6.1.1.2-Optional-dependencies-for-ortholog-utilities">6.1.1.2 Optional dependencies for ortholog utilities</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#6.1.1.2-An-orthology-table">6.1.1.2 An orthology table</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#6.1.2-Step-by-step:-mouse-→-human">6.1.2 Step-by-step: mouse → human</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#6.1.2.1-Convert-a-mouse-identifier-to-a-mouse-Ensembl-gene-ID-(IDTrack)">6.1.2.1 Convert a mouse identifier to a mouse Ensembl gene ID (IDTrack)</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#6.1.2.2-Find-human-ortholog(s)-(ortholog-utilities)">6.1.2.2 Find human ortholog(s) (ortholog utilities)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#6.1.2.2-Find-human-ortholog(s)-(the-orthology-table)">6.1.2.2 Find human ortholog(s) (the orthology table)</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#6.1.2.3-Convert-human-Ensembl-IDs-into-HGNC-symbols-(IDTrack)">6.1.2.3 Convert human Ensembl IDs into HGNC symbols (IDTrack)</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#6.1.3-Step-by-step:-pig-→-human-(same-pattern)">6.1.3 Step-by-step: pig → human (same pattern)</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#6.1.4-Advanced:-choose-among-multiple-ortholog-candidates">6.1.4 Advanced: choose among multiple ortholog candidates</a></li>
@@ -102,7 +102,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../changes.html">Changes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributor Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../authors.html">Credits</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code_of_conduct.html">Code of Conduct</a></li>
 </ul>
 
         </div>
@@ -152,12 +152,12 @@
 <ol class="arabic simple">
 <li><p><strong>Within-species cleanup (IDTrack)</strong></p>
 <ul class="simple">
-<li><p>Map mouse/pig identifiers to consistent Ensembl gene IDs within that species.</p></li>
+<li><p>Map mouse/pig identifiers to consistent Ensembl gene IDs within that species, at a pinned snapshot release.</p></li>
 </ul>
 </li>
-<li><p><strong>Cross-species mapping (orthologs)</strong></p>
+<li><p><strong>Cross-species mapping (orthologs, from an orthology resource)</strong></p>
 <ul class="simple">
-<li><p>Map mouse/pig Ensembl gene IDs to human ortholog Ensembl gene IDs.</p></li>
+<li><p>Map mouse/pig Ensembl gene IDs to human ortholog Ensembl gene IDs with an orthology table of the same Ensembl release (Ensembl Compara’s homologies, exported from BioMart or downloaded from Ensembl’s FTP site). IDTrack does not compute orthology; it makes sure that the ids on both sides of the table are the ids of the release the table was made for.</p></li>
 </ul>
 </li>
 <li><p><strong>Human naming (optional, IDTrack)</strong></p>
@@ -166,7 +166,7 @@
 </ul>
 </li>
 </ol>
-<p>This notebook does <strong>not</strong> decide the ‘correct’ ortholog for you in complex families — it shows how to surface the candidates and (optionally) score them with sequence-based heuristics.</p>
+<p>This notebook does <strong>not</strong> decide the ‘correct’ ortholog for you in complex families — it shows how to keep the candidates visible and record the rule you apply.</p>
 <section id="6.1.1-Pre-requisites">
 <h3>6.1.1 Pre-requisites<a class="headerlink" href="#6.1.1-Pre-requisites" title="Link to this heading"></a></h3>
 </section>
@@ -178,39 +178,74 @@
 <li><p><code class="docutils literal notranslate"><span class="pre">homo_sapiens</span></code></p></li>
 </ul>
 </section>
-<section id="6.1.1.2-Optional-dependencies-for-ortholog-utilities">
-<h3>6.1.1.2 Optional dependencies for ortholog utilities<a class="headerlink" href="#6.1.1.2-Optional-dependencies-for-ortholog-utilities" title="Link to this heading"></a></h3>
-<p>Ortholog utilities require optional packages. Install one of:</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">idtrack[ortholog]</span></code></p></li>
-<li><p>or <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">idtrack[all-external]</span></code></p></li>
-</ul>
-<p>If you don’t install these extras, the ortholog steps below are skipped with a message. The embedding features of section 6.1.4 also need <code class="docutils literal notranslate"><span class="pre">torch</span></code> and <code class="docutils literal notranslate"><span class="pre">transformers</span></code> (<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">idtrack[embeddings]</span></code>); with them installed, a protein language model is downloaded from Hugging Face on first use, and without them those features are left empty.</p>
+<section id="6.1.1.2-An-orthology-table">
+<h3>6.1.1.2 An orthology table<a class="headerlink" href="#6.1.1.2-An-orthology-table" title="Link to this heading"></a></h3>
+<p>Ensembl publishes the orthologs of every release (Ensembl Compara): in BioMart (the attributes “Human gene stable ID” and “Human homology type” of a mouse or pig gene dataset) and as files under <code class="docutils literal notranslate"><span class="pre">https://ftp.ensembl.org/pub/release-&lt;release&gt;/tsv/ensembl-compara/homologies/</span></code>. Use the table of the release of your graph’s snapshot, so that its gene ids are the ids IDTrack converts to.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>1
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Check optional dependency status (ortholog utilities require gget + biopython)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># The orthology table of this tutorial: the two rows of Ensembl Compara's homologies of release 115 for human TP53 (mouse</span>
+<span class="c1"># Trp53 and pig TP53, both one-to-one orthologs), with the columns of a BioMart export (gene stable ID, human gene stable</span>
+<span class="c1"># ID, human homology type). In your work, read the export of your snapshot release, e.g. pd.read_csv('mouse_human_orthologs_115.tsv', sep='\t').</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack</span><span class="w"> </span><span class="kn">import</span> <span class="n">_external_mappers</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 
-<span class="n">dep_status</span> <span class="o">=</span> <span class="n">_external_mappers</span><span class="o">.</span><span class="n">check_optional_dependencies</span><span class="p">(</span><span class="n">warn</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="n">ORTHOLOG_OK</span> <span class="o">=</span> <span class="n">dep_status</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'gget'</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="ow">and</span> <span class="n">dep_status</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'biopython'</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
-
-<span class="nb">print</span><span class="p">(</span><span class="s1">'Optional dependency status:'</span><span class="p">,</span> <span class="n">dep_status</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">'Ortholog utilities available:'</span><span class="p">,</span> <span class="n">ORTHOLOG_OK</span><span class="p">)</span>
-<br/></pre></div>
+<span class="n">orthology</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+    <span class="p">[</span>
+        <span class="p">{</span><span class="s1">'source_gene'</span><span class="p">:</span> <span class="s1">'ENSMUSG00000059552'</span><span class="p">,</span> <span class="s1">'human_gene'</span><span class="p">:</span> <span class="s1">'ENSG00000141510'</span><span class="p">,</span> <span class="s1">'homology_type'</span><span class="p">:</span> <span class="s1">'ortholog_one2one'</span><span class="p">},</span>
+        <span class="p">{</span><span class="s1">'source_gene'</span><span class="p">:</span> <span class="s1">'ENSSSCG00000017950'</span><span class="p">,</span> <span class="s1">'human_gene'</span><span class="p">:</span> <span class="s1">'ENSG00000141510'</span><span class="p">,</span> <span class="s1">'homology_type'</span><span class="p">:</span> <span class="s1">'ortholog_one2one'</span><span class="p">},</span>
+    <span class="p">]</span>
+<span class="p">)</span>
+<span class="n">orthology</span>
+</pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>1
+</pre></div>
 </div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-Optional dependency status: {&#39;gget&#39;: True, &#39;mygene&#39;: True, &#39;pybiomart&#39;: True, &#39;gprofiler-official&#39;: True, &#39;biopython&#39;: True}
-Ortholog utilities available: True
-</pre></div></div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>source_gene</th>
+      <th>human_gene</th>
+      <th>homology_type</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>ENSMUSG00000059552</td>
+      <td>ENSG00000141510</td>
+      <td>ortholog_one2one</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>ENSSSCG00000017950</td>
+      <td>ENSG00000141510</td>
+      <td>ortholog_one2one</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
 </div>
 </section>
 <section id="6.1.2-Step-by-step:-mouse-→-human">
@@ -225,102 +260,63 @@ Ortholog utilities available: True
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
 <span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack</span><span class="w"> </span><span class="kn">import</span> <span class="n">API</span>
 
 <span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'IDTRACK_LOCAL_REPO'</span><span class="p">,</span> <span class="s1">'idtrack_cache'</span><span class="p">))</span>
 <span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-<span class="n">api_mouse</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
-<span class="n">api_mouse</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
+<span class="n">API</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
 
-<span class="n">mouse_name</span><span class="p">,</span> <span class="n">mouse_latest</span> <span class="o">=</span> <span class="n">api_mouse</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">'mouse'</span><span class="p">)</span>
-<span class="n">MOUSE_SNAPSHOT</span> <span class="o">=</span> <span class="mi">115</span>  <span class="c1"># pinned (mouse_latest is Ensembl's newest release)</span>
-<span class="n">api_mouse</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">mouse_name</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">MOUSE_SNAPSHOT</span><span class="p">)</span>
+<span class="n">MOUSE_SNAPSHOT</span> <span class="o">=</span> <span class="mi">115</span>  <span class="c1"># pinned: the release of the orthology table</span>
+<span class="n">api_mouse</span> <span class="o">=</span> <span class="n">API</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="s1">'mus_musculus'</span><span class="p">,</span> <span class="n">MOUSE_SNAPSHOT</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
 
 <span class="n">mouse_query</span> <span class="o">=</span> <span class="s1">'Trp53'</span>  <span class="c1"># example MGI symbol; replace with your gene</span>
-<span class="n">mouse_to_ensembl</span> <span class="o">=</span> <span class="n">api_mouse</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span>
-    <span class="n">mouse_query</span><span class="p">,</span>
-    <span class="n">to_release</span><span class="o">=</span><span class="n">MOUSE_SNAPSHOT</span><span class="p">,</span>
-    <span class="n">final_database</span><span class="o">=</span><span class="s1">'base_ensembl_gene'</span><span class="p">,</span>
-<span class="p">)</span>
-<span class="n">mouse_to_ensembl</span>
-<br/></pre></div>
+<span class="n">mouse_to_ensembl</span> <span class="o">=</span> <span class="n">api_mouse</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="n">mouse_query</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">MOUSE_SNAPSHOT</span><span class="p">,</span> <span class="n">final_database</span><span class="o">=</span><span class="s1">'base_ensembl_gene'</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">mouse_to_ensembl</span><span class="o">.</span><span class="n">status</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">mouse_to_ensembl</span><span class="o">.</span><span class="n">targets</span><span class="p">()))</span>
+</pre></div>
 </div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-2026-11-12 15:22:50 INFO:idtrack._verify_organism: Ensembl Rest API query to get the organism names and associated releases.
-</pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>2
-</pre></div>
+<div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-{&#39;query_id&#39;: &#39;Trp53&#39;,
- &#39;graph_id&#39;: &#39;Trp53&#39;,
- &#39;match&#39;: &#39;exact&#39;,
- &#39;known_versions&#39;: [],
- &#39;from_release&#39;: 115,
- &#39;from_release_inferred&#39;: True,
- &#39;from_release_given&#39;: None,
- &#39;from_release_fallback&#39;: False,
- &#39;from_databases&#39;: [&#39;MGI Symbol&#39;,
-  &#39;NCBI gene (formerly Entrezgene)&#39;,
-  &#39;UniProtKB Gene Name&#39;],
- &#39;to_release&#39;: 115,
- &#39;strategy&#39;: &#39;best&#39;,
- &#39;final_database&#39;: &#39;base_ensembl_gene&#39;,
- &#39;target_id&#39;: [&#39;ENSMUSG00000059552&#39;],
- &#39;last_node&#39;: [[&#39;ENSMUSG00000059552.14&#39;, &#39;ENSMUSG00000059552&#39;]],
- &#39;ambiguous&#39;: False,
- &#39;tie&#39;: False,
- &#39;alternative_locus_genes&#39;: [],
- &#39;no_corresponding&#39;: False,
- &#39;no_conversion&#39;: False,
- &#39;no_target&#39;: False,
- &#39;no_target_genes&#39;: [],
- &#39;error&#39;: None}
+converted [&#39;ENSMUSG00000059552&#39;]
 </pre></div></div>
 </div>
-<p>The <code class="docutils literal notranslate"><span class="pre">target_id</span></code> entry is your mouse Ensembl gene ID (without version, because of <code class="docutils literal notranslate"><span class="pre">final_database='base_ensembl_gene'</span></code>). If you get several, you are in a 1→n case (<code class="docutils literal notranslate"><span class="pre">tie=True</span></code> when they are equal in all evidence) — you may need to decide how to handle it; the first entry is the first of the best answer in a fixed order (by gene id), not a choice by evidence.</p>
+<p><code class="docutils literal notranslate"><span class="pre">targets()</span></code> holds your mouse Ensembl gene ID (without version, because of <code class="docutils literal notranslate"><span class="pre">final_database='base_ensembl_gene'</span></code>). If you get several, you are in a 1→n case (<code class="docutils literal notranslate"><span class="pre">tie=True</span></code> when they are equal in all evidence) — you may need to decide how to handle it; the first entry is the first of the best answer in a fixed order (by gene id), not a choice by evidence.</p>
 </section>
-<section id="6.1.2.2-Find-human-ortholog(s)-(ortholog-utilities)">
-<h3>6.1.2.2 Find human ortholog(s) (ortholog utilities)<a class="headerlink" href="#6.1.2.2-Find-human-ortholog(s)-(ortholog-utilities)" title="Link to this heading"></a></h3>
-<p>We use Bgee orthologs via <code class="docutils literal notranslate"><span class="pre">gget</span></code> (optional dependency).</p>
+<section id="6.1.2.2-Find-human-ortholog(s)-(the-orthology-table)">
+<h3>6.1.2.2 Find human ortholog(s) (the orthology table)<a class="headerlink" href="#6.1.2.2-Find-human-ortholog(s)-(the-orthology-table)" title="Link to this heading"></a></h3>
+<p>Look the mouse gene up in the orthology table of the same release. Keep every ortholog the table lists, with its type.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>3
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">human_ensembl_gene_ids</span> <span class="o">=</span> <span class="p">[]</span>
-<span class="n">mouse_ensembl_gene_id</span> <span class="o">=</span> <span class="n">mouse_to_ensembl</span><span class="p">[</span><span class="s1">'target_id'</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">mouse_to_ensembl</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'target_id'</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">mouse_targets</span> <span class="o">=</span> <span class="n">mouse_to_ensembl</span><span class="o">.</span><span class="n">targets</span><span class="p">()</span>
+<span class="n">mouse_ensembl_gene_id</span> <span class="o">=</span> <span class="n">mouse_targets</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">mouse_targets</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="kc">None</span>
 
 <span class="k">if</span> <span class="n">mouse_ensembl_gene_id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">'No mouse Ensembl gene ID found; check your input ID and mouse graph/YAML.'</span><span class="p">)</span>
-<span class="k">elif</span> <span class="ow">not</span> <span class="n">ORTHOLOG_OK</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">'Ortholog utilities are not available (install extras: `pip install idtrack[ortholog]`).'</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'No single mouse Ensembl gene ID found; check your input ID and the mouse graph.'</span><span class="p">)</span>
+    <span class="n">human_ensembl_gene_ids</span> <span class="o">=</span> <span class="p">[]</span>
 <span class="k">else</span><span class="p">:</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._external_mappers</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_ortholog_table</span><span class="p">,</span> <span class="n">get_ortholog_ids_for_species</span>
-
-    <span class="n">ortholog_df</span> <span class="o">=</span> <span class="n">get_ortholog_table</span><span class="p">(</span><span class="n">mouse_ensembl_gene_id</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-    <span class="n">human_ensembl_gene_ids</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">get_ortholog_ids_for_species</span><span class="p">(</span><span class="n">ortholog_df</span><span class="p">,</span> <span class="n">target_species</span><span class="o">=</span><span class="s1">'human'</span><span class="p">))</span>
+    <span class="n">rows</span> <span class="o">=</span> <span class="n">orthology</span><span class="p">[</span><span class="n">orthology</span><span class="p">[</span><span class="s1">'source_gene'</span><span class="p">]</span> <span class="o">==</span> <span class="n">mouse_ensembl_gene_id</span><span class="p">]</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">rows</span><span class="o">.</span><span class="n">to_string</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+    <span class="n">human_ensembl_gene_ids</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">rows</span><span class="p">[</span><span class="s1">'human_gene'</span><span class="p">])</span>
 
 <span class="n">human_ensembl_gene_ids</span>
-<br/></pre></div>
+</pre></div>
 </div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area stderr docutils container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
-15:22:53 - INFO - Getting species ID for gene ENSMUSG00000059552 from Bgee
-15:22:53 - INFO - Getting orthologs for gene ENSMUSG00000059552 from Bgee
+       source_gene      human_gene    homology_type
+ENSMUSG00000059552 ENSG00000141510 ortholog_one2one
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -343,23 +339,18 @@ Ortholog utilities available: True
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="ow">not</span> <span class="n">human_ensembl_gene_ids</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">'No human ortholog IDs available; skipping human conversion step.'</span><span class="p">)</span>
 <span class="k">else</span><span class="p">:</span>
-    <span class="n">api_human</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
-    <span class="n">api_human</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
-
-    <span class="n">human_name</span><span class="p">,</span> <span class="n">human_latest</span> <span class="o">=</span> <span class="n">api_human</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">'human'</span><span class="p">)</span>
     <span class="n">HUMAN_SNAPSHOT</span> <span class="o">=</span> <span class="mi">115</span>  <span class="c1"># pinned</span>
-    <span class="n">api_human</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">human_name</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">HUMAN_SNAPSHOT</span><span class="p">)</span>
+    <span class="n">api_human</span> <span class="o">=</span> <span class="n">API</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="s1">'homo_sapiens'</span><span class="p">,</span> <span class="n">HUMAN_SNAPSHOT</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
 
     <span class="c1"># Convert all candidate orthologs (if many-to-many, you will see it here)</span>
-    <span class="n">human_results</span> <span class="o">=</span> <span class="n">api_human</span><span class="o">.</span><span class="n">convert_identifier_multiple</span><span class="p">(</span>
-        <span class="nb">list</span><span class="p">(</span><span class="n">human_ensembl_gene_ids</span><span class="p">),</span>
+    <span class="n">human_results</span> <span class="o">=</span> <span class="n">api_human</span><span class="o">.</span><span class="n">convert_many</span><span class="p">(</span>
+        <span class="n">human_ensembl_gene_ids</span><span class="p">,</span>
         <span class="n">to_release</span><span class="o">=</span><span class="n">HUMAN_SNAPSHOT</span><span class="p">,</span>
         <span class="n">final_database</span><span class="o">=</span><span class="s1">'HGNC Symbol'</span><span class="p">,</span>
-        <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">human_results</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s1">'query_id'</span><span class="p">],</span> <span class="s1">'-&gt;'</span><span class="p">,</span> <span class="n">r</span><span class="p">[</span><span class="s1">'target_id'</span><span class="p">],</span> <span class="s1">'| tie:'</span><span class="p">,</span> <span class="n">r</span><span class="p">[</span><span class="s1">'tie'</span><span class="p">])</span>
-<br/></pre></div>
+        <span class="nb">print</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">query_id</span><span class="p">,</span> <span class="s1">'-&gt;'</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">targets</span><span class="p">()),</span> <span class="s1">'| tie:'</span><span class="p">,</span> <span class="n">r</span><span class="o">.</span><span class="n">tie</span><span class="p">)</span>
+</pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -373,221 +364,92 @@ ENSG00000141510 -&gt; [&#39;TP53&#39;] | tie: False
 </section>
 <section id="6.1.3-Step-by-step:-pig-→-human-(same-pattern)">
 <h3>6.1.3 Step-by-step: pig → human (same pattern)<a class="headerlink" href="#6.1.3-Step-by-step:-pig-→-human-(same-pattern)" title="Link to this heading"></a></h3>
-<p>Replace <code class="docutils literal notranslate"><span class="pre">api_mouse</span></code> with a pig API instance and start from your pig identifiers. Many pig pipelines start from Ensembl IDs or Entrez IDs; adjust <code class="docutils literal notranslate"><span class="pre">final_database</span></code> accordingly.</p>
+<p>Use a pig API and start from your pig identifiers. Many pig pipelines start from Ensembl IDs or Entrez IDs; adjust <code class="docutils literal notranslate"><span class="pre">final_database</span></code> accordingly.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>5
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">api_pig</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
-<span class="n">api_pig</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
-
-<span class="n">pig_name</span><span class="p">,</span> <span class="n">pig_latest</span> <span class="o">=</span> <span class="n">api_pig</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">'pig'</span><span class="p">)</span>  <span class="c1"># 'pig' is sus_scrofa</span>
-<span class="n">PIG_SNAPSHOT</span> <span class="o">=</span> <span class="mi">115</span>  <span class="c1"># pinned</span>
-<span class="n">api_pig</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">pig_name</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">PIG_SNAPSHOT</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">PIG_SNAPSHOT</span> <span class="o">=</span> <span class="mi">115</span>  <span class="c1"># pinned</span>
+<span class="n">api_pig</span> <span class="o">=</span> <span class="n">API</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="s1">'sus_scrofa'</span><span class="p">,</span> <span class="n">PIG_SNAPSHOT</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
 
 <span class="n">pig_query</span> <span class="o">=</span> <span class="s1">'TP53'</span>  <span class="c1"># example; replace with your pig gene symbol or ID</span>
-<span class="n">pig_to_ensembl</span> <span class="o">=</span> <span class="n">api_pig</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span>
-    <span class="n">pig_query</span><span class="p">,</span>
-    <span class="n">to_release</span><span class="o">=</span><span class="n">PIG_SNAPSHOT</span><span class="p">,</span>
-    <span class="n">final_database</span><span class="o">=</span><span class="s1">'base_ensembl_gene'</span><span class="p">,</span>
-<span class="p">)</span>
-<span class="n">pig_to_ensembl</span>
-<br/></pre></div>
+<span class="n">pig_to_ensembl</span> <span class="o">=</span> <span class="n">api_pig</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="n">pig_query</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">PIG_SNAPSHOT</span><span class="p">,</span> <span class="n">final_database</span><span class="o">=</span><span class="s1">'base_ensembl_gene'</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">pig_to_ensembl</span><span class="o">.</span><span class="n">status</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">pig_to_ensembl</span><span class="o">.</span><span class="n">targets</span><span class="p">()))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">orthology</span><span class="p">[</span><span class="n">orthology</span><span class="p">[</span><span class="s1">'source_gene'</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">pig_to_ensembl</span><span class="o">.</span><span class="n">targets</span><span class="p">())]</span><span class="o">.</span><span class="n">to_string</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+</pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>5
-</pre></div>
+<div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-{&#39;query_id&#39;: &#39;TP53&#39;,
- &#39;graph_id&#39;: &#39;TP53&#39;,
- &#39;match&#39;: &#39;exact&#39;,
- &#39;known_versions&#39;: [],
- &#39;from_release&#39;: 115,
- &#39;from_release_inferred&#39;: True,
- &#39;from_release_given&#39;: None,
- &#39;from_release_fallback&#39;: False,
- &#39;from_databases&#39;: [&#39;NCBI gene (formerly Entrezgene)&#39;,
-  &#39;UniProtKB Gene Name&#39;,
-  &#39;VGNC Symbol&#39;],
- &#39;to_release&#39;: 115,
- &#39;strategy&#39;: &#39;best&#39;,
- &#39;final_database&#39;: &#39;base_ensembl_gene&#39;,
- &#39;target_id&#39;: [&#39;ENSSSCG00000017950&#39;],
- &#39;last_node&#39;: [[&#39;ENSSSCG00000017950.5&#39;, &#39;ENSSSCG00000017950&#39;]],
- &#39;ambiguous&#39;: False,
- &#39;tie&#39;: False,
- &#39;alternative_locus_genes&#39;: [],
- &#39;no_corresponding&#39;: False,
- &#39;no_conversion&#39;: False,
- &#39;no_target&#39;: False,
- &#39;no_target_genes&#39;: [],
- &#39;error&#39;: None}
+converted [&#39;ENSSSCG00000017950&#39;]
+       source_gene      human_gene    homology_type
+ENSSSCG00000017950 ENSG00000141510 ortholog_one2one
 </pre></div></div>
 </div>
-<p>From here, reuse the same ortholog + human conversion steps as in the mouse section.</p>
+<p>From here, reuse the same orthology lookup + human conversion steps as in the mouse section.</p>
 </section>
 <section id="6.1.4-Advanced:-choose-among-multiple-ortholog-candidates">
 <h3>6.1.4 Advanced: choose among multiple ortholog candidates<a class="headerlink" href="#6.1.4-Advanced:-choose-among-multiple-ortholog-candidates" title="Link to this heading"></a></h3>
-<p>When you have multiple orthologs, IDTrack can optionally compute additional features for ranking. This is for advanced use and requires extra dependencies.</p>
+<p>When the table lists several orthologs (<code class="docutils literal notranslate"><span class="pre">ortholog_one2many</span></code>, <code class="docutils literal notranslate"><span class="pre">ortholog_many2many</span></code>), choose with evidence the orthology resource provides (Ensembl Compara reports the percent identity of each pair, the gene-order conservation and whether the ortholog is high-confidence) and record the rule you used; IDTrack keeps every candidate visible but does not rank orthologs.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>6
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Example (advanced): compute sequence-based alignment features for each ortholog candidate</span>
-<span class="k">if</span> <span class="n">mouse_ensembl_gene_id</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">ORTHOLOG_OK</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">'Skipped: no mouse Ensembl gene ID, or the ortholog utilities are not installed.'</span><span class="p">)</span>
-    <span class="n">features</span> <span class="o">=</span> <span class="kc">None</span>
-<span class="k">else</span><span class="p">:</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._external_mappers</span><span class="w"> </span><span class="kn">import</span> <span class="n">align_ortholog_pair_with_features</span>
-
-    <span class="n">features</span> <span class="o">=</span> <span class="n">align_ortholog_pair_with_features</span><span class="p">(</span><span class="n">mouse_ensembl_gene_id</span><span class="p">,</span> <span class="n">target_species</span><span class="o">=</span><span class="s1">'human'</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="n">features</span>
-<br/></pre></div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Example: keep every ortholog, and the rule that would pick one, as columns of the result</span>
+<span class="n">candidates</span> <span class="o">=</span> <span class="n">orthology</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">'source_gene'</span><span class="p">)[</span><span class="s1">'human_gene'</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+<span class="n">candidates</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="s1">'human_candidates'</span><span class="p">)</span><span class="o">.</span><span class="n">to_frame</span><span class="p">()</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">rule</span><span class="o">=</span><span class="s1">'one2one only: keep; otherwise review'</span><span class="p">)</span>
+</pre></div>
 </div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-15:22:59 - INFO - Getting species ID for gene ENSMUSG00000059552 from Bgee
-15:22:59 - INFO - Getting orthologs for gene ENSMUSG00000059552 from Bgee
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-[INFO] Found 1 ortholog(s) for &#39;ENSMUSG00000059552&#39; in target species &#39;human&#39; (canonical=&#39;hsapiens&#39;, genus=&#39;Homo&#39;, species=&#39;sapiens&#39;).
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-15:23:26 - INFO - Requesting amino acid sequence of the canonical transcript ENSMUST00000108658 of gene ENSMUSG00000059552 from UniProt.
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-[INFO] Aligning &#39;ENSMUSG00000059552&#39; -&gt; &#39;ENSG00000141510&#39; (&#39;human&#39;)
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-15:23:56 - INFO - Requesting amino acid sequence of the canonical transcript ENST00000269305 of gene ENSG00000141510 from UniProt.
-15:23:56 - INFO - MUSCLE compiled.
-15:23:56 - INFO - MUSCLE aligning...
-
-muscle 5.2.linux64 [00617b]  791Gb RAM, 32 cores
-Built Apr 13 2022 00:43:46
-(C) Copyright 2004-2021 Robert C. Edgar.
-https://drive5.com
-
-Input: 2 seqs, avg length 392, max 393
-
-00:00 7.9Mb  CPU has 32 cores, defaulting to 20 threads
-
-WARNING: Max OMP threads 16
-
-00:00 134Mb   100.0% Calc posteriors
-00:00 134Mb   100.0% UPGMA5
-15:23:56 - INFO - MUSCLE alignment complete. Alignment time: 0.05 seconds
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-[WARN] Failed to compute embeddings for ENSG00000141510: transformers / torch not installed. Install them or call align_ortholog_pair_with_features(..., embedding_model_name=None).
-</pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>6
 </pre></div>
 </div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-{&#39;ENSG00000141510&#39;: {&#39;query_id&#39;: &#39;ENSMUSG00000059552&#39;,
-  &#39;target_id&#39;: &#39;ENSG00000141510&#39;,
-  &#39;target_species&#39;: &#39;human&#39;,
-  &#39;target_species_canonical&#39;: &#39;hsapiens&#39;,
-  &#39;target_species_genus&#39;: &#39;Homo&#39;,
-  &#39;target_species_species&#39;: &#39;sapiens&#39;,
-  &#39;alignment_aligned_query&#39;: &#39;MTAMEESQSDISLELPLSQETFSGLWKLLPPEDIL-PSP-HCMDDLLL-PQDVEEFFE---GPSEALRVSGAPAAQDPVTETPGPVAPAPATPWPLSSFVPSQKTYQGNYGFHLGFLQSGTAKSVMCTYSPPLNKLFCQLAKTCPVQLWVSATPPAGSRVRAMAIYKKSQHMTEVVRRCPHHERCSDGDGLAPPQHLIRVEGNLYPEYLEDRQTFRHSVVVPYEPPEAGSEYTTIHYKYMCNSSCMGGMNRRPILTIITLEDSSGNLLGRDSFEVRVCACPGRDRRTEEENFRKKEVLCPELPPGSAKRALPTCTSASPPQKKKPLDGEYFTLKIRGRKRFEMFRELNEALELKDAHATEESGDSRAHSSYLKTKKGQSTSRHKKTMVKKVGPDSD&#39;,
-  &#39;alignment_aligned_target&#39;: &#39;---MEEPQSDPSVEPPLSQETFSDLWKLLPENNVLSPLPSQAMDDLMLSPDDIEQWFTEDPGPDEAPRMPEAAPPVAPAPAAPTPAAPAPAPSWPLSSSVPSQKTYQGSYGFRLGFLHSGTAKSVTCTYSPALNKMFCQLAKTCPVQLWVDSTPPPGTRVRAMAIYKQSQHMTEVVRRCPHHERCSDSDGLAPPQHLIRVEGNLRVEYLDDRNTFRHSVVVPYEPPEVGSDCTTIHYNYMCNSSCMGGMNRRPILTIITLEDSSGNLLGRNSFEVRVCACPGRDRRTEEENLRKKGEPHHELPPGSTKRALPNNTSSSPQPKKKPLDGEYFTLQIRGRERFEMFRELNEALELKDAQAGKEPGGSRAHSSHLKSKKGQSTSRHKKLMFKTEGPDSD&#39;,
-  &#39;alignment_aligned_fasta&#39;: &#39;&gt;ENSMUSG00000059552\nMTAMEESQSDISLELPLSQETFSGLWKLLPPEDIL-PSP-HCMDDLLL-PQDVEEFFE---GPSEALRVSGAPAAQDPVT\nETPGPVAPAPATPWPLSSFVPSQKTYQGNYGFHLGFLQSGTAKSVMCTYSPPLNKLFCQLAKTCPVQLWVSATPPAGSRV\nRAMAIYKKSQHMTEVVRRCPHHERCSDGDGLAPPQHLIRVEGNLYPEYLEDRQTFRHSVVVPYEPPEAGSEYTTIHYKYM\nCNSSCMGGMNRRPILTIITLEDSSGNLLGRDSFEVRVCACPGRDRRTEEENFRKKEVLCPELPPGSAKRALPTCTSASPP\nQKKKPLDGEYFTLKIRGRKRFEMFRELNEALELKDAHATEESGDSRAHSSYLKTKKGQSTSRHKKTMVKKVGPDSD\n&gt;ENSG00000141510\n---MEEPQSDPSVEPPLSQETFSDLWKLLPENNVLSPLPSQAMDDLMLSPDDIEQWFTEDPGPDEAPRMPEAAPPVAPAP\nAAPTPAAPAPAPSWPLSSSVPSQKTYQGSYGFRLGFLHSGTAKSVTCTYSPALNKMFCQLAKTCPVQLWVDSTPPPGTRV\nRAMAIYKQSQHMTEVVRRCPHHERCSDSDGLAPPQHLIRVEGNLRVEYLDDRNTFRHSVVVPYEPPEVGSDCTTIHYNYM\nCNSSCMGGMNRRPILTIITLEDSSGNLLGRNSFEVRVCACPGRDRRTEEENLRKKGEPHHELPPGSTKRALPNNTSSSPQ\nPKKKPLDGEYFTLQIRGRERFEMFRELNEALELKDAQAGKEPGGSRAHSSHLKSKKGQSTSRHKKLMFKTEGPDSD\n&#39;,
-  &#39;score_alignment_length&#39;: 396.0,
-  &#39;score_identity_fraction&#39;: 0.7676767676767676,
-  &#39;score_positive_fraction&#39;: 0.8232323232323232,
-  &#39;score_very_negative_fraction&#39;: 0.015151515151515152,
-  &#39;score_gap_fraction_query&#39;: 0.015151515151515152,
-  &#39;score_gap_fraction_target&#39;: 0.007575757575757576,
-  &#39;score_gap_openings_query&#39;: 4.0,
-  &#39;score_gap_openings_target&#39;: 1.0,
-  &#39;score_seq1_coverage&#39;: 1.0,
-  &#39;score_seq2_coverage&#39;: 1.0,
-  &#39;score_blosum62_sum&#39;: 1599.0,
-  &#39;score_blosum62_mean&#39;: 4.037878787878788,
-  &#39;score_composition_l2_distance&#39;: 0.03280929173960127,
-  &#39;composition_diff_vector&#39;: [0.0004697592483852084,
-   0.0053239381483656326,
-   -0.007300841651986689,
-   0.005715404188686629,
-   0.005343511450381679,
-   0.0030142885104717174,
-   -0.002329222939909961,
-   0.0027206889802309647,
-   0.010647876296731265,
-   0.00831865335682129,
-   -0.002329222939909961,
-   -0.015110589156390682,
-   -0.01706791935799569,
-   -0.0022705030338618162,
-   -0.0046192992757878165,
-   -0.006948522215697792,
-   0.005558817772558233,
-   0.005480524564494028,
-   -0.002485809356038364,
-   0.007868467410452145],
-  &#39;compdiff_A&#39;: 0.0004697592483852084,
-  &#39;compdiff_C&#39;: 0.0053239381483656326,
-  &#39;compdiff_D&#39;: -0.007300841651986689,
-  &#39;compdiff_E&#39;: 0.005715404188686629,
-  &#39;compdiff_F&#39;: 0.005343511450381679,
-  &#39;compdiff_G&#39;: 0.0030142885104717174,
-  &#39;compdiff_H&#39;: -0.002329222939909961,
-  &#39;compdiff_I&#39;: 0.0027206889802309647,
-  &#39;compdiff_K&#39;: 0.010647876296731265,
-  &#39;compdiff_L&#39;: 0.00831865335682129,
-  &#39;compdiff_M&#39;: -0.002329222939909961,
-  &#39;compdiff_N&#39;: -0.015110589156390682,
-  &#39;compdiff_P&#39;: -0.01706791935799569,
-  &#39;compdiff_Q&#39;: -0.0022705030338618162,
-  &#39;compdiff_R&#39;: -0.0046192992757878165,
-  &#39;compdiff_S&#39;: -0.006948522215697792,
-  &#39;compdiff_T&#39;: 0.005558817772558233,
-  &#39;compdiff_V&#39;: 0.005480524564494028,
-  &#39;compdiff_W&#39;: -0.002485809356038364,
-  &#39;compdiff_Y&#39;: 0.007868467410452145,
-  &#39;emb_model&#39;: None,
-  &#39;emb_dim&#39;: None,
-  &#39;emb_cosine&#39;: None,
-  &#39;emb_euclid&#39;: None,
-  &#39;emb_diff&#39;: None}}
-</pre></div></div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>human_candidates</th>
+      <th>rule</th>
+    </tr>
+    <tr>
+      <th>source_gene</th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>ENSMUSG00000059552</th>
+      <td>[ENSG00000141510]</td>
+      <td>one2one only: keep; otherwise review</td>
+    </tr>
+    <tr>
+      <th>ENSSSCG00000017950</th>
+      <td>[ENSG00000141510]</td>
+      <td>one2one only: keep; otherwise review</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
 </div>
 </section>
 <section id="6.1.5-Practical-cautions-(please-read)">
@@ -595,7 +457,7 @@ WARNING: Max OMP threads 16
 <ol class="arabic simple">
 <li><p><strong>Orthology is context-dependent</strong>: paralogs, gene family expansions, and annotation differences matter.</p></li>
 <li><p><strong>Do not silently pick one</strong> in many-to-many cases without recording the rule you used.</p></li>
-<li><p><strong>Record provenance</strong>: snapshot releases + YAML configs + ortholog source/version.</p></li>
+<li><p><strong>Record provenance</strong>: snapshot releases + YAML configs + the orthology resource and its release.</p></li>
 </ol>
 </section>
 </section>

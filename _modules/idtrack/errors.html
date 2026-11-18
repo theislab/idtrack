@@ -1,0 +1,572 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>idtrack.errors &mdash; idtrack 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=6a604523" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="../../_static/tutorials.css?v=0e72a3a5" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../_static/design-tabs.js?v=fcb327ea"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />  
+<!-- Google tag (gtag.js) -->
+<script
+    async
+    src="https://www.googletagmanager.com/gtag/js?id=G-FYKLWNJBVK"
+></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() {
+        dataLayer.push(arguments);
+    }
+    gtag("js", new Date());
+
+    gtag("config", "G-FYKLWNJBVK");
+</script>
+
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            idtrack
+              <img src="../../_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../changes.html">Changes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_of_conduct.html">Code of Conduct</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">idtrack</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">idtrack.errors</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for idtrack.errors</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""The errors of idtrack, in one hierarchy rooted in :py:class:`IdtrackError`.</span>
+
+<span class="sd">A caller (a script, a notebook, a web server) can tell from the class alone whose fault an error is:</span>
+
+<span class="sd">- :py:class:`InputError`: the caller asked for something the package or the loaded graph does not have, or passed an</span>
+<span class="sd">  argument of the wrong kind. The subclasses name the argument: an unknown organism, release, assembly, database or</span>
+<span class="sd">  identifier, a missing value, an Ensembl id at a release where it is not active or with a version that does not</span>
+<span class="sd">  exist, an argument of the wrong type or value. Each subclass also derives from the built-in error that it replaces</span>
+<span class="sd">  (``ValueError``, or ``TypeError`` for a value of the wrong type), so ``except ValueError`` keeps working.</span>
+<span class="sd">- :py:class:`GraphFileError`: a graph file is missing, unreadable, of another format, or holds another graph than the</span>
+<span class="sd">  one asked for (:py:class:`GraphMismatchError`).</span>
+<span class="sd">- :py:class:`SearchBudgetExceededError`: one conversion needed more work than its budget; an outcome of that one</span>
+<span class="sd">  identifier, which a batch records and goes on.</span>
+<span class="sd">- :py:class:`BuildError`: building tables or a graph failed: Ensembl could not be reached or answered something</span>
+<span class="sd">  unusable (:py:class:`EnsemblAccessError`, also a ``ConnectionError``), a table or a schema is not what the builder</span>
+<span class="sd">  needs, the history does not validate, the externals configuration does not cover a release.</span>
+<span class="sd">- :py:class:`IntegrityError`: the package or a graph contradicts itself; a bug or a damaged file, never the caller's</span>
+<span class="sd">  input.</span>
+
+<span class="sd">This module imports nothing of idtrack.</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sequence</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+
+
+<div class="viewcode-block" id="IdtrackError">
+<a class="viewcode-back" href="../../reference.html#idtrack.errors.IdtrackError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">IdtrackError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""The root of every error idtrack raises on purpose."""</span></div>
+
+
+
+<span class="c1"># ---------------------------------------------------------------------------------------------------------------------</span>
+<span class="c1"># The caller's input</span>
+
+
+<div class="viewcode-block" id="InputError">
+<a class="viewcode-back" href="../../reference.html#idtrack.errors.InputError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">InputError</span><span class="p">(</span><span class="n">IdtrackError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""The caller passed a value the package or the loaded graph cannot use.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        argument (str | None): The name of the argument, where one is concerned.</span>
+<span class="sd">        value (Any): The value given.</span>
+<span class="sd">        allowed (tuple | None): The accepted values, where they are few enough to list.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">argument</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">allowed</span><span class="p">:</span> <span class="n">Sequence</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Keep the message and what it is about.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            message: The text of the error.</span>
+<span class="sd">            argument: The name of the argument, if one is concerned.</span>
+<span class="sd">            value: The value given.</span>
+<span class="sd">            allowed: The accepted values, if they can be listed.</span>
+<span class="sd">        """</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">message</span> <span class="o">=</span> <span class="n">message</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">argument</span> <span class="o">=</span> <span class="n">argument</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">allowed</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">allowed</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">allowed</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return the message alone.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: The message.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">message</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__reduce__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Rebuild the error with its attributes (pickling, copying)."""</span>
+        <span class="k">return</span> <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">,),</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="ArgumentTypeError">
+<a class="viewcode-back" href="../../reference.html#idtrack.errors.ArgumentTypeError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ArgumentTypeError</span><span class="p">(</span><span class="n">InputError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""An argument is not of the type the call takes (a number for a string, a float for a release)."""</span></div>
+
+
+
+<div class="viewcode-block" id="InvalidArgumentError">
+<a class="viewcode-back" href="../../reference.html#idtrack.errors.InvalidArgumentError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">InvalidArgumentError</span><span class="p">(</span><span class="n">InputError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""An argument has a value the call does not take (a strategy, a mode, a budget that is not positive)."""</span></div>
+
+
+
+<div class="viewcode-block" id="MissingValueError">
+<a class="viewcode-back" href="../../reference.html#idtrack.errors.MissingValueError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">MissingValueError</span><span class="p">(</span><span class="n">InputError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""A value that stands for nothing was given where an identifier is needed (an empty string)."""</span></div>
+
+
+
+<div class="viewcode-block" id="UnknownOrganismError">
+<a class="viewcode-back" href="../../reference.html#idtrack.errors.UnknownOrganismError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">UnknownOrganismError</span><span class="p">(</span><span class="n">InputError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""The organism is not in idtrack's organism table (:py:mod:`idtrack.organisms`)."""</span></div>
+
+
+
+<div class="viewcode-block" id="UnknownReleaseError">
+<a class="viewcode-back" href="../../reference.html#idtrack.errors.UnknownReleaseError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">UnknownReleaseError</span><span class="p">(</span><span class="n">InputError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""The Ensembl release is not one of the loaded graph (or of the organism)."""</span></div>
+
+
+
+<div class="viewcode-block" id="UnknownAssemblyError">
+<a class="viewcode-back" href="../../reference.html#idtrack.errors.UnknownAssemblyError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">UnknownAssemblyError</span><span class="p">(</span><span class="n">InputError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""The genome assembly is not one of the organism or of the loaded graph."""</span></div>
+
+
+
+<div class="viewcode-block" id="UnknownDatabaseError">
+<a class="viewcode-back" href="../../reference.html#idtrack.errors.UnknownDatabaseError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">UnknownDatabaseError</span><span class="p">(</span><span class="n">InputError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""The database is not one of the loaded graph (at the release asked about)."""</span></div>
+
+
+
+<div class="viewcode-block" id="UnknownIdentifierError">
+<a class="viewcode-back" href="../../reference.html#idtrack.errors.UnknownIdentifierError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">UnknownIdentifierError</span><span class="p">(</span><span class="n">InputError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""The identifier is not one the call can work on (not in the graph, or not of the kind the call needs)."""</span></div>
+
+
+
+<div class="viewcode-block" id="InactiveAtReleaseError">
+<a class="viewcode-back" href="../../reference.html#idtrack.errors.InactiveAtReleaseError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">InactiveAtReleaseError</span><span class="p">(</span><span class="n">InputError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""The identifier is not active at the release the caller gave as ``from_release``.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        identifier (str): The graph node of the query.</span>
+<span class="sd">        release (int): The release that was given.</span>
+<span class="sd">        active_ranges (list[list[int]]): Inclusive ``[first, last]`` release ranges in which the identifier is active.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">identifier</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">release</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">active_ranges</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]]):</span>  <span class="c1"># noqa: B042 - __reduce__</span>
+<span class="w">        </span><span class="sd">"""Keep the query, the release and the releases at which the identifier is active.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            identifier: The graph node of the query.</span>
+<span class="sd">            release: The release that was given.</span>
+<span class="sd">            active_ranges: Inclusive release ranges in which the identifier is active.</span>
+<span class="sd">        """</span>
+        <span class="n">ranges</span> <span class="o">=</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">a</span><span class="si">}</span><span class="s2">"</span> <span class="k">if</span> <span class="n">a</span> <span class="o">==</span> <span class="n">b</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">a</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">b</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">active_ranges</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">"none"</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">identifier</span><span class="si">!r}</span><span class="s2"> is not active at Ensembl release </span><span class="si">{</span><span class="n">release</span><span class="si">}</span><span class="s2">; it is active at the releases: "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">ranges</span><span class="si">}</span><span class="s2">. Give one of these as `from_release`, or leave it out to start from the target release when "</span>
+            <span class="s2">"the identifier is active there and from its latest active release otherwise."</span><span class="p">,</span>
+            <span class="n">argument</span><span class="o">=</span><span class="s2">"from_release"</span><span class="p">,</span>
+            <span class="n">value</span><span class="o">=</span><span class="n">release</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">identifier</span> <span class="o">=</span> <span class="n">identifier</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">release</span> <span class="o">=</span> <span class="n">release</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">active_ranges</span> <span class="o">=</span> <span class="n">active_ranges</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__reduce__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Rebuild the error from its own arguments (pickling, copying)."""</span>
+        <span class="k">return</span> <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">identifier</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">release</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">active_ranges</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="UnknownVersionError">
+<a class="viewcode-back" href="../../reference.html#idtrack.errors.UnknownVersionError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">UnknownVersionError</span><span class="p">(</span><span class="n">InputError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""The identifier is an Ensembl id with a version that the graph does not hold.</span>
+
+<span class="sd">    The version never existed, or the graph cannot know it (a version lower than the latest, or of an id that is no</span>
+<span class="sd">    longer active). It is not answered with another version's gene.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        identifier (str): The identifier as given.</span>
+<span class="sd">        versions (tuple[str, ...]): The ``&lt;id&gt;.&lt;version&gt;`` ids that the graph holds, by ascending version.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">identifier</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">versions</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]):</span>  <span class="c1"># noqa: B042 - __reduce__</span>
+<span class="w">        </span><span class="sd">"""Keep the query and the versions that exist.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            identifier: The identifier as given.</span>
+<span class="sd">            versions: The versions of the id that the graph holds.</span>
+<span class="sd">        """</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">identifier</span><span class="si">!r}</span><span class="s2"> names a version that this graph does not hold; the versions that exist are: "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">versions</span><span class="p">)</span><span class="si">}</span><span class="s2">. Give one of them, or the id without version."</span><span class="p">,</span>
+            <span class="n">argument</span><span class="o">=</span><span class="s2">"identifier"</span><span class="p">,</span>
+            <span class="n">value</span><span class="o">=</span><span class="n">identifier</span><span class="p">,</span>
+            <span class="n">allowed</span><span class="o">=</span><span class="n">versions</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">identifier</span> <span class="o">=</span> <span class="n">identifier</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">versions</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">versions</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__reduce__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Rebuild the error from its own arguments (pickling, copying)."""</span>
+        <span class="k">return</span> <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">identifier</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">versions</span><span class="p">))</span></div>
+
+
+
+<span class="c1"># ---------------------------------------------------------------------------------------------------------------------</span>
+<span class="c1"># Graph files</span>
+
+
+<div class="viewcode-block" id="GraphFileError">
+<a class="viewcode-back" href="../../reference.html#idtrack.errors.GraphFileError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">GraphFileError</span><span class="p">(</span><span class="n">IdtrackError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""A graph file is missing, cannot be read, or is of a format this version of idtrack does not read.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        path (str): The file.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Keep the message and the file.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            message: The text of the error.</span>
+<span class="sd">            path: The graph file.</span>
+<span class="sd">        """</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">message</span> <span class="o">=</span> <span class="n">message</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">path</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return the message alone.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: The message.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">message</span></div>
+
+
+
+<div class="viewcode-block" id="GraphMismatchError">
+<a class="viewcode-back" href="../../reference.html#idtrack.errors.GraphMismatchError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">GraphMismatchError</span><span class="p">(</span><span class="n">GraphFileError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""A graph file holds another graph than the one asked for (organism, window, selection, format, ...)."""</span></div>
+
+
+
+<span class="c1"># ---------------------------------------------------------------------------------------------------------------------</span>
+<span class="c1"># The search</span>
+
+
+<div class="viewcode-block" id="SearchBudgetExceededError">
+<a class="viewcode-back" href="../../reference.html#idtrack.errors.SearchBudgetExceededError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">SearchBudgetExceededError</span><span class="p">(</span><span class="n">IdtrackError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""A conversion needed more search states or more time than its budget allows.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        identifier (str): The graph node of the query.</span>
+<span class="sd">        states (int): Number of search states expanded when the search stopped.</span>
+<span class="sd">        seconds (float): Seconds spent when the search stopped.</span>
+<span class="sd">        budget_states (int): The budget of states of the call.</span>
+<span class="sd">        budget_seconds (float): The budget of seconds of the call.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">identifier</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">states</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">seconds</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">budget_states</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">budget_seconds</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Keep the work done and the budget.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            identifier: The graph node of the query.</span>
+<span class="sd">            states: Number of search states expanded when the search stopped.</span>
+<span class="sd">            seconds: Seconds spent when the search stopped.</span>
+<span class="sd">            budget_states: The budget of states of the call.</span>
+<span class="sd">            budget_seconds: The budget of seconds of the call.</span>
+<span class="sd">        """</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">identifier</span><span class="p">,</span> <span class="n">states</span><span class="p">,</span> <span class="n">seconds</span><span class="p">,</span> <span class="n">budget_states</span><span class="p">,</span> <span class="n">budget_seconds</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">identifier</span> <span class="o">=</span> <span class="n">identifier</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">states</span> <span class="o">=</span> <span class="n">states</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">seconds</span> <span class="o">=</span> <span class="n">seconds</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">budget_states</span> <span class="o">=</span> <span class="n">budget_states</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">budget_seconds</span> <span class="o">=</span> <span class="n">budget_seconds</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Say how far the search got and what its budget was.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: The message of the error.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"The conversion of </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">identifier</span><span class="si">!r}</span><span class="s2"> was stopped after </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="si">}</span><span class="s2"> search states and "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">seconds</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> s (budget: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">budget_states</span><span class="si">}</span><span class="s2"> states, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">budget_seconds</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> s). Give the call "</span>
+            <span class="s2">"a larger `budget_states` or `budget_seconds` (or a `SearchSettings` with them) to let it run longer."</span>
+        <span class="p">)</span></div>
+
+
+
+<span class="c1"># ---------------------------------------------------------------------------------------------------------------------</span>
+<span class="c1"># Building tables and graphs</span>
+
+
+<div class="viewcode-block" id="BuildError">
+<a class="viewcode-back" href="../../reference.html#idtrack.errors.BuildError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">BuildError</span><span class="p">(</span><span class="n">IdtrackError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Building the tables or the graph of an organism failed."""</span></div>
+
+
+
+<div class="viewcode-block" id="EnsemblAccessError">
+<a class="viewcode-back" href="../../reference.html#idtrack.errors.EnsemblAccessError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">EnsemblAccessError</span><span class="p">(</span><span class="n">BuildError</span><span class="p">,</span> <span class="ne">ConnectionError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Ensembl could not be reached, or did not give a usable answer after every attempt."""</span></div>
+
+
+
+<div class="viewcode-block" id="EnsemblRestError">
+<a class="viewcode-back" href="../../reference.html#idtrack.errors.EnsemblRestError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">EnsemblRestError</span><span class="p">(</span><span class="n">EnsemblAccessError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Ensembl REST could not be reached or did not give a usable answer after every attempt.</span>
+
+<span class="sd">    The message names the URL, the attempts, the timeouts in force and how to change them</span>
+<span class="sd">    (:py:func:`idtrack.settings.configure_ensembl`).</span>
+<span class="sd">    """</span></div>
+
+
+
+<div class="viewcode-block" id="EnsemblDownloadError">
+<a class="viewcode-back" href="../../reference.html#idtrack.errors.EnsemblDownloadError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">EnsemblDownloadError</span><span class="p">(</span><span class="n">EnsemblAccessError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""A file of Ensembl's HTTPS dumps could not be downloaded after every attempt.</span>
+
+<span class="sd">    A file that Ensembl does not have (HTTP 404 or 410) is not this error: the caller is told that it is absent.</span>
+<span class="sd">    """</span></div>
+
+
+
+<div class="viewcode-block" id="EnsemblSchemaError">
+<a class="viewcode-back" href="../../reference.html#idtrack.errors.EnsemblSchemaError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">EnsemblSchemaError</span><span class="p">(</span><span class="n">BuildError</span><span class="p">,</span> <span class="ne">LookupError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""An Ensembl core database has no such table, or the table lacks requested columns.</span>
+
+<span class="sd">    It states a fact about the schema of one release (older releases keep stable ids in ``&lt;form&gt;_stable_id``</span>
+<span class="sd">    tables, and some columns were renamed), so callers may fall back to the older layout when they catch it. A</span>
+<span class="sd">    failed download, a connection error or a failure to cache a table never raises it; those keep their own</span>
+<span class="sd">    exception, so that a fallback cannot hide them.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        table (str): Name of the table.</span>
+<span class="sd">        missing_columns (tuple[str, ...]): Requested columns the table lacks; empty when the table itself is absent.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">table</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">missing_columns</span><span class="p">:</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="p">()):</span>
+<span class="w">        </span><span class="sd">"""Record the table and the missing columns next to the message.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            message: The text of the error.</span>
+<span class="sd">            table: Name of the table.</span>
+<span class="sd">            missing_columns: Requested columns the table lacks.</span>
+<span class="sd">        """</span>
+        <span class="c1"># All arguments go to the base class, so that pickling and copying rebuild the same exception.</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="n">table</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">missing_columns</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">message</span> <span class="o">=</span> <span class="n">message</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">table</span> <span class="o">=</span> <span class="n">table</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">missing_columns</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">missing_columns</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return the message alone (the base class would show all arguments).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: The message.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">message</span></div>
+
+
+
+<div class="viewcode-block" id="TableFormatError">
+<a class="viewcode-back" href="../../reference.html#idtrack.errors.TableFormatError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">TableFormatError</span><span class="p">(</span><span class="n">BuildError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""A stored table cannot be read by this version of idtrack, or a table cannot be stored."""</span></div>
+
+
+
+<div class="viewcode-block" id="HistoryValidationError">
+<a class="viewcode-back" href="../../reference.html#idtrack.errors.HistoryValidationError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">HistoryValidationError</span><span class="p">(</span><span class="n">BuildError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Ensembl's id history of an organism does not validate (a session that no release pair explains, ...)."""</span></div>
+
+
+
+<div class="viewcode-block" id="ExternalsError">
+<a class="viewcode-back" href="../../reference.html#idtrack.errors.ExternalsError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ExternalsError</span><span class="p">(</span><span class="n">BuildError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""An externals configuration file (the selection of external databases) is malformed."""</span></div>
+
+
+
+<div class="viewcode-block" id="ExternalsReleaseNotCoveredError">
+<a class="viewcode-back" href="../../reference.html#idtrack.errors.ExternalsReleaseNotCoveredError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ExternalsReleaseNotCoveredError</span><span class="p">(</span><span class="n">ExternalsError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""The externals configuration file does not list a release that a graph needs."""</span></div>
+
+
+
+<span class="c1"># ---------------------------------------------------------------------------------------------------------------------</span>
+<span class="c1"># Integrity</span>
+
+
+<div class="viewcode-block" id="IntegrityError">
+<a class="viewcode-back" href="../../reference.html#idtrack.errors.IntegrityError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">IntegrityError</span><span class="p">(</span><span class="n">IdtrackError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""The package or a graph contradicts itself: a bug or a damaged file, never the caller's input."""</span></div>
+
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">"ArgumentTypeError"</span><span class="p">,</span>
+    <span class="s2">"BuildError"</span><span class="p">,</span>
+    <span class="s2">"EnsemblAccessError"</span><span class="p">,</span>
+    <span class="s2">"EnsemblDownloadError"</span><span class="p">,</span>
+    <span class="s2">"EnsemblRestError"</span><span class="p">,</span>
+    <span class="s2">"EnsemblSchemaError"</span><span class="p">,</span>
+    <span class="s2">"ExternalsError"</span><span class="p">,</span>
+    <span class="s2">"ExternalsReleaseNotCoveredError"</span><span class="p">,</span>
+    <span class="s2">"GraphFileError"</span><span class="p">,</span>
+    <span class="s2">"GraphMismatchError"</span><span class="p">,</span>
+    <span class="s2">"HistoryValidationError"</span><span class="p">,</span>
+    <span class="s2">"IdtrackError"</span><span class="p">,</span>
+    <span class="s2">"InactiveAtReleaseError"</span><span class="p">,</span>
+    <span class="s2">"InputError"</span><span class="p">,</span>
+    <span class="s2">"IntegrityError"</span><span class="p">,</span>
+    <span class="s2">"InvalidArgumentError"</span><span class="p">,</span>
+    <span class="s2">"MissingValueError"</span><span class="p">,</span>
+    <span class="s2">"SearchBudgetExceededError"</span><span class="p">,</span>
+    <span class="s2">"TableFormatError"</span><span class="p">,</span>
+    <span class="s2">"UnknownAssemblyError"</span><span class="p">,</span>
+    <span class="s2">"UnknownDatabaseError"</span><span class="p">,</span>
+    <span class="s2">"UnknownIdentifierError"</span><span class="p">,</span>
+    <span class="s2">"UnknownOrganismError"</span><span class="p">,</span>
+    <span class="s2">"UnknownReleaseError"</span><span class="p">,</span>
+    <span class="s2">"UnknownVersionError"</span><span class="p">,</span>
+<span class="p">]</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Kemal Inecik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

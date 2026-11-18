@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Installation &mdash; idtrack 0.0.5 documentation</title>
+  <title>Installation &mdash; idtrack 0.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=6a604523" />
@@ -16,7 +16,7 @@
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=282f96c0"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
       <script src="_static/doctools.js?v=fd6eb6e6"></script>
       <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="_static/design-tabs.js?v=fcb327ea"></script>
@@ -83,13 +83,7 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#verifying-your-installation">Verifying Your Installation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#network-access-mysql-or-https">Network Access: MySQL or HTTPS</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#optional-dependencies">Optional Dependencies</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#external-mapping-backends">External Mapping Backends</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#ortholog-analysis">Ortholog Analysis</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#protein-embeddings">Protein Embeddings</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#all-optional-dependencies">All Optional Dependencies</a></li>
-</ul>
-</li>
+<li class="toctree-l2"><a class="reference internal" href="#optional-dependencies">Optional Dependencies</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#troubleshooting">Troubleshooting</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#common-installation-issues">Common Installation Issues</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#getting-help">Getting Help</a></li>
@@ -103,7 +97,7 @@
 <li class="toctree-l1"><a class="reference internal" href="changes.html">Changes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributor Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="authors.html">Credits</a></li>
-<li class="toctree-l1"><a class="reference internal" href="code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="code_of_conduct.html">Code of Conduct</a></li>
 </ul>
 
         </div>
@@ -154,21 +148,14 @@ your workflow.</p>
 </li>
 <li><p><a class="reference internal" href="#verifying-your-installation" id="id12">Verifying Your Installation</a></p></li>
 <li><p><a class="reference internal" href="#network-access-mysql-or-https" id="id13">Network Access: MySQL or HTTPS</a></p></li>
-<li><p><a class="reference internal" href="#optional-dependencies" id="id14">Optional Dependencies</a></p>
+<li><p><a class="reference internal" href="#optional-dependencies" id="id14">Optional Dependencies</a></p></li>
+<li><p><a class="reference internal" href="#troubleshooting" id="id15">Troubleshooting</a></p>
 <ul>
-<li><p><a class="reference internal" href="#external-mapping-backends" id="id15">External Mapping Backends</a></p></li>
-<li><p><a class="reference internal" href="#ortholog-analysis" id="id16">Ortholog Analysis</a></p></li>
-<li><p><a class="reference internal" href="#protein-embeddings" id="id17">Protein Embeddings</a></p></li>
-<li><p><a class="reference internal" href="#all-optional-dependencies" id="id18">All Optional Dependencies</a></p></li>
+<li><p><a class="reference internal" href="#common-installation-issues" id="id16">Common Installation Issues</a></p></li>
+<li><p><a class="reference internal" href="#getting-help" id="id17">Getting Help</a></p></li>
 </ul>
 </li>
-<li><p><a class="reference internal" href="#troubleshooting" id="id19">Troubleshooting</a></p>
-<ul>
-<li><p><a class="reference internal" href="#common-installation-issues" id="id20">Common Installation Issues</a></p></li>
-<li><p><a class="reference internal" href="#getting-help" id="id21">Getting Help</a></p></li>
-</ul>
-</li>
-<li><p><a class="reference internal" href="#what-s-next" id="id22">What’s Next?</a></p></li>
+<li><p><a class="reference internal" href="#what-s-next" id="id18">What’s Next?</a></p></li>
 </ul>
 </nav>
 <section id="system-requirements">
@@ -202,7 +189,7 @@ rhesus), 2.1 GB (mouse), 5.3 GB (human) for a graph of snapshot release 115, plu
 </tr>
 <tr class="row-even"><td><p><strong>Network</strong></p></td>
 <td><p>HTTPS access to <code class="docutils literal notranslate"><span class="pre">ftp.ensembl.org</span></code> and <code class="docutils literal notranslate"><span class="pre">rest.ensembl.org</span></code> to build a graph (and for
-<a class="reference internal" href="reference.html#idtrack.API.resolve_organism" title="idtrack.API.resolve_organism"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.resolve_organism()</span></code></a> to learn the latest release); the Ensembl MySQL ports are optional
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.ensembl_organism()</span></code> to learn the latest release); the Ensembl MySQL ports are optional
 (see <a class="reference internal" href="#ensembl-access"><span class="std std-ref">Network Access: MySQL or HTTPS</span></a>). Loading a graph that is on disk needs no network.</p></td>
 </tr>
 </tbody>
@@ -215,27 +202,30 @@ See the <a class="reference internal" href="#apple-silicon"><span class="std std
 </section>
 <section id="install-with-pip">
 <h2>Install with pip<a class="headerlink" href="#install-with-pip" title="Link to this heading"></a></h2>
-<p>IDTrack is published on PyPI (it is not on conda-forge or bioconda). Install it into a fresh environment:</p>
+<p>Install IDTrack from GitHub into a fresh environment (it is not on conda-forge or bioconda):</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>idtrack-env
 <span class="gp">$ </span><span class="nb">source</span><span class="w"> </span>idtrack-env/bin/activate<span class="w">      </span><span class="c1"># Windows: idtrack-env\Scripts\activate</span>
-<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>idtrack
+<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"git+https://github.com/theislab/idtrack.git"</span>
 </pre></div>
 </div>
 <p>or into a conda/mamba environment, with pip:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>mamba<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>idtrack-env<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.13
 <span class="gp">$ </span>conda<span class="w"> </span>activate<span class="w"> </span>idtrack-env
-<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>idtrack
+<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"git+https://github.com/theislab/idtrack.git"</span>
+</pre></div>
+</div>
+<p>To harmonize <code class="docutils literal notranslate"><span class="pre">.h5ad</span></code> datasets (<a class="reference internal" href="reference.html#idtrack.harmonize.HarmonizeFeatures" title="idtrack.harmonize.HarmonizeFeatures"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.harmonize.HarmonizeFeatures</span></code></a>), install the <code class="docutils literal notranslate"><span class="pre">harmonize</span></code> extra,
+which brings anndata and scipy:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"idtrack[harmonize] @ git+https://github.com/theislab/idtrack.git"</span>
 </pre></div>
 </div>
 <div class="admonition important">
 <p class="admonition-title">Important</p>
-<p>The release on PyPI, 0.0.5, is older than the version these pages describe: the changes listed under
-“Unreleased” in <a class="reference internal" href="changes.html"><span class="doc">Changes</span></a> are not in it, and it reads neither the graphs nor the table cache of this version
-(nor this version its). Until the next release, install this version from GitHub:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"git+https://github.com/theislab/idtrack.git@main"</span>
-</pre></div>
-</div>
-<p><code class="docutils literal notranslate"><span class="pre">idtrack.__version__</span></code> does not tell the two apart before then (both say 0.0.5).</p>
+<p>The release on PyPI (<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">idtrack</span></code>), 0.0.5, is an older, different version with another API: the
+changes listed in <a class="reference internal" href="changes.html"><span class="doc">Changes</span></a> are not in it, and it reads neither the graphs nor the table cache of this version
+(nor this version its). Install from GitHub until version 0.1.0 is published on PyPI.
+<code class="docutils literal notranslate"><span class="pre">idtrack.__version__</span></code> tells them apart: this version reports 0.1.0 (<code class="docutils literal notranslate"><span class="pre">unknown</span></code> when the code runs from a source
+folder that is not installed).</p>
 </div>
 </section>
 <section id="apple-silicon-m1-m2-m3-m4-setup">
@@ -256,7 +246,7 @@ first gives it one. This is a one-time setup.</p>
 </pre></div>
 </div>
 <p><strong>Step 2: Install IDTrack</strong></p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>idtrack
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"git+https://github.com/theislab/idtrack.git"</span>
 </pre></div>
 </div>
 <p><strong>Verification:</strong></p>
@@ -281,8 +271,8 @@ easier to manage your installation. IDTrack runs on Python 3.12 to 3.15.</p>
 <span class="gp"># </span>Activate<span class="w"> </span>the<span class="w"> </span>environment
 <span class="gp">$ </span>conda<span class="w"> </span>activate<span class="w"> </span>idtrack-env
 
-<span class="gp"># </span>Install<span class="w"> </span>IDTrack<span class="w"> </span><span class="o">(</span>from<span class="w"> </span>PyPI,<span class="w"> </span>with<span class="w"> </span>pip<span class="o">)</span>
-<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>idtrack
+<span class="gp"># </span>Install<span class="w"> </span>IDTrack<span class="w"> </span><span class="o">(</span>from<span class="w"> </span>GitHub,<span class="w"> </span>with<span class="w"> </span>pip<span class="o">)</span>
+<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"git+https://github.com/theislab/idtrack.git"</span>
 </pre></div>
 </div>
 </section>
@@ -298,7 +288,7 @@ easier to manage your installation. IDTrack runs on Python 3.12 to 3.15.</p>
 <span class="gp">$ </span>idtrack-env<span class="se">\S</span>cripts<span class="se">\a</span>ctivate
 
 <span class="gp"># </span>Install<span class="w"> </span>IDTrack
-<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>idtrack
+<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"git+https://github.com/theislab/idtrack.git"</span>
 </pre></div>
 </div>
 </section>
@@ -350,22 +340,17 @@ and testing tools.</p>
 <h2>Verifying Your Installation<a class="headerlink" href="#verifying-your-installation" title="Link to this heading"></a></h2>
 <p>After installation, verify that IDTrack is working correctly by running this verification
 script:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
-
-<span class="c1"># Pick a stable, writable cache directory (reused across runs)</span>
-<span class="n">local_repo</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">"./idtrack_cache"</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
-<span class="n">local_repo</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">idtrack.organisms</span>
 
 <span class="c1"># Print version information</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"IDTrack version: </span><span class="si">{</span><span class="n">idtrack</span><span class="o">.</span><span class="n">__version__</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
-<span class="c1"># Test API initialization</span>
-<span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">local_repo</span><span class="p">))</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">"API initialized successfully"</span><span class="p">)</span>
+<span class="c1"># Offline: the organisms of the table</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Organisms:"</span><span class="p">,</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">idtrack</span><span class="o">.</span><span class="n">organisms</span><span class="o">.</span><span class="n">supported_organisms</span><span class="p">()))</span>
 
-<span class="c1"># Test organism resolution</span>
-<span class="n">organism</span><span class="p">,</span> <span class="n">release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s2">"human"</span><span class="p">)</span>
+<span class="c1"># Online (Ensembl REST): organism resolution and Ensembl's latest release</span>
+<span class="n">organism</span><span class="p">,</span> <span class="n">release</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="o">.</span><span class="n">ensembl_organism</span><span class="p">(</span><span class="s2">"human"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Resolved organism: </span><span class="si">{</span><span class="n">organism</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Latest Ensembl release: </span><span class="si">{</span><span class="n">release</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
@@ -373,8 +358,8 @@ script:</p>
 </pre></div>
 </div>
 <p><strong>Expected output:</strong></p>
-<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>IDTrack version: 0.0.x
-API initialized successfully
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>IDTrack version: 0.1.0
+Organisms: homo_sapiens, macaca_fascicularis, macaca_mulatta, mus_musculus, sus_scrofa
 Resolved organism: homo_sapiens
 Latest Ensembl release: 116
 
@@ -390,7 +375,7 @@ Ensembl serves on the day you run it).</p>
 (<code class="docutils literal notranslate"><span class="pre">ensembldb.ensembl.org</span></code>, ports 3306, 5306 and 3337) or from the MySQL dumps on
 <code class="docutils literal notranslate"><span class="pre">https://ftp.ensembl.org/pub/</span></code>. Many institutional networks and HPC clusters block the MySQL ports;
 HTTPS is enough. The access mode is chosen with the environment variable <code class="docutils literal notranslate"><span class="pre">IDTRACK_ENSEMBL_ACCESS</span></code> or
-the attribute <code class="docutils literal notranslate"><span class="pre">idtrack.DB.ensembl_access</span></code> (which wins when set):</p>
+with <a class="reference internal" href="reference.html#idtrack.settings.configure_ensembl" title="idtrack.settings.configure_ensembl"><code class="xref py py-func docutils literal notranslate"><span class="pre">idtrack.settings.configure_ensembl()</span></code></a> (<code class="docutils literal notranslate"><span class="pre">access=</span></code>, which wins when set):</p>
 <table class="docutils align-default">
 <colgroup>
 <col style="width: 15.0%" />
@@ -415,9 +400,9 @@ from the HTTPS dumps.</p></td>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span><span class="nb">export</span><span class="w"> </span><span class="nv">IDTRACK_ENSEMBL_ACCESS</span><span class="o">=</span>https
 </pre></div>
 </div>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">idtrack.settings</span>
 
-<span class="n">idtrack</span><span class="o">.</span><span class="n">DB</span><span class="o">.</span><span class="n">ensembl_access</span> <span class="o">=</span> <span class="s2">"https"</span>  <span class="c1"># or "auto"</span>
+<span class="n">idtrack</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">configure_ensembl</span><span class="p">(</span><span class="n">access</span><span class="o">=</span><span class="s2">"https"</span><span class="p">)</span>  <span class="c1"># or "auto"</span>
 </pre></div>
 </div>
 <p><strong>What differs between the modes:</strong> nothing in the tables: both read the same Ensembl tables, with the same rows,
@@ -429,20 +414,18 @@ In <code class="docutils literal notranslate"><span class="pre">auto</span></cod
 fails is not tried again for ten minutes (then after twice as long, up to a day; the tables come over HTTPS meanwhile,
 with a warning; this costs only speed). A query or data error of the MySQL server is raised, not answered over
 HTTPS.</p>
-<p>If you route IDTrack through an SSH tunnel with <a class="reference internal" href="reference.html#idtrack.ConnectionBridge" title="idtrack.ConnectionBridge"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.ConnectionBridge</span></code></a>, starting and stopping
-the bridge forgets the probe results, so the ports are probed again through the new route.</p>
 <p><strong>Slow networks, timeouts and retries.</strong> Every request to Ensembl REST (organism names and the latest release)
-waits <code class="docutils literal notranslate"><span class="pre">idtrack.DB.connection_timeout</span></code> seconds to connect (default 15) and <code class="docutils literal notranslate"><span class="pre">idtrack.DB.reading_timeout</span></code>
-seconds for the answer (default 60; it also applies to the HTTPS dumps), and is tried
-<code class="docutils literal notranslate"><span class="pre">idtrack.DB.rest_attempts</span></code> times (default 3) when it times out, the connection fails, or Ensembl answers 429
-or 5xx. When every attempt fails, <a class="reference internal" href="reference.html#idtrack.EnsemblRestError" title="idtrack.EnsemblRestError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.EnsemblRestError</span></code></a> (a <code class="xref py py-class docutils literal notranslate"><span class="pre">ConnectionError</span></code>) names the
-URL, the timeouts and what to change; a download of the dumps that keeps failing raises
-<a class="reference internal" href="reference.html#idtrack.EnsemblDownloadError" title="idtrack.EnsemblDownloadError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.EnsemblDownloadError</span></code></a> (also a <code class="xref py py-class docutils literal notranslate"><span class="pre">ConnectionError</span></code>), and a release that cannot be listed
+waits <code class="docutils literal notranslate"><span class="pre">connection_timeout</span></code> seconds to connect (default 15) and <code class="docutils literal notranslate"><span class="pre">reading_timeout</span></code> seconds for the answer
+(default 60; it also applies to the HTTPS dumps), and is tried <code class="docutils literal notranslate"><span class="pre">rest_attempts</span></code> times (default 3) when it times out,
+the connection fails, or Ensembl answers 429 or 5xx (the fields of <a class="reference internal" href="reference.html#idtrack.settings.EnsemblSettings" title="idtrack.settings.EnsemblSettings"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.settings.EnsemblSettings</span></code></a>, set
+for the whole process with <a class="reference internal" href="reference.html#idtrack.settings.configure_ensembl" title="idtrack.settings.configure_ensembl"><code class="xref py py-func docutils literal notranslate"><span class="pre">idtrack.settings.configure_ensembl()</span></code></a>). When every attempt fails,
+<a class="reference internal" href="reference.html#idtrack.errors.EnsemblRestError" title="idtrack.errors.EnsemblRestError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.errors.EnsemblRestError</span></code></a> (an <a class="reference internal" href="reference.html#idtrack.errors.EnsemblAccessError" title="idtrack.errors.EnsemblAccessError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.errors.EnsemblAccessError</span></code></a>, also a
+<code class="xref py py-class docutils literal notranslate"><span class="pre">ConnectionError</span></code>) names the URL, the timeouts and what to change; a download of the dumps that keeps
+failing raises <a class="reference internal" href="reference.html#idtrack.errors.EnsemblDownloadError" title="idtrack.errors.EnsemblDownloadError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.errors.EnsemblDownloadError</span></code></a> (likewise), and a release that cannot be listed
 is an error, never read as “Ensembl has no such release”. On a network where Ensembl answers slowly, raise the timeouts before the first call:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">idtrack.settings</span>
 
-<span class="n">idtrack</span><span class="o">.</span><span class="n">DB</span><span class="o">.</span><span class="n">reading_timeout</span> <span class="o">=</span> <span class="mi">120</span>
-<span class="n">idtrack</span><span class="o">.</span><span class="n">DB</span><span class="o">.</span><span class="n">rest_attempts</span> <span class="o">=</span> <span class="mi">5</span>
+<span class="n">idtrack</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">configure_ensembl</span><span class="p">(</span><span class="n">reading_timeout</span><span class="o">=</span><span class="mi">120</span><span class="p">,</span> <span class="n">rest_attempts</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>The network is needed only to download, and to learn which release is the latest: the formal name, the short name
@@ -454,43 +437,13 @@ proxy is honoured through <code class="docutils literal notranslate"><span class
 </section>
 <section id="optional-dependencies">
 <h2>Optional Dependencies<a class="headerlink" href="#optional-dependencies" title="Link to this heading"></a></h2>
-<p>IDTrack has optional dependencies for advanced features:</p>
-<section id="external-mapping-backends">
-<h3>External Mapping Backends<a class="headerlink" href="#external-mapping-backends" title="Link to this heading"></a></h3>
-<p>For cross-database identifier mapping using external services:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Install<span class="w"> </span>the<span class="w"> </span>optional<span class="w"> </span>backends<span class="w"> </span>via<span class="w"> </span>Python<span class="w"> </span>extras<span class="w"> </span><span class="o">(</span>recommended<span class="o">)</span>
-<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"idtrack[external-mappers]"</span>
-
-<span class="gp"># </span>Or<span class="w"> </span>install<span class="w"> </span>only<span class="w"> </span>the<span class="w"> </span>libraries<span class="w"> </span>you<span class="w"> </span>need
-<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>gget<span class="w"> </span>mygene<span class="w"> </span>pybiomart<span class="w"> </span>gprofiler-official
+<p>The <code class="docutils literal notranslate"><span class="pre">harmonize</span></code> extra brings anndata and scipy for <a class="reference internal" href="reference.html#idtrack.harmonize.HarmonizeFeatures" title="idtrack.harmonize.HarmonizeFeatures"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.harmonize.HarmonizeFeatures</span></code></a> (harmonization
+of <code class="docutils literal notranslate"><span class="pre">.h5ad</span></code> datasets); conversions, graph building and the pure core of harmonization
+(<a class="reference internal" href="reference.html#module-idtrack.harmonize" title="idtrack.harmonize"><code class="xref py py-mod docutils literal notranslate"><span class="pre">idtrack.harmonize</span></code></a>) do not need it. Without it, using <code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures</span></code> raises an ImportError that names
+the extra.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"idtrack[harmonize] @ git+https://github.com/theislab/idtrack.git"</span>
 </pre></div>
 </div>
-</section>
-<section id="ortholog-analysis">
-<h3>Ortholog Analysis<a class="headerlink" href="#ortholog-analysis" title="Link to this heading"></a></h3>
-<p>For cross-species ortholog analysis with sequence alignment:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"idtrack[ortholog]"</span>
-</pre></div>
-</div>
-</section>
-<section id="protein-embeddings">
-<h3>Protein Embeddings<a class="headerlink" href="#protein-embeddings" title="Link to this heading"></a></h3>
-<p><a class="reference internal" href="reference/external_mappers.html#idtrack._external_mappers._ortholog.align_ortholog_pair_with_features" title="idtrack._external_mappers._ortholog.align_ortholog_pair_with_features"><code class="xref py py-func docutils literal notranslate"><span class="pre">idtrack._external_mappers._ortholog.align_ortholog_pair_with_features()</span></code></a> can add protein-language-model embedding
-features to an ortholog alignment. They need <code class="docutils literal notranslate"><span class="pre">torch</span></code> and <code class="docutils literal notranslate"><span class="pre">transformers</span></code>; with them installed, the model named by
-<code class="docutils literal notranslate"><span class="pre">embedding_model_name</span></code> (<code class="docutils literal notranslate"><span class="pre">facebook/esm2_t12_35M_UR50D</span></code> by default) is downloaded from Hugging Face on first use.
-Without them, or with <code class="docutils literal notranslate"><span class="pre">embedding_model_name=None</span></code>, those features are left empty (with <code class="docutils literal notranslate"><span class="pre">verbose=True</span></code> a warning says why) and the
-other alignment features are computed.</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"idtrack[embeddings]"</span>
-</pre></div>
-</div>
-</section>
-<section id="all-optional-dependencies">
-<h3>All Optional Dependencies<a class="headerlink" href="#all-optional-dependencies" title="Link to this heading"></a></h3>
-<p>Install all optional dependencies at once:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"idtrack[all-external]"</span>
-</pre></div>
-</div>
-</section>
 </section>
 <section id="troubleshooting">
 <h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading"></a></h2>
@@ -501,7 +454,7 @@ other alignment features are computed.</p>
 then IDTrack with pip:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>mamba<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>idtrack-env<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.13<span class="w"> </span>h5py
 <span class="gp">$ </span>conda<span class="w"> </span>activate<span class="w"> </span>idtrack-env
-<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>idtrack
+<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"git+https://github.com/theislab/idtrack.git"</span>
 </pre></div>
 </div>
 <p><strong>SSL Certificate errors during download</strong></p>
@@ -515,12 +468,12 @@ then IDTrack with pip:</p>
 </div>
 <p><strong>Permission errors during installation</strong></p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Option<span class="w"> </span><span class="m">1</span>:<span class="w"> </span>Use<span class="w"> </span>--user<span class="w"> </span>flag<span class="w"> </span>with<span class="w"> </span>pip
-<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>--user<span class="w"> </span>idtrack
+<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>--user<span class="w"> </span><span class="s2">"git+https://github.com/theislab/idtrack.git"</span>
 
 <span class="gp"># </span>Option<span class="w"> </span><span class="m">2</span>:<span class="w"> </span>Use<span class="w"> </span>a<span class="w"> </span>virtual<span class="w"> </span>environment<span class="w"> </span><span class="o">(</span>recommended<span class="o">)</span>
 <span class="gp">$ </span>python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>idtrack-env
 <span class="gp">$ </span><span class="nb">source</span><span class="w"> </span>idtrack-env/bin/activate
-<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>idtrack
+<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"git+https://github.com/theislab/idtrack.git"</span>
 </pre></div>
 </div>
 </section>

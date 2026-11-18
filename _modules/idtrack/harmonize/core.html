@@ -1,0 +1,438 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>idtrack.harmonize.core &mdash; idtrack 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=6a604523" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/tutorials.css?v=0e72a3a5" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../../_static/design-tabs.js?v=fcb327ea"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />  
+<!-- Google tag (gtag.js) -->
+<script
+    async
+    src="https://www.googletagmanager.com/gtag/js?id=G-FYKLWNJBVK"
+></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() {
+        dataLayer.push(arguments);
+    }
+    gtag("js", new Date());
+
+    gtag("config", "G-FYKLWNJBVK");
+</script>
+
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            idtrack
+              <img src="../../../_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../changes.html">Changes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../code_of_conduct.html">Code of Conduct</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">idtrack</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">idtrack.harmonize.core</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for idtrack.harmonize.core</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""The pure core of harmonization: how the features of one dataset convert, and which output features they give.</span>
+
+<span class="sd">Functions of their arguments alone (no files, no AnnData): :py:func:`convert_features` converts feature names with an</span>
+<span class="sd">:py:class:`idtrack.API` and names every gene reached; :py:func:`feature_table` classifies each input feature by its</span>
+<span class="sd">conversion; :py:func:`output_plan` says which output feature each input becomes. A web service can serve them for a</span>
+<span class="sd">list of names; :py:class:`idtrack.harmonize.HarmonizeFeatures` applies them to ``.h5ad`` files.</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack</span><span class="w"> </span><span class="kn">import</span> <span class="n">ids</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">IntegrityError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.results</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConversionResult</span>
+
+<span class="c1">#: Status of an output feature (``var["idtrack_status"]``); see :py:class:`HarmonizeFeatures`.</span>
+<span class="n">STATUSES</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">"converted"</span><span class="p">,</span>
+    <span class="s2">"converted_no_final_id"</span><span class="p">,</span>
+    <span class="s2">"merged"</span><span class="p">,</span>
+    <span class="s2">"merged_no_final_id"</span><span class="p">,</span>
+    <span class="s2">"unconverted_merge_partner"</span><span class="p">,</span>
+    <span class="s2">"unconverted_ambiguous"</span><span class="p">,</span>
+    <span class="s2">"unconverted_no_conversion"</span><span class="p">,</span>
+    <span class="s2">"unconverted_not_in_graph"</span><span class="p">,</span>
+    <span class="s2">"unconverted_error"</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_is_text</span><span class="p">(</span><span class="n">series</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return whether *series* holds text (``object`` dtype, or a pandas string dtype).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        series: A column.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        bool: ``True`` for text.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">is_object_dtype</span><span class="p">(</span><span class="n">series</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">series</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">StringDtype</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_holding_missing</span><span class="p">(</span><span class="n">series</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return *series* in a dtype that can hold missing values of its kind.</span>
+
+<span class="sd">    Integers become the nullable ``Int``/``UInt`` dtype of the same width and booleans ``boolean`` (missing value</span>
+<span class="sd">    ``pd.NA``); every other dtype (float, text, categorical, datetime, nullable dtypes) already has a missing value</span>
+<span class="sd">    and is returned unchanged.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        series: A column.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        pandas.Series: The column, in a dtype with a missing value.</span>
+<span class="sd">    """</span>
+    <span class="n">dtype</span> <span class="o">=</span> <span class="n">series</span><span class="o">.</span><span class="n">dtype</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="ow">and</span> <span class="n">dtype</span><span class="o">.</span><span class="n">kind</span> <span class="ow">in</span> <span class="s2">"iu"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">series</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">pandas_dtype</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'U'</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">dtype</span><span class="o">.</span><span class="n">kind</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s1">'u'</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">''</span><span class="si">}</span><span class="s2">Int</span><span class="si">{</span><span class="mi">8</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">dtype</span><span class="o">.</span><span class="n">itemsize</span><span class="si">}</span><span class="s2">"</span><span class="p">))</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="ow">and</span> <span class="n">dtype</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">"b"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">series</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">"boolean"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">series</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_missing_like</span><span class="p">(</span><span class="n">template</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return a column of missing values of the kind of *template* (see :py:func:`_holding_missing`).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        template: A column of the same name in another dataset.</span>
+<span class="sd">        index: Index of the new column.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        pandas.Series: All values missing (``NaN``, ``pd.NA``, ``NaT`` or a missing category).</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">_holding_missing</span><span class="p">(</span><span class="n">template</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="convert_features">
+<a class="viewcode-back" href="../../../reference.html#idtrack.harmonize.convert_features">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">convert_features</span><span class="p">(</span>
+    <span class="n">api</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">feature_names</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">to_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">final_database</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">from_release</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">from_database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">ConversionResult</span><span class="p">],</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]:</span>
+<span class="w">    </span><span class="sd">"""Convert the feature names of one dataset, then name every gene reached in the final database.</span>
+
+<span class="sd">    The names of a gene in the final database depend on the gene, the database and the release only, so they are</span>
+<span class="sd">    read from the gene itself (:py:meth:`idtrack.API.gene_to_database`: a few look-ups per gene, no search), whatever</span>
+<span class="sd">    feature led to the gene and whatever name that feature's own conversion returned.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        api: An :py:class:`idtrack.API` with the graph.</span>
+<span class="sd">        feature_names: The feature names.</span>
+<span class="sd">        to_release: The target release.</span>
+<span class="sd">        final_database: The final database.</span>
+<span class="sd">        from_release: The release the names come from; ``None``: read each where the graph holds it.</span>
+<span class="sd">        from_database: The external database the names are meant as; ``None``: any.</span>
+<span class="sd">        progress: Show a progress bar.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple: The results (one per feature, in order) and ``{gene: final-database names}`` (sorted; empty for a gene</span>
+<span class="sd">        without an id in the final database).</span>
+<span class="sd">    """</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert_many</span><span class="p">(</span>
+        <span class="n">feature_names</span><span class="p">,</span>
+        <span class="n">from_release</span><span class="o">=</span><span class="n">from_release</span><span class="p">,</span>
+        <span class="n">from_database</span><span class="o">=</span><span class="n">from_database</span><span class="p">,</span>
+        <span class="n">to_release</span><span class="o">=</span><span class="n">to_release</span><span class="p">,</span>
+        <span class="n">final_database</span><span class="o">=</span><span class="n">final_database</span><span class="p">,</span>
+        <span class="n">progress</span><span class="o">=</span><span class="n">progress</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">genes</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">({</span><span class="n">candidate</span><span class="o">.</span><span class="n">gene</span> <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">results</span> <span class="k">for</span> <span class="n">candidate</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="s2">"best"</span><span class="p">)})</span>
+    <span class="k">if</span> <span class="n">final_database</span> <span class="o">==</span> <span class="n">ids</span><span class="o">.</span><span class="n">GENE</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">results</span><span class="p">,</span> <span class="p">{</span><span class="n">gene</span><span class="p">:</span> <span class="p">[</span><span class="n">gene</span><span class="p">]</span> <span class="k">for</span> <span class="n">gene</span> <span class="ow">in</span> <span class="n">genes</span><span class="p">}</span>
+    <span class="k">return</span> <span class="n">results</span><span class="p">,</span> <span class="p">{</span><span class="n">gene</span><span class="p">:</span> <span class="n">api</span><span class="o">.</span><span class="n">gene_to_database</span><span class="p">(</span><span class="n">gene</span><span class="p">,</span> <span class="n">final_database</span><span class="p">,</span> <span class="n">to_release</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">gene</span> <span class="ow">in</span> <span class="n">genes</span><span class="p">}</span></div>
+
+
+
+<div class="viewcode-block" id="feature_table">
+<a class="viewcode-back" href="../../../reference.html#idtrack.harmonize.feature_table">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">feature_table</span><span class="p">(</span>
+    <span class="n">feature_names</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">matchings</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ConversionResult</span><span class="p">],</span>
+    <span class="n">gene_names</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Classify each input feature of one dataset by its conversion; a pure function of that dataset alone.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        feature_names: The dataset's feature names, in file order.</span>
+<span class="sd">        matchings: :py:meth:`idtrack.API.convert` results, one per feature, in the same order (their best view</span>
+<span class="sd">            counts).</span>
+<span class="sd">        gene_names: ``{ensembl_gene: names}``: the final-database names of every gene reached (empty: none).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        pandas.DataFrame: Indexed by the input names, in file order, with the columns ``status`` (one of</span>
+<span class="sd">        ``"converted"``, ``"converted_no_final_id"``, ``"ambiguous"``, ``"no_conversion"``, ``"not_in_graph"``,</span>
+<span class="sd">        ``"error"``), ``reason`` (missing for ``"converted"``, unless the feature had to be read at another release</span>
+<span class="sd">        than the dataset's source release because the graph does not hold it there), ``ensembl_gene`` (the gene at</span>
+<span class="sd">        the target release</span>
+<span class="sd">        when there is exactly one), ``final_id`` (the gene's final-database name: the first in sorted order of</span>
+<span class="sd">        *gene_names*), ``final_id_alternatives`` (the gene's other names, ``";"``-joined) and ``own`` (the input</span>
+<span class="sd">        names the gene itself: its stable id, or one of its final-database names, compared without case).</span>
+<span class="sd">    """</span>
+    <span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">feature_names</span><span class="p">,</span> <span class="n">matchings</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">query_id</span> <span class="o">!=</span> <span class="n">name</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">IntegrityError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Matching of </span><span class="si">{</span><span class="n">m</span><span class="o">.</span><span class="n">query_id</span><span class="si">!r}</span><span class="s2"> given for feature </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2">."</span><span class="p">)</span>
+        <span class="n">genes</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">({</span><span class="n">candidate</span><span class="o">.</span><span class="n">gene</span> <span class="k">for</span> <span class="n">candidate</span> <span class="ow">in</span> <span class="n">m</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="s2">"best"</span><span class="p">)})</span>
+        <span class="n">row</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">"status"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">"reason"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">"ensembl_gene"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">"final_id"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">"final_id_alternatives"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">"own"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">error</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">row</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="s2">"error"</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">m</span><span class="o">.</span><span class="n">error</span><span class="o">.</span><span class="n">type</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">m</span><span class="o">.</span><span class="n">error</span><span class="o">.</span><span class="n">message</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">m</span><span class="o">.</span><span class="n">graph_id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">row</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="s2">"not_in_graph"</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="s2">"not found in the graph"</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="n">m</span><span class="o">.</span><span class="n">candidates</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">genes</span><span class="p">:</span>
+            <span class="n">row</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="s2">"no_conversion"</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="sa">f</span><span class="s2">"no gene at release </span><span class="si">{</span><span class="n">m</span><span class="o">.</span><span class="n">to_release</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">genes</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">row</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="s2">"ambiguous"</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="sa">f</span><span class="s2">"maps to </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">genes</span><span class="p">)</span><span class="si">}</span><span class="s2"> genes: </span><span class="si">{</span><span class="s1">';'</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">genes</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">gene</span> <span class="o">=</span> <span class="n">genes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">names</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">gene_names</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">gene</span><span class="p">,</span> <span class="p">[]))</span>
+            <span class="n">resolved</span> <span class="o">=</span> <span class="n">ids</span><span class="o">.</span><span class="n">stable_id_of</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">graph_id</span> <span class="ow">or</span> <span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">casefold</span><span class="p">()</span>
+            <span class="n">row</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+                <span class="n">ensembl_gene</span><span class="o">=</span><span class="n">gene</span><span class="p">,</span>
+                <span class="n">final_id</span><span class="o">=</span><span class="n">names</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">names</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="n">final_id_alternatives</span><span class="o">=</span><span class="s2">";"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">names</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="n">own</span><span class="o">=</span><span class="n">resolved</span> <span class="ow">in</span> <span class="p">{</span><span class="n">ids</span><span class="o">.</span><span class="n">stable_id_of</span><span class="p">(</span><span class="n">gene</span><span class="p">)</span><span class="o">.</span><span class="n">casefold</span><span class="p">(),</span> <span class="o">*</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">casefold</span><span class="p">()</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">names</span><span class="p">)},</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">from_release_fallback</span><span class="p">:</span>
+                <span class="n">row</span><span class="p">[</span><span class="s2">"reason"</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"not in the graph at release </span><span class="si">{</span><span class="n">m</span><span class="o">.</span><span class="n">from_release_given</span><span class="si">}</span><span class="s2">; read at release </span><span class="si">{</span><span class="n">m</span><span class="o">.</span><span class="n">from_release</span><span class="si">}</span><span class="s2">"</span>
+            <span class="k">if</span> <span class="n">names</span><span class="p">:</span>
+                <span class="n">row</span><span class="p">[</span><span class="s2">"status"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"converted"</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">no_name</span> <span class="o">=</span> <span class="s2">"the gene has no id in the final database"</span>
+                <span class="n">row</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+                    <span class="n">status</span><span class="o">=</span><span class="s2">"converted_no_final_id"</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">no_name</span><span class="si">}</span><span class="s2">; </span><span class="si">{</span><span class="n">row</span><span class="p">[</span><span class="s1">'reason'</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span> <span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="s2">"reason"</span><span class="p">]</span> <span class="k">else</span> <span class="n">no_name</span>
+                <span class="p">)</span>
+        <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="n">feature_names</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">),</span> <span class="n">columns</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">rows</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="k">if</span> <span class="n">rows</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_text_or_none</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return a table cell as text, or ``None`` for a missing value (pandas stores a missing text as NaN)."""</span>
+    <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span> <span class="ow">and</span> <span class="n">value</span> <span class="o">!=</span> <span class="n">value</span><span class="p">)</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="output_plan">
+<a class="viewcode-back" href="../../../reference.html#idtrack.harmonize.output_plan">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">output_plan</span><span class="p">(</span><span class="n">table</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">merge</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">keep_unconverted</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Decide the output features of one dataset from its :py:func:`feature_table` (a pure function of it).</span>
+
+<span class="sd">    Rules (also in :py:class:`HarmonizeFeatures`):</span>
+
+<span class="sd">    * A gene reached by exactly one input feature is one output feature named by the gene (``"converted"``, or</span>
+<span class="sd">      ``"converted_no_final_id"`` when the gene has no final-database id).</span>
+<span class="sd">    * A gene reached by several input features ("n-to-1"): with ``merge="sum"`` one output feature named by the gene</span>
+<span class="sd">      whose values are the sum of theirs (``"merged"``/``"merged_no_final_id"``); with ``merge="flag"``, if exactly</span>
+<span class="sd">      one of them names the gene itself (``own``) it becomes the gene's feature and the others stay under their</span>
+<span class="sd">      input names as ``"unconverted_merge_partner"``; otherwise all stay under their input names as</span>
+<span class="sd">      ``"unconverted_merge_partner"`` and the gene has no output feature.</span>
+<span class="sd">    * Every other input feature stays under its input name (``"unconverted_ambiguous"``,</span>
+<span class="sd">      ``"unconverted_no_conversion"``, ``"unconverted_not_in_graph"``, ``"unconverted_error"``) when</span>
+<span class="sd">      *keep_unconverted*, and is left out otherwise; merge partners are always kept.</span>
+<span class="sd">    * An input name kept unconverted that equals the name of a converted output feature is renamed</span>
+<span class="sd">      ``"unconverted:&lt;name&gt;"``.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        table: Output of :py:func:`feature_table`.</span>
+<span class="sd">        merge: ``"sum"`` or ``"flag"``.</span>
+<span class="sd">        keep_unconverted: Keep the unconverted features (see above).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        pandas.DataFrame: One row per output feature, in the order of its first input feature, indexed by the output</span>
+<span class="sd">        name, with the columns ``sources`` (list of input positions), ``query_ids`` (``";"``-joined input names),</span>
+<span class="sd">        ``status``, ``reason``, ``ensembl_gene``, ``final_id``, ``final_id_alternatives``.</span>
+<span class="sd">    """</span>
+    <span class="n">converted</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="s2">"status"</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">([</span><span class="s2">"converted"</span><span class="p">,</span> <span class="s2">"converted_no_final_id"</span><span class="p">])</span>
+    <span class="n">groups</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">position</span><span class="p">,</span> <span class="n">gene</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">"ensembl_gene"</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()):</span>
+        <span class="k">if</span> <span class="n">converted</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">position</span><span class="p">]:</span>
+            <span class="n">groups</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">gene</span><span class="p">,</span> <span class="p">[])</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
+    <span class="n">names</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="n">statuses</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="s2">"status"</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="n">rows</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">first_of_gene</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_gene_row</span><span class="p">(</span><span class="n">gene</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">sources</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">status</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">reason</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+        <span class="n">first</span> <span class="o">=</span> <span class="n">sources</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">"name"</span><span class="p">:</span> <span class="n">gene</span><span class="p">,</span>
+            <span class="s2">"sources"</span><span class="p">:</span> <span class="n">sources</span><span class="p">,</span>
+            <span class="s2">"query_ids"</span><span class="p">:</span> <span class="s2">";"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">names</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sources</span><span class="p">),</span>
+            <span class="s2">"status"</span><span class="p">:</span> <span class="n">status</span><span class="p">,</span>
+            <span class="s2">"reason"</span><span class="p">:</span> <span class="n">reason</span><span class="p">,</span>
+            <span class="s2">"ensembl_gene"</span><span class="p">:</span> <span class="n">gene</span><span class="p">,</span>
+            <span class="s2">"final_id"</span><span class="p">:</span> <span class="n">table</span><span class="p">[</span><span class="s2">"final_id"</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">first</span><span class="p">],</span>
+            <span class="s2">"final_id_alternatives"</span><span class="p">:</span> <span class="n">table</span><span class="p">[</span><span class="s2">"final_id_alternatives"</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">first</span><span class="p">],</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_kept_row</span><span class="p">(</span><span class="n">position</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">status</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">reason</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">gene</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">"name"</span><span class="p">:</span> <span class="n">names</span><span class="p">[</span><span class="n">position</span><span class="p">],</span>
+            <span class="s2">"sources"</span><span class="p">:</span> <span class="p">[</span><span class="n">position</span><span class="p">],</span>
+            <span class="s2">"query_ids"</span><span class="p">:</span> <span class="n">names</span><span class="p">[</span><span class="n">position</span><span class="p">],</span>
+            <span class="s2">"status"</span><span class="p">:</span> <span class="n">status</span><span class="p">,</span>
+            <span class="s2">"reason"</span><span class="p">:</span> <span class="n">reason</span><span class="p">,</span>
+            <span class="s2">"ensembl_gene"</span><span class="p">:</span> <span class="n">gene</span><span class="p">,</span>
+            <span class="s2">"final_id"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">"final_id_alternatives"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">}</span>
+
+    <span class="k">for</span> <span class="n">position</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">names</span><span class="p">)):</span>
+        <span class="n">status</span> <span class="o">=</span> <span class="n">statuses</span><span class="p">[</span><span class="n">position</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">status</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"converted"</span><span class="p">,</span> <span class="s2">"converted_no_final_id"</span><span class="p">):</span>
+            <span class="n">gene</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="s2">"ensembl_gene"</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">position</span><span class="p">]</span>
+            <span class="n">sources</span> <span class="o">=</span> <span class="n">groups</span><span class="p">[</span><span class="n">gene</span><span class="p">]</span>
+            <span class="n">suffix</span> <span class="o">=</span> <span class="s2">""</span> <span class="k">if</span> <span class="n">status</span> <span class="o">==</span> <span class="s2">"converted"</span> <span class="k">else</span> <span class="s2">"_no_final_id"</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sources</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_gene_row</span><span class="p">(</span><span class="n">gene</span><span class="p">,</span> <span class="n">sources</span><span class="p">,</span> <span class="n">status</span><span class="p">,</span> <span class="n">_text_or_none</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">"reason"</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">position</span><span class="p">])))</span>
+                <span class="k">continue</span>
+            <span class="n">partners</span> <span class="o">=</span> <span class="s2">";"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">names</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sources</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">merge</span> <span class="o">==</span> <span class="s2">"sum"</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">gene</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">first_of_gene</span><span class="p">:</span>
+                    <span class="n">first_of_gene</span><span class="p">[</span><span class="n">gene</span><span class="p">]</span> <span class="o">=</span> <span class="n">position</span>
+                    <span class="n">reason</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"sum of </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">sources</span><span class="p">)</span><span class="si">}</span><span class="s2"> input features: </span><span class="si">{</span><span class="n">partners</span><span class="si">}</span><span class="s2">"</span>
+                    <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_gene_row</span><span class="p">(</span><span class="n">gene</span><span class="p">,</span> <span class="n">sources</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"merged</span><span class="si">{</span><span class="n">suffix</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">reason</span><span class="p">))</span>
+                <span class="k">continue</span>
+            <span class="n">own</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sources</span> <span class="k">if</span> <span class="n">table</span><span class="p">[</span><span class="s2">"own"</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">s</span><span class="p">]]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">own</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">own</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">position</span><span class="p">:</span>
+                <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_gene_row</span><span class="p">(</span><span class="n">gene</span><span class="p">,</span> <span class="p">[</span><span class="n">position</span><span class="p">],</span> <span class="n">status</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"kept as the gene itself among: </span><span class="si">{</span><span class="n">partners</span><span class="si">}</span><span class="s2">"</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">reason</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"shares the gene </span><span class="si">{</span><span class="n">gene</span><span class="si">}</span><span class="s2"> with: </span><span class="si">{</span><span class="n">partners</span><span class="si">}</span><span class="s2">"</span>
+                <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_kept_row</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="s2">"unconverted_merge_partner"</span><span class="p">,</span> <span class="n">reason</span><span class="p">,</span> <span class="n">gene</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="n">keep_unconverted</span><span class="p">:</span>
+            <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="n">_kept_row</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"unconverted_</span><span class="si">{</span><span class="n">status</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">_text_or_none</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">"reason"</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">position</span><span class="p">]),</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="p">)</span>
+
+    <span class="n">plan</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">_kept_row</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s2">""</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">rows</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">plan</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"sources"</span><span class="p">,</span> <span class="s2">"query_ids"</span><span class="p">,</span> <span class="s2">"status"</span><span class="p">,</span> <span class="s2">"reason"</span><span class="p">,</span> <span class="s2">"ensembl_gene"</span><span class="p">,</span> <span class="s2">"final_id"</span><span class="p">,</span> <span class="s2">"final_id_alternatives"</span><span class="p">],</span>
+            <span class="n">index</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">([],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">),</span>
+        <span class="p">)</span>
+    <span class="n">gene_names_out</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">plan</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="o">~</span><span class="n">plan</span><span class="p">[</span><span class="s2">"status"</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"unconverted"</span><span class="p">),</span> <span class="s2">"name"</span><span class="p">])</span>
+    <span class="n">clash</span> <span class="o">=</span> <span class="n">plan</span><span class="p">[</span><span class="s2">"status"</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"unconverted"</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">plan</span><span class="p">[</span><span class="s2">"name"</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">gene_names_out</span><span class="p">)</span>
+    <span class="n">plan</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">clash</span><span class="p">,</span> <span class="s2">"name"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"unconverted:"</span> <span class="o">+</span> <span class="n">plan</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">clash</span><span class="p">,</span> <span class="s2">"name"</span><span class="p">]</span>
+    <span class="n">plan</span> <span class="o">=</span> <span class="n">plan</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">"name"</span><span class="p">)</span>
+    <span class="n">plan</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">plan</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">duplicated</span><span class="p">()</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="n">IntegrityError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Output features named twice: </span><span class="si">{</span><span class="n">plan</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">plan</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">duplicated</span><span class="p">()]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()[:</span><span class="mi">10</span><span class="p">]</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">plan</span></div>
+
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"STATUSES"</span><span class="p">,</span> <span class="s2">"convert_features"</span><span class="p">,</span> <span class="s2">"feature_table"</span><span class="p">,</span> <span class="s2">"output_plan"</span><span class="p">]</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Kemal Inecik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

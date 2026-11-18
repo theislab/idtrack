@@ -1,0 +1,396 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>idtrack.engine.explain &mdash; idtrack 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=6a604523" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/tutorials.css?v=0e72a3a5" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../../_static/design-tabs.js?v=fcb327ea"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />  
+<!-- Google tag (gtag.js) -->
+<script
+    async
+    src="https://www.googletagmanager.com/gtag/js?id=G-FYKLWNJBVK"
+></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() {
+        dataLayer.push(arguments);
+    }
+    gtag("js", new Date());
+
+    gtag("config", "G-FYKLWNJBVK");
+</script>
+
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            idtrack
+              <img src="../../../_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../changes.html">Changes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../code_of_conduct.html">Code of Conduct</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">idtrack</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">idtrack.engine.explain</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for idtrack.engine.explain</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""The explained path of a conversion: the steps the search took, typed, and the nodes they pass, as data.</span>
+
+<span class="sd">The search records each path as a tuple of raw steps: ``(source, target, key)`` for a history edge,</span>
+<span class="sd">``(source, target, 0, release)`` for a cross-reference edge used at a release (``None`` for the final hop of</span>
+<span class="sd">confidence 1), and ``(None, gene, None)`` for a gene that is its own answer. :py:class:`PathBuilder` turns them into</span>
+<span class="sd">:py:class:`idtrack.results.PathStep` and :py:class:`idtrack.results.PathNode` records with what the graph says about</span>
+<span class="sd">each (releases, scores, splits and merges, databases and assemblies), every step and node once per conversion.</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack</span><span class="w"> </span><span class="kn">import</span> <span class="n">ids</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">IntegrityError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.results</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExplainedPath</span><span class="p">,</span> <span class="n">PathNode</span><span class="p">,</span> <span class="n">PathStep</span>
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.graph.graph</span><span class="w"> </span><span class="kn">import</span> <span class="n">TheGraph</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_finite</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">math</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">value</span><span class="p">))</span> <span class="k">else</span> <span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="PathBuilder">
+<a class="viewcode-back" href="../../../reference.html#idtrack.engine.explain.PathBuilder">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">PathBuilder</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Collect the steps and nodes of every candidate of one conversion.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        graph: The graph.</span>
+<span class="sd">        reverse: Whether the walk goes back in time (a history step ``(u, v, key)`` then follows the edge</span>
+<span class="sd">            ``v -&gt; u``).</span>
+<span class="sd">        to_release: The target release.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph</span><span class="p">:</span> <span class="n">TheGraph</span><span class="p">,</span> <span class="n">reverse</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">to_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Start an empty explanation."""</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph</span> <span class="o">=</span> <span class="n">graph</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reverse</span> <span class="o">=</span> <span class="n">reverse</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">to_release</span> <span class="o">=</span> <span class="n">to_release</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_steps</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">PathStep</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_step_index</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_nodes</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">PathNode</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_serving</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">serving_assembly</span>
+        <span class="c1"># The releases each assembly serves, as bit masks (``serving_assembly`` read the other way round).</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_serving_masks</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">((</span><span class="nb">int</span><span class="p">(</span><span class="n">assembly</span><span class="p">),</span> <span class="n">releases</span><span class="o">.</span><span class="n">mask</span><span class="p">)</span> <span class="k">for</span> <span class="n">assembly</span><span class="p">,</span> <span class="n">releases</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">serving_line</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">snapshot_release</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_real</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="c1"># ------------------------------------------------------------------ nodes</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nodes</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="n">graph</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span>
+        <span class="n">node_type</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">node_type</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">kind</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">node_type</span><span class="p">)</span>
+        <span class="n">databases</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
+        <span class="n">active</span><span class="p">:</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="p">()</span>
+        <span class="n">assemblies</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
+        <span class="n">non_reference</span><span class="p">:</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="p">()</span>
+        <span class="k">if</span> <span class="n">node_type</span> <span class="o">==</span> <span class="n">ids</span><span class="o">.</span><span class="n">EXTERNAL</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">ids</span><span class="o">.</span><span class="n">SYNONYM_PREFIX</span><span class="p">):</span>
+                <span class="n">kind</span> <span class="o">=</span> <span class="s2">"synonym"</span>
+            <span class="n">found</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">connection</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">xref_edges</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+                <span class="n">found</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">database</span> <span class="k">for</span> <span class="n">database</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">connection</span><span class="o">.</span><span class="n">items</span><span class="p">)</span>
+            <span class="n">databases</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">found</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="n">node_type</span> <span class="o">==</span> <span class="n">ids</span><span class="o">.</span><span class="n">GENE</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_real</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+            <span class="n">ranges</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">active_ranges</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">active</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">((</span><span class="nb">int</span><span class="p">(</span><span class="n">a</span><span class="p">),</span> <span class="n">_finite</span><span class="p">(</span><span class="n">b</span><span class="p">))</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">ranges</span><span class="p">)</span>
+            <span class="n">alive</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># the releases of the ranges up to the last release of the graph, as a bit mask</span>
+            <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">ranges</span><span class="p">:</span>
+                <span class="n">low</span><span class="p">,</span> <span class="n">high</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">a</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last</span><span class="p">))</span>
+                <span class="k">if</span> <span class="n">high</span> <span class="o">&gt;=</span> <span class="n">low</span><span class="p">:</span>
+                    <span class="n">alive</span> <span class="o">|=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="n">high</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="n">low</span><span class="p">)</span>
+            <span class="n">assemblies</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">assembly</span> <span class="k">for</span> <span class="n">assembly</span><span class="p">,</span> <span class="n">served</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_serving_masks</span> <span class="k">if</span> <span class="n">served</span> <span class="o">&amp;</span> <span class="n">alive</span><span class="p">))</span>
+            <span class="n">outside</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">non_reference_releases</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">outside</span><span class="o">.</span><span class="n">mask</span><span class="p">:</span>
+                <span class="n">non_reference</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">((</span><span class="nb">int</span><span class="p">(</span><span class="n">a</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">b</span><span class="p">))</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">list_to_ranges</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">outside</span><span class="p">)))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_nodes</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">PathNode</span><span class="p">(</span>
+            <span class="nb">id</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">kind</span><span class="o">=</span><span class="n">kind</span><span class="p">,</span>
+            <span class="n">label</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">databases</span><span class="o">=</span><span class="n">databases</span><span class="p">,</span>
+            <span class="n">active</span><span class="o">=</span><span class="n">active</span><span class="p">,</span>
+            <span class="n">assemblies</span><span class="o">=</span><span class="n">assemblies</span><span class="p">,</span>
+            <span class="n">non_reference</span><span class="o">=</span><span class="n">non_reference</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_is_real</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Whether a backbone node is a gene id with a version (not ``&lt;id&gt;.Void`` or ``&lt;id&gt;.Retired``)."""</span>
+        <span class="n">real</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_real</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">real</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">real</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_real</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">version</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ids</span><span class="o">.</span><span class="n">SENTINEL_VERSIONS</span>
+        <span class="k">return</span> <span class="n">real</span>
+
+    <span class="c1"># ------------------------------------------------------------------ steps</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_history</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PathStep</span><span class="p">:</span>
+        <span class="n">graph</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span>
+        <span class="c1"># The walk's step (u, v) follows the edge u -&gt; v forward in time and v -&gt; u backward.</span>
+        <span class="n">tail</span><span class="p">,</span> <span class="n">head</span> <span class="o">=</span> <span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">source</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">reverse</span> <span class="k">else</span> <span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
+        <span class="n">edge</span> <span class="o">=</span> <span class="nb">next</span><span class="p">((</span><span class="n">e</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">history_edges</span><span class="p">(</span><span class="n">tail</span><span class="p">)</span> <span class="k">if</span> <span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">head</span> <span class="ow">and</span> <span class="n">e</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">==</span> <span class="n">key</span><span class="p">),</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">edge</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># pragma: no cover - the search only takes edges of the graph</span>
+            <span class="k">raise</span> <span class="n">IntegrityError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"No history edge </span><span class="si">{</span><span class="n">tail</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">head</span><span class="si">}</span><span class="s2"> (key </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">) in the graph."</span><span class="p">)</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">,</span> <span class="n">weight</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">edge</span>
+        <span class="n">splits</span> <span class="o">=</span> <span class="n">merges</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">"history"</span><span class="p">:</span>
+            <span class="n">splits</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span>
+                <span class="mi">1</span>
+                <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">history_edges</span><span class="p">(</span><span class="n">tail</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">e</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">old</span> <span class="ow">and</span> <span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">head</span> <span class="ow">and</span> <span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">tail</span> <span class="ow">and</span> <span class="n">math</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_real</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="p">)</span>
+            <span class="n">merges</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span>
+                <span class="mi">1</span>
+                <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">history_edges</span><span class="p">(</span><span class="n">head</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">e</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="n">new</span> <span class="ow">and</span> <span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">head</span> <span class="ow">and</span> <span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">tail</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_real</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="p">)</span>
+        <span class="n">weight_value</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">weight</span> <span class="o">!=</span> <span class="n">weight</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="n">weight</span><span class="p">)</span>
+        <span class="n">new_release</span> <span class="o">=</span> <span class="n">_finite</span><span class="p">(</span><span class="n">new</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">"self_loop"</span><span class="p">:</span>
+            <span class="n">reason</span> <span class="o">=</span> <span class="s2">"self_loop"</span>
+        <span class="k">elif</span> <span class="n">splits</span> <span class="ow">and</span> <span class="n">merges</span><span class="p">:</span>
+            <span class="n">reason</span> <span class="o">=</span> <span class="s2">"split_and_merge"</span>
+        <span class="k">elif</span> <span class="n">splits</span><span class="p">:</span>
+            <span class="n">reason</span> <span class="o">=</span> <span class="s2">"split"</span>
+        <span class="k">elif</span> <span class="n">merges</span><span class="p">:</span>
+            <span class="n">reason</span> <span class="o">=</span> <span class="s2">"merge"</span>
+        <span class="k">elif</span> <span class="n">ids</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">tail</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">ids</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">head</span><span class="p">)[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="n">reason</span> <span class="o">=</span> <span class="s2">"new_version"</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">reason</span> <span class="o">=</span> <span class="s2">"replaced"</span>
+        <span class="n">old_release</span> <span class="o">=</span> <span class="n">_finite</span><span class="p">(</span><span class="n">old</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">PathStep</span><span class="p">(</span>
+            <span class="n">kind</span><span class="o">=</span><span class="n">kind</span><span class="p">,</span>
+            <span class="n">source</span><span class="o">=</span><span class="n">source</span><span class="p">,</span>
+            <span class="n">target</span><span class="o">=</span><span class="n">target</span><span class="p">,</span>
+            <span class="n">key</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">key</span><span class="p">),</span>
+            <span class="n">old_release</span><span class="o">=</span><span class="n">old_release</span><span class="p">,</span>
+            <span class="n">new_release</span><span class="o">=</span><span class="n">new_release</span><span class="p">,</span>
+            <span class="n">weight</span><span class="o">=</span><span class="n">weight_value</span><span class="p">,</span>
+            <span class="n">splits</span><span class="o">=</span><span class="n">splits</span><span class="p">,</span>
+            <span class="n">merges</span><span class="o">=</span><span class="n">merges</span><span class="p">,</span>
+            <span class="n">assembly</span><span class="o">=</span><span class="kc">None</span> <span class="k">if</span> <span class="n">new_release</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_assembly</span><span class="p">(</span><span class="n">new_release</span><span class="p">),</span>
+            <span class="n">old_assembly</span><span class="o">=</span><span class="kc">None</span> <span class="k">if</span> <span class="n">old_release</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_assembly</span><span class="p">(</span><span class="n">old_release</span><span class="p">),</span>
+            <span class="n">reason</span><span class="o">=</span><span class="n">reason</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_assembly</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">release</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">assembly</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_serving</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">release</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">assembly</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">int</span><span class="p">(</span><span class="n">assembly</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_xref</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">release</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PathStep</span><span class="p">:</span>
+        <span class="n">graph</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span>
+        <span class="n">connection</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">connection</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span> <span class="ow">or</span> <span class="n">graph</span><span class="o">.</span><span class="n">connection</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">source</span><span class="p">)</span>
+        <span class="n">databases</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
+        <span class="n">assembly</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">release</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">assembly</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_assembly</span><span class="p">(</span><span class="n">release</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">connection</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">databases</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
+                    <span class="nb">sorted</span><span class="p">(</span>
+                        <span class="p">{</span>
+                            <span class="n">database</span>
+                            <span class="k">for</span> <span class="n">database</span><span class="p">,</span> <span class="n">edge_assembly</span><span class="p">,</span> <span class="n">releases</span> <span class="ow">in</span> <span class="n">connection</span><span class="o">.</span><span class="n">items</span>
+                            <span class="k">if</span> <span class="n">release</span> <span class="ow">in</span> <span class="n">releases</span> <span class="ow">and</span> <span class="p">(</span><span class="n">assembly</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">int</span><span class="p">(</span><span class="n">edge_assembly</span><span class="p">)</span> <span class="o">==</span> <span class="n">assembly</span><span class="p">)</span>
+                        <span class="p">}</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">connection</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">databases</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">sorted</span><span class="p">({</span><span class="n">d</span> <span class="k">for</span> <span class="n">d</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">connection</span><span class="o">.</span><span class="n">items</span><span class="p">}))</span>
+        <span class="n">reason</span> <span class="o">=</span> <span class="s2">"final_other_release"</span> <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">"final"</span> <span class="ow">and</span> <span class="n">release</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">kind</span>
+        <span class="k">return</span> <span class="n">PathStep</span><span class="p">(</span>
+            <span class="n">kind</span><span class="o">=</span><span class="n">kind</span><span class="p">,</span>
+            <span class="n">source</span><span class="o">=</span><span class="n">source</span><span class="p">,</span>
+            <span class="n">target</span><span class="o">=</span><span class="n">target</span><span class="p">,</span>
+            <span class="n">key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">release</span><span class="o">=</span><span class="kc">None</span> <span class="k">if</span> <span class="n">release</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">int</span><span class="p">(</span><span class="n">release</span><span class="p">),</span>
+            <span class="n">databases</span><span class="o">=</span><span class="n">databases</span><span class="p">,</span>
+            <span class="n">assembly</span><span class="o">=</span><span class="n">assembly</span><span class="p">,</span>
+            <span class="n">reason</span><span class="o">=</span><span class="n">reason</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">raw</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="n">token</span> <span class="o">=</span> <span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="o">*</span><span class="n">raw</span><span class="p">)</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_step_index</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">token</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">index</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">index</span>
+        <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">"identity"</span><span class="p">:</span>
+            <span class="n">step</span> <span class="o">=</span> <span class="n">PathStep</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s2">"identity"</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">target</span><span class="o">=</span><span class="n">raw</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">reason</span><span class="o">=</span><span class="s2">"identity"</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">kind</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"history"</span><span class="p">,</span> <span class="s2">"self_loop"</span><span class="p">):</span>
+            <span class="n">step</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_history</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">raw</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">raw</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">raw</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">step</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_xref</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">raw</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">raw</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">raw</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">source</span><span class="p">,</span> <span class="n">step</span><span class="o">.</span><span class="n">target</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_node</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_steps</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_steps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_step_index</span><span class="p">[</span><span class="n">token</span><span class="p">]</span> <span class="o">=</span> <span class="n">index</span>
+        <span class="k">return</span> <span class="n">index</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_inward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Whether a cross-reference step walks towards the gene (along the edge ``source -&gt; target``)."""</span>
+        <span class="k">return</span> <span class="nb">any</span><span class="p">(</span><span class="n">other</span> <span class="o">==</span> <span class="n">target</span> <span class="k">for</span> <span class="n">other</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">xref_edges</span><span class="p">(</span><span class="n">source</span><span class="p">))</span>
+
+<div class="viewcode-block" id="PathBuilder.search_path">
+<a class="viewcode-back" href="../../../reference.html#idtrack.engine.explain.PathBuilder.search_path">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">search_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">raw_path</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Return the indices of the steps of a path from the identifier to a gene.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            raw_path: The engine's steps.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple[int, ...]: Indices into :py:attr:`steps`.</span>
+<span class="sd">        """</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># A path from a gene (a gene id with version as the query) has no entry steps: a cross-reference step that</span>
+        <span class="c1"># leaves it is a bridge. Any other query enters through cross-reference steps up to its first gene.</span>
+        <span class="n">first</span> <span class="o">=</span> <span class="n">raw_path</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">raw_path</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="n">seen_gene</span> <span class="o">=</span> <span class="n">first</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">first</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">is_backbone</span><span class="p">(</span><span class="n">first</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">raw</span> <span class="ow">in</span> <span class="n">raw_path</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">raw</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">indices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_add</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="s2">"identity"</span><span class="p">))</span>
+                <span class="n">seen_gene</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                <span class="n">indices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_add</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="s2">"self_loop"</span> <span class="k">if</span> <span class="n">raw</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">raw</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">else</span> <span class="s2">"history"</span><span class="p">))</span>
+                <span class="n">seen_gene</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">elif</span> <span class="ow">not</span> <span class="n">seen_gene</span><span class="p">:</span>
+                <span class="n">indices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_add</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="s2">"entry"</span><span class="p">))</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">is_backbone</span><span class="p">(</span><span class="n">raw</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                    <span class="n">seen_gene</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">indices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_add</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="s2">"bridge_far"</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inward</span><span class="p">(</span><span class="n">raw</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">raw</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="k">else</span> <span class="s2">"bridge_near"</span><span class="p">))</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="PathBuilder.final_path">
+<a class="viewcode-back" href="../../../reference.html#idtrack.engine.explain.PathBuilder.final_path">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">final_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">raw_path</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Return the indices of the steps of a final hop.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            raw_path: The engine's steps from the gene to the target.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple[int, ...]: Indices into :py:attr:`steps`.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_add</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="s2">"final"</span><span class="p">)</span> <span class="k">for</span> <span class="n">raw</span> <span class="ow">in</span> <span class="n">raw_path</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="PathBuilder.result">
+<a class="viewcode-back" href="../../../reference.html#idtrack.engine.explain.PathBuilder.result">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">result</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ExplainedPath</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return the explanation collected.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            ExplainedPath: Nodes and steps.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="n">ExplainedPath</span><span class="p">(</span><span class="n">nodes</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_nodes</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span> <span class="n">steps</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_steps</span><span class="p">))</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Kemal Inecik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

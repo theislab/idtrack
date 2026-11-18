@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Part 7 — Advanced Topics &mdash; idtrack 0.0.5 documentation</title>
+  <title>Part 7 — Advanced Topics &mdash; idtrack 0.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=6a604523" />
@@ -17,7 +17,7 @@
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=282f96c0"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../_static/design-tabs.js?v=fcb327ea"></script>
@@ -81,16 +81,6 @@
 <li class="toctree-l3"><a class="reference internal" href="#7.2-—-Programmatic-YAML-Management">7.2 — Programmatic YAML Management</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#7.3-—-Troubleshooting-&amp;-Diagnostics">7.3 — Troubleshooting &amp; Diagnostics</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#7.4-—-Integration-Patterns">7.4 — Integration Patterns</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#7.5-—-No-Internet-Servers:-SSH-ConnectionBridge">7.5 — No-Internet Servers: SSH ConnectionBridge</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#The-most-important-rule">The most important rule</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Why-“two-SSH-tabs”-is-normal-(inbound-vs-outbound)">Why “two SSH tabs” is normal (inbound vs outbound)</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Scenario-1-—-Python-runs-on-the-server/login-node-(no-compute-node)">Scenario 1 — Python runs on the server/login node (no compute node)</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Scenario-2-—-Python-runs-on-a-compute-node-(Slurm),-not-Jupyter-(plain-Python-script)">Scenario 2 — Python runs on a compute node (Slurm), not Jupyter (plain Python script)</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Scenario-3-—-Jupyter-kernel-runs-on-a-compute-node-(browser-on-your-local-machine)">Scenario 3 — Jupyter kernel runs on a compute node (browser on your local machine)</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#What-ConnectionBridge-changes-(briefly)">What <code class="docutils literal notranslate"><span class="pre">ConnectionBridge</span></code> changes (briefly)</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Copy/paste-helper:-ConnectionBridge-SSH-command">Copy/paste helper: ConnectionBridge SSH command</a></li>
-</ul>
-</li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="99_initialization_test.html">Appendix</a></li>
@@ -102,7 +92,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../changes.html">Changes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributor Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../authors.html">Credits</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code_of_conduct.html">Code of Conduct</a></li>
 </ul>
 
         </div>
@@ -140,7 +130,6 @@
 <li><p>custom external database profiles (strict vs broad)</p></li>
 <li><p>programmatic YAML management (useful in pipelines)</p></li>
 <li><p>troubleshooting &amp; diagnostics (common failure modes)</p></li>
-<li><p>restricted-server SSH bridging (ConnectionBridge)</p></li>
 <li><p>integration patterns (Snakemake/Nextflow-friendly workflows)</p></li>
 </ul>
 <blockquote>
@@ -154,8 +143,8 @@
 <li><p><strong>Strict profile:</strong> a small allowlist, lower ambiguity, smaller downloads.</p></li>
 <li><p><strong>Broad profile:</strong> a larger allowlist (the shipped default is one), more coverage, but more ambiguity.</p></li>
 </ul>
-<p>The YAML of a local repository has a fixed name, <code class="docutils literal notranslate"><span class="pre">&lt;organism&gt;_externals_modified.yml</span></code> (without it, the shipped default is used). A graph file records the selection of external databases it was built from: loading it under another selection raises <code class="docutils literal notranslate"><span class="pre">idtrack.GraphMismatchError</span></code> instead of answering from a graph of the other profile. So keep <strong>one local repository per profile</strong>: each holds its YAML, its tables and its graph.</p>
-<p>The next cell writes two profiles with <code class="docutils literal notranslate"><span class="pre">idtrack._default_externals.apply_allowlist</span></code>, which switches on exactly the <code class="docutils literal notranslate"><span class="pre">{form:</span> <span class="pre">{database:</span> <span class="pre">[assembly</span> <span class="pre">keys]}}</span></code> entries of an allowlist in a template (the shipped templates list every database Ensembl has for the organism, per form: gene, transcript, translation) and reports allowlisted names the template does not have. It writes nothing over an existing YAML of your local repository.</p>
+<p>The YAML of a local repository has a fixed name, <code class="docutils literal notranslate"><span class="pre">&lt;organism&gt;_externals_modified.yml</span></code> (without it, the shipped default is used). A graph file records the selection of external databases it was built from: loading it under another selection raises <code class="docutils literal notranslate"><span class="pre">idtrack.errors.GraphMismatchError</span></code> instead of answering from a graph of the other profile. So keep <strong>one local repository per profile</strong>: each holds its YAML, its tables and its graph.</p>
+<p>The next cell writes two profiles with <code class="docutils literal notranslate"><span class="pre">idtrack.build.default_externals.apply_allowlist</span></code>, which switches on exactly the <code class="docutils literal notranslate"><span class="pre">{form:</span> <span class="pre">{database:</span> <span class="pre">[assembly</span> <span class="pre">keys]}}</span></code> entries of an allowlist in a template (the shipped templates list every database Ensembl has for the organism, per form: gene, transcript, translation) and reports allowlisted names the template does not have. It writes nothing over an existing YAML of your local repository.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>1
 </pre></div>
@@ -168,8 +157,8 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._default_externals</span><span class="w"> </span><span class="kn">import</span> <span class="n">DEFAULT_EXTERNALS</span><span class="p">,</span> <span class="n">apply_allowlist</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._external_databases</span><span class="w"> </span><span class="kn">import</span> <span class="n">write_externals_yaml</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.build.default_externals</span><span class="w"> </span><span class="kn">import</span> <span class="n">DEFAULT_EXTERNALS</span><span class="p">,</span> <span class="n">apply_allowlist</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.build.externals</span><span class="w"> </span><span class="kn">import</span> <span class="n">write_externals_yaml</span>
 
 <span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'IDTRACK_LOCAL_REPO'</span><span class="p">,</span> <span class="s1">'idtrack_cache'</span><span class="p">))</span>
 <span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -198,7 +187,7 @@
     <span class="nb">print</span><span class="p">(</span><span class="s1">'   written:'</span><span class="p">,</span> <span class="n">out_path</span><span class="p">)</span>
 
 <span class="nb">print</span><span class="p">()</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">'To use a profile: idtrack.API(local_repository=&lt;its folder&gt;), then build_graph as usual.'</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'To use a profile: idtrack.API.build(organism, snapshot_release, &lt;its folder&gt;).'</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -214,7 +203,7 @@ strict: 10 form/database/assembly entries enabled; not in the template: []
 broad: 63 form/database/assembly entries enabled; not in the template: []
    written: idtrack_profile_broad/homo_sapiens_externals_modified.yml
 
-To use a profile: idtrack.API(local_repository=&lt;its folder&gt;), then build_graph as usual.
+To use a profile: idtrack.API.build(organism, snapshot_release, &lt;its folder&gt;).
 </pre></div></div>
 </div>
 </section>
@@ -234,7 +223,7 @@ To use a profile: idtrack.API(local_repository=&lt;its folder&gt;), then build_g
 <li><p>writes a modified YAML to the path you give (never over a file you did not name)</p></li>
 </ul>
 <blockquote>
-<div><p><strong>Tip:</strong> Keep allowlists per organism in your pipeline repository (as Python dicts or a small TOML/YAML). That makes your configuration reviewable. <code class="docutils literal notranslate"><span class="pre">idtrack._default_externals.DEFAULT_EXTERNALS</span></code> holds the allowlists of the shipped files.</p>
+<div><p><strong>Tip:</strong> Keep allowlists per organism in your pipeline repository (as Python dicts or a small TOML/YAML). That makes your configuration reviewable. <code class="docutils literal notranslate"><span class="pre">idtrack.build.default_externals.DEFAULT_EXTERNALS</span></code> holds the allowlists of the shipped files.</p>
 </div></blockquote>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>2
@@ -248,8 +237,8 @@ To use a profile: idtrack.API(local_repository=&lt;its folder&gt;), then build_g
 <span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._default_externals</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_allowlist</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._external_databases</span><span class="w"> </span><span class="kn">import</span> <span class="n">write_externals_yaml</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.build.default_externals</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_allowlist</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.build.externals</span><span class="w"> </span><span class="kn">import</span> <span class="n">write_externals_yaml</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">apply_allowlist_to_yaml</span><span class="p">(</span><span class="n">template_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">organism</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">allowlist</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">out_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -292,15 +281,16 @@ Enabled form/database/assembly entries: 12
 <ul class="simple">
 <li><p><strong>Permission errors in ``IDTRACK_LOCAL_REPO``:</strong> your cache directory is not writable.</p></li>
 <li><p><strong>REST timeouts:</strong> network issues or Ensembl REST is temporarily slow.</p></li>
-<li><p><strong>MySQL connection errors:</strong> outbound MySQL ports may be blocked; IDTrack probes a port once and, when it fails, uses the HTTPS/FTP dumps for the next ten minutes or longer (the same tables, rows and values, slower per table). Set <code class="docutils literal notranslate"><span class="pre">IDTRACK_ENSEMBL_ACCESS=https</span></code> to skip MySQL entirely. Port <code class="docutils literal notranslate"><span class="pre">3337</span></code> is Ensembl’s archive server (GRCh37 from release 79; IDTrack reads it for human GRCh37 only; its frozen copies of other assemblies carry later release numbers and are not used).</p></li>
-<li><p><strong>``idtrack.GraphMismatchError`` when loading a graph:</strong> the graph file in your local repository was built from another selection of external databases, another organism table or by an older graph format than you ask for now; the message names the differences. Move the file away (or use another local repository) and build again.</p></li>
-<li><p><strong>``idtrack.EnsemblDownloadError`` / ``idtrack.EnsemblRestError``:</strong> Ensembl did not answer after the retries; the message names the URL. A release is never silently skipped because a request failed.</p></li>
+<li><p><strong>MySQL connection errors:</strong> outbound MySQL ports may be blocked; IDTrack probes a port once and, when it fails, uses the HTTPS/FTP dumps for the next ten minutes or longer (the same tables, rows and values, slower per table). Set <code class="docutils literal notranslate"><span class="pre">IDTRACK_ENSEMBL_ACCESS=https</span></code> (or <code class="docutils literal notranslate"><span class="pre">idtrack.settings.configure_ensembl(access='https')</span></code>) to skip MySQL entirely. Port <code class="docutils literal notranslate"><span class="pre">3337</span></code> is Ensembl’s archive server (GRCh37 from release 79; IDTrack reads it for human GRCh37 only; its frozen copies of other assemblies
+carry later release numbers and are not used).</p></li>
+<li><p><strong>``idtrack.errors.GraphMismatchError`` when loading a graph:</strong> the graph file in your local repository was built from another selection of external databases, another organism table or by an older graph format than you ask for now; the message names the differences. Use another local repository, or build again with <code class="docutils literal notranslate"><span class="pre">API.build(...,</span> <span class="pre">rebuild=True)</span></code>.</p></li>
+<li><p><strong>``idtrack.errors.EnsemblDownloadError`` / ``idtrack.errors.EnsemblRestError``:</strong> Ensembl did not answer after the retries; the message names the URL. A release is never silently skipped because a request failed.</p></li>
 <li><p><strong>A warning that releases have no entry in the external YAML:</strong> your external YAML does not include every release of the snapshot window; a graph built so has no external identifiers at those releases. Extend the file with <code class="docutils literal notranslate"><span class="pre">ExternalDatabases.extend_modified_yaml</span></code> (Part 2, section 2.6).</p></li>
 <li><p><strong>Unexpected 1→n explosion:</strong> your external allowlist is too broad or contains promiscuous namespaces.</p></li>
 </ul>
 <p>The next cell is a compact diagnostic report you can paste into issues or lab notes.</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>3
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
@@ -335,11 +325,11 @@ Enabled form/database/assembly entries: 12
 
 <span class="c1"># MySQL ports (best-effort)</span>
 <span class="c1"># Note: port 3337 is Ensembl's archive server; IDTrack reads it for human GRCh37 only. Other releases use 3306/5306.</span>
-<span class="c1"># IDTrack itself probes a port once and remembers the answer (see `idtrack._ensembl_access`).</span>
+<span class="c1"># IDTrack itself probes a port once and remembers the answer (see `idtrack.build.ensembl_access`).</span>
 <span class="k">try</span><span class="p">:</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._db</span><span class="w"> </span><span class="kn">import</span> <span class="n">DB</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">idtrack.settings</span>
 
-    <span class="n">host</span> <span class="o">=</span> <span class="n">DB</span><span class="o">.</span><span class="n">mysql_host</span>
+    <span class="n">host</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ENSEMBL</span><span class="o">.</span><span class="n">mysql_host</span>
     <span class="n">port_status</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">for</span> <span class="n">port</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">,</span> <span class="mi">3337</span><span class="p">]:</span>
         <span class="k">try</span><span class="p">:</span>
@@ -356,55 +346,23 @@ Enabled form/database/assembly entries: 12
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">v</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
 
 <span class="c1"># Optional: quick integrity check (only if the human graph of snapshot 115 exists)</span>
-<span class="c1"># NOTE: TrackTests read Ensembl's tables too (a database manager); we only run one check here.</span>
+<span class="c1"># NOTE: the self-tests (GraphChecks) read Ensembl's tables too (a database manager); we only run one check of the graph here.</span>
 <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">'graph_homo_sapiens_assembly38_min48_max115'</span><span class="p">)</span> <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">report</span><span class="p">[</span><span class="s1">'graph_snapshots'</span><span class="p">]):</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack</span><span class="w"> </span><span class="kn">import</span> <span class="n">API</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.checks</span><span class="w"> </span><span class="kn">import</span> <span class="n">GraphChecks</span>
 
-        <span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
-        <span class="n">api</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
-        <span class="c1"># Loads the graph of the pinned snapshot (it exists, see above).</span>
-        <span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="s1">'homo_sapiens'</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="mi">115</span><span class="p">,</span> <span class="n">return_test</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-        <span class="n">check</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">is_edge_with_same_nts_only_at_backbone_nodes</span><span class="p">()</span>  <span class="c1"># a result: `holds`, `details`</span>
+        <span class="n">API</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
+        <span class="n">api</span> <span class="o">=</span> <span class="n">API</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="s1">'homo_sapiens'</span><span class="p">,</span> <span class="mi">115</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>  <span class="c1"># loads the file of the pinned snapshot</span>
+        <span class="n">manager</span> <span class="o">=</span> <span class="n">API</span><span class="o">.</span><span class="n">database_manager</span><span class="p">(</span><span class="s1">'homo_sapiens'</span><span class="p">,</span> <span class="mi">115</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
+        <span class="n">check</span> <span class="o">=</span> <span class="n">GraphChecks</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span> <span class="n">manager</span><span class="p">)</span><span class="o">.</span><span class="n">is_edge_with_same_nts_only_at_backbone_nodes</span><span class="p">()</span>  <span class="c1"># `holds`, `details`</span>
         <span class="nb">print</span><span class="p">()</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s1">'Quick TrackTests check (edge nts invariant):'</span><span class="p">,</span> <span class="n">check</span><span class="o">.</span><span class="n">holds</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">'Quick self-test (edge nts invariant):'</span><span class="p">,</span> <span class="n">check</span><span class="o">.</span><span class="n">holds</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">()</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s1">'TrackTests quick check skipped/failed -&gt;'</span><span class="p">,</span> <span class="nb">repr</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
-<br/></pre></div>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">'Self-test quick check skipped/failed -&gt;'</span><span class="p">,</span> <span class="nb">repr</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+</pre></div>
 </div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-local_repository: idtrack_cache
-local_repository_writable: True
-yaml_files: [&#39;homo_sapiens_externals_modified.yml&#39;, &#39;macaca_fascicularis_externals_modified.yml&#39;, &#39;macaca_mulatta_externals_modified.yml&#39;, &#39;mus_musculus_externals_modified.yml&#39;, &#39;sus_scrofa_externals_modified.yml&#39;]
-graph_snapshots: [&#39;graph_homo_sapiens_assembly38_min48_max115_narrow.npz&#39;, &#39;graph_macaca_fascicularis_assembly6_min91_max115_narrow.npz&#39;, &#39;graph_macaca_mulatta_assembly10_min48_max115_narrow.npz&#39;, &#39;graph_mus_musculus_assembly39_min48_max115_narrow.npz&#39;, &#39;graph_sus_scrofa_assembly111_min56_max115_narrow.npz&#39;]
-ensembl_rest_status: 200
-ensembl_mysql_ports: {3306: &#39;TimeoutError&#39;, 5306: &#39;TimeoutError&#39;, 3337: &#39;TimeoutError&#39;}
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-2026-11-12 23:11:07 INFO:idtrack._database_manager: Ensembl releases of homo_sapiens assembly 38 read from &#39;idtrack_cache/ensembl_https_index_homo_sapiens_assembly-38.json&#39; (scanned up to release 116).
-2026-11-12 23:11:07 INFO:idtrack._graph_maker: The graph is being read: idtrack_cache/graph_homo_sapiens_assembly38_min48_max115_narrow.npz
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-
-Quick TrackTests check (edge nts invariant): True
-</pre></div></div>
 </div>
 </section>
 <section id="7.4-—-Integration-Patterns">
@@ -429,7 +387,7 @@ Quick TrackTests check (edge nts invariant): True
 <span class="s2">    output:</span>
 <span class="s2">        'idtrack_cache/graph_homo_sapiens_assembly38_min48_max115_narrow.npz'</span>
 <span class="s2">    shell:</span>
-<span class="s2">        "python - &lt;&lt;'PY'</span><span class="se">\n</span><span class="s2">import os</span><span class="se">\n</span><span class="s2">from pathlib import Path</span><span class="se">\n</span><span class="s2">import idtrack</span><span class="se">\n\n</span><span class="s2">repo = os.path.abspath('idtrack_cache')</span><span class="se">\n</span><span class="s2">Path(repo).mkdir(parents=True, exist_ok=True)</span><span class="se">\n\n</span><span class="s2">api = idtrack.API(local_repository=repo)</span><span class="se">\n</span><span class="s2">api.build_graph(organism_name='homo_sapiens', snapshot_release=115)</span><span class="se">\n</span><span class="s2">print('Built: homo_sapiens 115')</span><span class="se">\n</span><span class="s2">PY"</span>
+<span class="s2">        "python - &lt;&lt;'PY'</span><span class="se">\n</span><span class="s2">import os</span><span class="se">\n</span><span class="s2">from pathlib import Path</span><span class="se">\n</span><span class="s2">import idtrack</span><span class="se">\n\n</span><span class="s2">repo = os.path.abspath('idtrack_cache')</span><span class="se">\n</span><span class="s2">Path(repo).mkdir(parents=True, exist_ok=True)</span><span class="se">\n\n</span><span class="s2">idtrack.API.build('homo_sapiens', 115, repo)</span><span class="se">\n</span><span class="s2">print('Built: homo_sapiens 115')</span><span class="se">\n</span><span class="s2">PY"</span>
 <span class="s2">"""</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
 
 <span class="n">nextflow_process</span> <span class="o">=</span> <span class="s2">"""</span>
@@ -437,7 +395,7 @@ Quick TrackTests check (edge nts invariant): True
 <span class="s2">  output:</span>
 <span class="s2">    path "idtrack_cache/graph_homo_sapiens_assembly38_min48_max115_narrow.npz"</span>
 <span class="s2">  script:</span>
-<span class="s2">    "export IDTRACK_LOCAL_REPO=$PWD/idtrack_cache</span><span class="se">\n</span><span class="s2">python - &lt;&lt;'PY'</span><span class="se">\n</span><span class="s2">import os</span><span class="se">\n</span><span class="s2">from pathlib import Path</span><span class="se">\n</span><span class="s2">import idtrack</span><span class="se">\n\n</span><span class="s2">repo = os.environ['IDTRACK_LOCAL_REPO']</span><span class="se">\n</span><span class="s2">Path(repo).mkdir(parents=True, exist_ok=True)</span><span class="se">\n\n</span><span class="s2">api = idtrack.API(local_repository=repo)</span><span class="se">\n</span><span class="s2">api.build_graph(organism_name='homo_sapiens', snapshot_release=115)</span><span class="se">\n</span><span class="s2">print('Built: homo_sapiens 115')</span><span class="se">\n</span><span class="s2">PY"</span>
+<span class="s2">    "export IDTRACK_LOCAL_REPO=$PWD/idtrack_cache</span><span class="se">\n</span><span class="s2">python - &lt;&lt;'PY'</span><span class="se">\n</span><span class="s2">import os</span><span class="se">\n</span><span class="s2">from pathlib import Path</span><span class="se">\n</span><span class="s2">import idtrack</span><span class="se">\n\n</span><span class="s2">repo = os.environ['IDTRACK_LOCAL_REPO']</span><span class="se">\n</span><span class="s2">Path(repo).mkdir(parents=True, exist_ok=True)</span><span class="se">\n\n</span><span class="s2">idtrack.API.build('homo_sapiens', 115, repo)</span><span class="se">\n</span><span class="s2">print('Built: homo_sapiens 115')</span><span class="se">\n</span><span class="s2">PY"</span>
 <span class="s2">}</span>
 <span class="s2">"""</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
 
@@ -466,8 +424,7 @@ import idtrack
 repo = os.path.abspath(&#39;idtrack_cache&#39;)
 Path(repo).mkdir(parents=True, exist_ok=True)
 
-api = idtrack.API(local_repository=repo)
-api.build_graph(organism_name=&#39;homo_sapiens&#39;, snapshot_release=115)
+idtrack.API.build(&#39;homo_sapiens&#39;, 115, repo)
 print(&#39;Built: homo_sapiens 115&#39;)
 PY&#34;
 --- Nextflow example ---
@@ -484,184 +441,12 @@ import idtrack
 repo = os.environ[&#39;IDTRACK_LOCAL_REPO&#39;]
 Path(repo).mkdir(parents=True, exist_ok=True)
 
-api = idtrack.API(local_repository=repo)
-api.build_graph(organism_name=&#39;homo_sapiens&#39;, snapshot_release=115)
+idtrack.API.build(&#39;homo_sapiens&#39;, 115, repo)
 print(&#39;Built: homo_sapiens 115&#39;)
 PY&#34;
 }
 </pre></div></div>
 </div>
-</section>
-<section id="7.5-—-No-Internet-Servers:-SSH-ConnectionBridge">
-<h2>7.5 — No-Internet Servers: SSH ConnectionBridge<a class="headerlink" href="#7.5-—-No-Internet-Servers:-SSH-ConnectionBridge" title="Link to this heading"></a></h2>
-<p>Some HPC clusters block outbound internet access from compute nodes. IDTrack needs to contact Ensembl services, so in these environments you can route networking through your <strong>local machine</strong> using:</p>
-<ol class="arabic simple">
-<li><p>an SSH reverse SOCKS proxy (<code class="docutils literal notranslate"><span class="pre">ssh</span> <span class="pre">-R</span> <span class="pre">...</span></code>) that creates a SOCKS5 proxy <em>on the remote machine</em>, and</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">idtrack.ConnectionBridge</span></code> inside the Python process so Python uses that proxy.</p></li>
-</ol>
-<section id="The-most-important-rule">
-<h3>The most important rule<a class="headerlink" href="#The-most-important-rule" title="Link to this heading"></a></h3>
-<p><strong>The SOCKS proxy must exist on the same machine where your Python code is running.</strong></p>
-<ul class="simple">
-<li><p>If your Python runs on the login node → the proxy must be on the login node.</p></li>
-<li><p>If your Python runs on a compute node → the proxy must be on that compute node.</p></li>
-<li><p>If your Jupyter kernel runs on a compute node → the proxy must be on that compute node (not on the login node).</p></li>
-</ul>
-</section>
-<section id="Why-“two-SSH-tabs”-is-normal-(inbound-vs-outbound)">
-<h3>Why “two SSH tabs” is normal (inbound vs outbound)<a class="headerlink" href="#Why-“two-SSH-tabs”-is-normal-(inbound-vs-outbound)" title="Link to this heading"></a></h3>
-<ul class="simple">
-<li><p><strong>Inbound</strong> traffic: your browser (local) needs to reach Jupyter (remote) → solved with <code class="docutils literal notranslate"><span class="pre">ssh</span> <span class="pre">-L</span></code> (Jupyter tunnel).</p></li>
-<li><p><strong>Outbound</strong> traffic: your remote Python process needs to reach the internet (Ensembl) → solved with <code class="docutils literal notranslate"><span class="pre">ssh</span> <span class="pre">-R</span></code> + <code class="docutils literal notranslate"><span class="pre">idtrack.ConnectionBridge</span></code>.</p></li>
-</ul>
-<p>These are independent problems, so using two separate SSH sessions/tabs is common. If your cluster allows you to SSH directly to the machine running the kernel (often via <code class="docutils literal notranslate"><span class="pre">ssh</span> <span class="pre">-J</span> <span class="pre">login</span> <span class="pre">compute</span></code>), you can also combine <code class="docutils literal notranslate"><span class="pre">-L</span></code> and <code class="docutils literal notranslate"><span class="pre">-R</span></code> in a single SSH command.</p>
-</section>
-<section id="Scenario-1-—-Python-runs-on-the-server/login-node-(no-compute-node)">
-<h3>Scenario 1 — Python runs on the server/login node (no compute node)<a class="headerlink" href="#Scenario-1-—-Python-runs-on-the-server/login-node-(no-compute-node)" title="Link to this heading"></a></h3>
-<p>On your <strong>local machine</strong> (keep this SSH session open):</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ssh<span class="w"> </span>-N<span class="w"> </span>-R<span class="w"> </span><span class="m">127</span>.0.0.1:1080<span class="w"> </span>user@server
-</pre></div>
-</div>
-<p>On the <strong>server</strong> (run IDTrack inside this Python process):</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
-
-<span class="k">with</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">ConnectionBridge</span><span class="p">(</span><span class="n">proxy_port</span><span class="o">=</span><span class="mi">1080</span><span class="p">):</span>
-    <span class="c1"># ... run IDTrack code ...</span>
-    <span class="k">pass</span>
-</pre></div>
-</div>
-</section>
-<section id="Scenario-2-—-Python-runs-on-a-compute-node-(Slurm),-not-Jupyter-(plain-Python-script)">
-<h3>Scenario 2 — Python runs on a compute node (Slurm), not Jupyter (plain Python script)<a class="headerlink" href="#Scenario-2-—-Python-runs-on-a-compute-node-(Slurm),-not-Jupyter-(plain-Python-script)" title="Link to this heading"></a></h3>
-<p>This is the same idea, but the target machine is the <strong>compute node</strong>.</p>
-<ol class="arabic simple">
-<li><p>Start your job and learn the compute node hostname (often from job output or <code class="docutils literal notranslate"><span class="pre">hostname</span></code>).</p></li>
-<li><p>On your <strong>local machine</strong>, create the proxy on that compute node (often via the login node as a jump host):</p></li>
-</ol>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ssh<span class="w"> </span>-N<span class="w"> </span>-J<span class="w"> </span>user@login<span class="w"> </span>-R<span class="w"> </span><span class="m">127</span>.0.0.1:1080<span class="w"> </span>user@compute123
-</pre></div>
-</div>
-<ol class="arabic simple" start="3">
-<li><p>Run your Python script on the <strong>compute node</strong>, and enable <code class="docutils literal notranslate"><span class="pre">ConnectionBridge</span></code> at the start of the program.</p></li>
-</ol>
-</section>
-<section id="Scenario-3-—-Jupyter-kernel-runs-on-a-compute-node-(browser-on-your-local-machine)">
-<h3>Scenario 3 — Jupyter kernel runs on a compute node (browser on your local machine)<a class="headerlink" href="#Scenario-3-—-Jupyter-kernel-runs-on-a-compute-node-(browser-on-your-local-machine)" title="Link to this heading"></a></h3>
-<p>You usually need BOTH:</p>
-<ul class="simple">
-<li><p>an <strong>inbound</strong> Jupyter tunnel (<code class="docutils literal notranslate"><span class="pre">ssh</span> <span class="pre">-L</span> <span class="pre">...</span></code>) so your browser can reach Jupyter, and</p></li>
-<li><p>an <strong>outbound</strong> SOCKS tunnel (<code class="docutils literal notranslate"><span class="pre">ssh</span> <span class="pre">-R</span> <span class="pre">...</span></code>) so the kernel can reach Ensembl.</p></li>
-</ul>
-<p>Option A (common): keep your existing Jupyter tunnel workflow, and open a second SSH tab for the <code class="docutils literal notranslate"><span class="pre">ssh</span> <span class="pre">-R</span> <span class="pre">...</span></code> tunnel.</p>
-<p>Option B (single SSH session): only if you can SSH to the compute node (often via <code class="docutils literal notranslate"><span class="pre">-J</span></code>). Example (adjust ports/users):</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ssh<span class="w"> </span>-N<span class="w"> </span>-J<span class="w"> </span>user@login<span class="w"> </span>-L<span class="w"> </span><span class="m">8888</span>:127.0.0.1:8888<span class="w"> </span>-R<span class="w"> </span><span class="m">127</span>.0.0.1:1080<span class="w"> </span>user@compute123
-</pre></div>
-</div>
-</section>
-<section id="What-ConnectionBridge-changes-(briefly)">
-<h3>What <code class="docutils literal notranslate"><span class="pre">ConnectionBridge</span></code> changes (briefly)<a class="headerlink" href="#What-ConnectionBridge-changes-(briefly)" title="Link to this heading"></a></h3>
-<ul class="simple">
-<li><p>It patches <code class="docutils literal notranslate"><span class="pre">socket.socket</span></code> to PySocks’ <code class="docutils literal notranslate"><span class="pre">socks.socksocket</span></code> so most Python networking stacks transparently use the proxy (requests/urllib3, urllib, PyMySQL, etc.).</p></li>
-<li><p>It optionally sets <code class="docutils literal notranslate"><span class="pre">ALL_PROXY</span></code>/<code class="docutils literal notranslate"><span class="pre">all_proxy</span></code> so child processes inherit the proxy.</p></li>
-<li><p>It restores the original state on <code class="docutils literal notranslate"><span class="pre">stop()</span></code> (also best-effort on interpreter exit), including a default proxy that was set before.</p></li>
-<li><p>A bridge stays active until <code class="docutils literal notranslate"><span class="pre">stop()</span></code> (or <code class="docutils literal notranslate"><span class="pre">ConnectionBridge.stop_all()</span></code>, which ends it whoever started it); dropping the object does not end it.</p></li>
-</ul>
-<blockquote>
-<div><p><strong>Tip:</strong> Prefer the context-manager form (<code class="docutils literal notranslate"><span class="pre">with</span> <span class="pre">ConnectionBridge(...)</span></code>) in scripts so cleanup is guaranteed. It raises <code class="docutils literal notranslate"><span class="pre">ConnectionError</span></code> when the connectivity check fails, so the block never runs without the network it needs.</p>
-</div></blockquote>
-</section>
-<section id="Copy/paste-helper:-ConnectionBridge-SSH-command">
-<h3>Copy/paste helper: ConnectionBridge SSH command<a class="headerlink" href="#Copy/paste-helper:-ConnectionBridge-SSH-command" title="Link to this heading"></a></h3>
-<p>There is a ready-to-use helper script in this repo:</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">idtrack/reproducibility/scripts/connection_bridge_tunnel.sh</span></code></p></li>
-</ul>
-<p>It is meant to run on your <strong>local machine</strong>. It prints only the SSH command (one line). Paste that line into a terminal tab and keep it open.</p>
-<p>Examples:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Show full beginner-oriented help:</span>
-bash<span class="w"> </span>idtrack/reproducibility/scripts/connection_bridge_tunnel.sh<span class="w"> </span>--help
-
-<span class="c1"># Server/login node (Python runs on the login node):</span>
-bash<span class="w"> </span>idtrack/reproducibility/scripts/connection_bridge_tunnel.sh<span class="w"> </span>user@server
-
-<span class="c1"># Compute node (Python runs on compute node; go via login as jump host):</span>
-bash<span class="w"> </span>idtrack/reproducibility/scripts/connection_bridge_tunnel.sh<span class="w"> </span>--jump<span class="w"> </span>user@login<span class="w"> </span>compute123
-
-<span class="c1"># Compute node host auto-detected from Jupyter URL (kernel on compute node):</span>
-bash<span class="w"> </span>idtrack/reproducibility/scripts/connection_bridge_tunnel.sh<span class="w"> </span>--jump<span class="w"> </span>user@login<span class="w"> </span><span class="s2">"http://compute123:8888/lab?token=..."</span>
-
-<span class="c1"># Optional: one combined SSH command with both Jupyter (-L) and SOCKS (-R):</span>
-bash<span class="w"> </span>idtrack/reproducibility/scripts/connection_bridge_tunnel.sh<span class="w"> </span>--jump<span class="w"> </span>user@login<span class="w"> </span>--with-jupyter<span class="w"> </span><span class="s2">"http://compute123:8888/lab?token=..."</span>
-</pre></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>5
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
-
-<span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
-
-<span class="c1"># Enable the bridge inside the current Python process (e.g. a Jupyter kernel running on the server).</span>
-<span class="c1"># If `test=True` (default), the bridge pings Ensembl REST and rolls back automatically on failure.</span>
-<span class="n">b</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">ConnectionBridge</span><span class="p">(</span><span class="n">proxy_port</span><span class="o">=</span><span class="mi">1080</span><span class="p">)</span>
-<span class="n">ok</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">test</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">'Bridge enabled:'</span><span class="p">,</span> <span class="n">ok</span><span class="p">)</span>
-
-<span class="c1"># ... run IDTrack code here ...</span>
-<span class="c1"># api = idtrack.API(local_repository='./idtrack_cache')</span>
-<span class="c1"># api.build_graph(organism_name='homo_sapiens', snapshot_release=115)</span>
-
-<span class="c1"># Recommended pattern in scripts:</span>
-<span class="c1"># with idtrack.ConnectionBridge(proxy_port=1080) as _b:</span>
-<span class="c1">#     ... do work ...</span>
-
-<span class="n">b</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">'Bridge disabled'</span><span class="p">)</span>
-<br/></pre></div>
-</div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-2026-11-12 23:11:45 INFO:idtrack._connection_bridge: [idtrack] ConnectionBridge enabled: all TCP sockets in this Python process are routed through 127.0.0.1:1080. Call `b.stop()` to restore normal networking.
-2026-11-12 23:11:45 ERROR:idtrack._connection_bridge: [idtrack] ConnectionBridge check failed: SOCKSHTTPSConnectionPool(host=&#39;rest.ensembl.org&#39;, port=443): Max retries exceeded with url: /info/ping (Caused by NewConnectionError(&#34;SOCKSHTTPSConnection(host=&#39;rest.ensembl.org&#39;, port=443): Failed to establish a new connection: [Errno 111] Connection refused&#34;))
-  Troubleshooting:
-  - Ensure the SSH session is established from your local machine: `ssh -R 1080 user@server`
-  - On the server, check the SOCKS port is listening: `ss -tlnp | grep 1080`
-2026-11-12 23:11:45 WARNING:idtrack._connection_bridge: [idtrack] ConnectionBridge test failed; disabling bridge.
-2026-11-12 23:11:45 INFO:idtrack._connection_bridge: [idtrack] ConnectionBridge disabled: normal networking restored.
-2026-11-12 23:11:45 INFO:idtrack._connection_bridge: [idtrack] ConnectionBridge already stopped.
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-[idtrack] ConnectionBridge enabled: all TCP sockets in this Python process are routed through 127.0.0.1:1080. Call `b.stop()` to restore normal networking.
-[idtrack] ConnectionBridge check failed: SOCKSHTTPSConnectionPool(host=&#39;rest.ensembl.org&#39;, port=443): Max retries exceeded with url: /info/ping (Caused by NewConnectionError(&#34;SOCKSHTTPSConnection(host=&#39;rest.ensembl.org&#39;, port=443): Failed to establish a new connection: [Errno 111] Connection refused&#34;))
-  Troubleshooting:
-  - Ensure the SSH session is established from your local machine: `ssh -R 1080 user@server`
-  - On the server, check the SOCKS port is listening: `ss -tlnp | grep 1080`
-[idtrack] ConnectionBridge test failed; disabling bridge.
-[idtrack] ConnectionBridge disabled: normal networking restored.
-Bridge enabled: False
-[idtrack] ConnectionBridge already stopped.
-Bridge disabled
-</pre></div></div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>
-</pre></div>
-</div>
-</div>
-</section>
 </section>
 </section>
 

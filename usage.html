@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Quickstart &mdash; idtrack 0.0.5 documentation</title>
+  <title>Quickstart &mdash; idtrack 0.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=6a604523" />
@@ -16,7 +16,7 @@
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=282f96c0"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
       <script src="_static/doctools.js?v=fd6eb6e6"></script>
       <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="_static/design-tabs.js?v=fcb327ea"></script>
@@ -79,6 +79,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#supported-organisms">Supported Organisms</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#common-patterns">Common Patterns</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#reusing-built-graphs">Reusing Built Graphs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#names-per-database-and-release">Names per Database and Release</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#working-with-anndata-objects">Working with AnnData Objects</a></li>
 </ul>
 </li>
@@ -90,7 +91,7 @@
 <li class="toctree-l1"><a class="reference internal" href="changes.html">Changes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributor Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="authors.html">Credits</a></li>
-<li class="toctree-l1"><a class="reference internal" href="code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="code_of_conduct.html">Code of Conduct</a></li>
 </ul>
 
         </div>
@@ -135,11 +136,12 @@ identifier conversions, and says what the answers mean.</p>
 <li><p><a class="reference internal" href="#common-patterns" id="id12">Common Patterns</a></p>
 <ul>
 <li><p><a class="reference internal" href="#reusing-built-graphs" id="id13">Reusing Built Graphs</a></p></li>
-<li><p><a class="reference internal" href="#working-with-anndata-objects" id="id14">Working with AnnData Objects</a></p></li>
+<li><p><a class="reference internal" href="#names-per-database-and-release" id="id14">Names per Database and Release</a></p></li>
+<li><p><a class="reference internal" href="#working-with-anndata-objects" id="id15">Working with AnnData Objects</a></p></li>
 </ul>
 </li>
-<li><p><a class="reference internal" href="#time-and-memory" id="id15">Time and Memory</a></p></li>
-<li><p><a class="reference internal" href="#what-s-next" id="id16">What’s Next?</a></p></li>
+<li><p><a class="reference internal" href="#time-and-memory" id="id16">Time and Memory</a></p></li>
+<li><p><a class="reference internal" href="#what-s-next" id="id17">What’s Next?</a></p></li>
 </ul>
 </nav>
 <div class="admonition tip">
@@ -170,13 +172,13 @@ release of the graph, on the assembly that Ensembl maintained at that release.</
 </thead>
 <tbody>
 <tr class="row-even"><td><p>1</p></td>
-<td><p><strong>Initialize</strong></p></td>
-<td><p>Create an API instance with a local repository (the folder of downloaded tables and graph files)</p></td>
+<td><p><strong>Local repository</strong></p></td>
+<td><p>Make the folder of downloaded tables and graph files</p></td>
 </tr>
 <tr class="row-odd"><td><p>2</p></td>
-<td><p><strong>Load or build</strong></p></td>
-<td><p>Load the graph of an organism and a snapshot release from the local repository, or build it if it is not
-there yet</p></td>
+<td><p><strong>Build or load</strong></p></td>
+<td><p><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.build()</span></code> builds the graph of an organism and a snapshot release (or loads its file from
+the local repository when it is there); <code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.load()</span></code> loads a graph file and never builds</p></td>
 </tr>
 <tr class="row-even"><td><p>3</p></td>
 <td><p><strong>Convert</strong></p></td>
@@ -202,18 +204,16 @@ to 1.14 GB (human) of memory.</p>
 <span class="n">local_repo</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"IDTRACK_LOCAL_REPO"</span><span class="p">,</span> <span class="s2">"./idtrack_cache"</span><span class="p">))</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
 <span class="n">local_repo</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-<span class="c1"># Step 2: Initialize the API</span>
-<span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">local_repo</span><span class="p">))</span>
-
-<span class="c1"># Step 3: Load (or, the first time, build) the graph of a pinned snapshot release.</span>
-<span class="c1"># api.resolve_organism("human") gives ("homo_sapiens", &lt;Ensembl's newest release&gt;) if you want to look them up.</span>
+<span class="c1"># Step 2: Build (the first time) or load the graph of a pinned snapshot release.</span>
+<span class="c1"># idtrack.API.ensembl_organism("human") gives ("homo_sapiens", &lt;Ensembl's newest release&gt;) if you want to look</span>
+<span class="c1"># them up (it asks Ensembl).</span>
 <span class="n">SNAPSHOT_RELEASE</span> <span class="o">=</span> <span class="mi">115</span>
-<span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="s2">"homo_sapiens"</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">)</span>
+<span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="s2">"homo_sapiens"</span><span class="p">,</span> <span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">local_repo</span><span class="p">))</span>
 
-<span class="c1"># Step 4: Convert an identifier (to the snapshot release, unless `to_release` says otherwise)</span>
-<span class="n">result</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="s2">"TP53"</span><span class="p">)</span>
-<span class="n">target</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="s2">"target_id"</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">result</span><span class="p">[</span><span class="s2">"target_id"</span><span class="p">]</span> <span class="k">else</span> <span class="kc">None</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"TP53 -&gt; </span><span class="si">{</span><span class="n">target</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="c1"># Step 3: Convert an identifier (to the snapshot release, unless `to_release` says otherwise)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s2">"TP53"</span><span class="p">)</span>
+<span class="n">targets</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">targets</span><span class="p">()</span>  <span class="c1"># the best answer; result.targets("all") for every target reached</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"TP53 -&gt; </span><span class="si">{</span><span class="n">targets</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">targets</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="kc">None</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 </div>
 <p><strong>Expected output:</strong></p>
@@ -225,7 +225,7 @@ to 1.14 GB (human) of memory.</p>
 <code class="docutils literal notranslate"><span class="pre">final_database=&quot;HGNC</span> <span class="pre">Symbol&quot;</span></code>.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Pin the snapshot release in your scripts. <a class="reference internal" href="reference.html#idtrack.API.resolve_organism" title="idtrack.API.resolve_organism"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.resolve_organism()</span></code></a> returns Ensembl’s newest
+<p>Pin the snapshot release in your scripts. <code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.ensembl_organism()</span></code> returns Ensembl’s newest
 release, which changes every few months: a script that builds at “the latest release” builds a new graph (a new
 download) after each Ensembl release, and its answers can change with it. A pinned snapshot loads from disk with
 the same answers on every run.</p>
@@ -236,19 +236,18 @@ the same answers on every run.</p>
 <p>Convert several identifiers with the same arguments at once:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
 
-<span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="s2">"./idtrack_cache"</span><span class="p">)</span>
-<span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="s2">"homo_sapiens"</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="mi">115</span><span class="p">)</span>
+<span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="s2">"homo_sapiens"</span><span class="p">,</span> <span class="mi">115</span><span class="p">,</span> <span class="s2">"./idtrack_cache"</span><span class="p">)</span>
 
 <span class="c1"># Convert a batch of gene symbols</span>
 <span class="n">genes</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"TP53"</span><span class="p">,</span> <span class="s2">"BRCA1"</span><span class="p">,</span> <span class="s2">"EGFR"</span><span class="p">,</span> <span class="s2">"KRAS"</span><span class="p">,</span> <span class="s2">"MYC"</span><span class="p">]</span>
-<span class="n">results</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert_identifier_multiple</span><span class="p">(</span><span class="n">genes</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert_many</span><span class="p">(</span><span class="n">genes</span><span class="p">)</span>  <span class="c1"># progress=True shows a progress bar</span>
 
 <span class="c1"># Print results</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"Gene Symbol -&gt; Ensembl ID"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"-"</span> <span class="o">*</span> <span class="mi">30</span><span class="p">)</span>
 <span class="k">for</span> <span class="n">gene</span><span class="p">,</span> <span class="n">result</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">genes</span><span class="p">,</span> <span class="n">results</span><span class="p">):</span>
-    <span class="n">target</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="s2">"target_id"</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">result</span><span class="p">[</span><span class="s2">"target_id"</span><span class="p">]</span> <span class="k">else</span> <span class="kc">None</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">gene</span><span class="si">:</span><span class="s2">&lt;10</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">target</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="n">targets</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">targets</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">gene</span><span class="si">:</span><span class="s2">&lt;10</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">targets</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">targets</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="kc">None</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 </div>
 <p><strong>Expected output:</strong></p>
@@ -261,27 +260,28 @@ KRAS       -&gt; ENSG00000133703.15
 MYC        -&gt; ENSG00000136997.22
 </pre></div>
 </div>
-<p>The arguments are checked once, before any conversion; each distinct identifier is converted once. A search that
-exceeds its budget (<a class="reference internal" href="reference.html#idtrack.SearchBudgetExceededError" title="idtrack.SearchBudgetExceededError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.SearchBudgetExceededError</span></code></a>) does not stop the batch: that item gets
-<code class="docutils literal notranslate"><span class="pre">&quot;error&quot;:</span> <span class="pre">{&quot;type&quot;:</span> <span class="pre">...,</span> <span class="pre">&quot;message&quot;:</span> <span class="pre">...}</span></code> and no target.</p>
+<p>The arguments are checked once, before any conversion; each distinct identifier is converted once. An error of one
+identifier (a search that exceeds its budget, <a class="reference internal" href="reference.html#idtrack.errors.SearchBudgetExceededError" title="idtrack.errors.SearchBudgetExceededError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.errors.SearchBudgetExceededError</span></code></a>, or any other)
+does not stop the batch: that item has <code class="docutils literal notranslate"><span class="pre">status</span> <span class="pre">==</span> <span class="pre">&quot;error&quot;</span></code>, no candidate, and the error in <code class="docutils literal notranslate"><span class="pre">result.error</span></code>
+(<a class="reference internal" href="reference.html#idtrack.results.ErrorInfo" title="idtrack.results.ErrorInfo"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.results.ErrorInfo</span></code></a>: its type, message, and whether it is the caller’s).
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.classify()</span></code> sorts a batch into the bins 1→0, 1→1 and 1→n, and
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.classification_summary()</span></code> writes the counts.</p>
 </section>
 <section id="example-3-working-with-mouse">
 <h2>Example 3: Working with Mouse<a class="headerlink" href="#example-3-working-with-mouse" title="Link to this heading"></a></h2>
 <p>IDTrack supports several organisms (see <a class="reference internal" href="#supported-organisms">Supported Organisms</a>). Here’s how to work with mouse:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
 
-<span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="s2">"./idtrack_cache"</span><span class="p">)</span>
-
 <span class="c1"># Load the mouse graph</span>
-<span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="s2">"mus_musculus"</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="mi">115</span><span class="p">)</span>
+<span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="s2">"mus_musculus"</span><span class="p">,</span> <span class="mi">115</span><span class="p">,</span> <span class="s2">"./idtrack_cache"</span><span class="p">)</span>
 
 <span class="c1"># Convert mouse gene symbols</span>
 <span class="n">mouse_genes</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"Trp53"</span><span class="p">,</span> <span class="s2">"Brca1"</span><span class="p">,</span> <span class="s2">"Egfr"</span><span class="p">]</span>
-<span class="n">results</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert_identifier_multiple</span><span class="p">(</span><span class="n">mouse_genes</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert_many</span><span class="p">(</span><span class="n">mouse_genes</span><span class="p">)</span>
 
 <span class="k">for</span> <span class="n">gene</span><span class="p">,</span> <span class="n">result</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">mouse_genes</span><span class="p">,</span> <span class="n">results</span><span class="p">):</span>
-    <span class="n">target</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="s2">"target_id"</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">result</span><span class="p">[</span><span class="s2">"target_id"</span><span class="p">]</span> <span class="k">else</span> <span class="kc">None</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">gene</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">target</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="n">targets</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">targets</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">gene</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">targets</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">targets</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="kc">None</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 </div>
 <p><strong>Expected output:</strong></p>
@@ -290,8 +290,8 @@ Brca1 -&gt; ENSMUSG00000017146.13
 Egfr -&gt; ENSMUSG00000020122.17
 </pre></div>
 </div>
-<p>One <a class="reference internal" href="reference.html#idtrack.API" title="idtrack.API"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.API</span></code></a> holds one graph: <a class="reference internal" href="reference.html#idtrack.API.build_graph" title="idtrack.API.build_graph"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.build_graph()</span></code></a> for another organism replaces the
-graph of the object. Use one object per organism to keep several loaded.</p>
+<p>One <code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.API</span></code> holds one graph (one organism, one snapshot release). Use one object per organism to keep
+several loaded.</p>
 </section>
 <section id="example-4-understanding-conversion-outcomes">
 <h2>Example 4: Understanding Conversion Outcomes<a class="headerlink" href="#example-4-understanding-conversion-outcomes" title="Link to this heading"></a></h2>
@@ -311,77 +311,87 @@ graph of the object. Use one object per organism to keep several loaded.</p>
 <tbody>
 <tr class="row-even"><td><p><strong>1 -&gt; 1</strong></p></td>
 <td><p>Unique mapping</p></td>
-<td><p>One target: <code class="docutils literal notranslate"><span class="pre">target_id</span></code> has one element</p></td>
+<td><p>One target: <code class="docutils literal notranslate"><span class="pre">result.targets()</span></code> has one element (<code class="docutils literal notranslate"><span class="pre">result.status</span> <span class="pre">==</span> <span class="pre">&quot;converted&quot;</span></code>)</p></td>
 </tr>
 <tr class="row-odd"><td><p><strong>1 -&gt; 0</strong></p></td>
 <td><p>No mapping found</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">no_corresponding</span></code>: the identifier is not in the graph (unknown, a version that does not exist, or of a
-database the graph does not include); <code class="docutils literal notranslate"><span class="pre">no_conversion</span></code>: it is in the graph, but no gene at the target release
-descends from it (a retired id)</p></td>
+<td><p>No candidate: <code class="docutils literal notranslate"><span class="pre">status</span></code> is <code class="docutils literal notranslate"><span class="pre">&quot;not_found&quot;</span></code> (the identifier is not in the graph: unknown, or of a database the
+graph does not include), <code class="docutils literal notranslate"><span class="pre">&quot;unknown_version&quot;</span></code> (a version that does not exist) or <code class="docutils literal notranslate"><span class="pre">&quot;no_conversion&quot;</span></code> (it is in
+the graph, but no gene at the target release descends from it, e.g. a retired id); <code class="docutils literal notranslate"><span class="pre">result.reason</span></code> says why
+(<a class="reference internal" href="reference.html#idtrack.results.REASONS" title="idtrack.results.REASONS"><code class="xref py py-data docutils literal notranslate"><span class="pre">idtrack.results.REASONS</span></code></a>)</p></td>
 </tr>
 <tr class="row-even"><td><p><strong>1 -&gt; n</strong></p></td>
 <td><p>Multiple mappings</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">ambiguous</span></code>: several targets (a split gene, a name that two genes carry)</p></td>
+<td><p>Several targets (a split gene, a name that two genes carry); <code class="docutils literal notranslate"><span class="pre">result.tie</span></code> when they are equal in all evidence</p></td>
 </tr>
 </tbody>
 </table>
-<p><a class="reference internal" href="reference.html#idtrack.API.convert_identifier" title="idtrack.API.convert_identifier"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.convert_identifier()</span></code></a> uses <code class="docutils literal notranslate"><span class="pre">strategy=&quot;best&quot;</span></code> by default: it returns the best answer, which is
-one target, or, when several genes or targets are equal in all the evidence the graph holds, all of them in a fixed
-order (by the mapping score of each to the gene the identifier was read as, then by gene id and target id) with
-<code class="docutils literal notranslate"><span class="pre">&quot;tie&quot;:</span> <span class="pre">True</span></code>. Nothing is chosen by position, and the same call on the same graph gives the same answer in every
-run. <code class="docutils literal notranslate"><span class="pre">strategy=&quot;all&quot;</span></code> returns every target reached, best first: the genes of the best answer lead, in the order in
-which <code class="docutils literal notranslate"><span class="pre">&quot;best&quot;</span></code> returns them, and the others follow by their evidence. So <code class="docutils literal notranslate"><span class="pre">result[&quot;target_id&quot;][0]</span></code> is the first
-target of the best answer with either strategy; check <code class="docutils literal notranslate"><span class="pre">result[&quot;tie&quot;]</span></code> or <code class="docutils literal notranslate"><span class="pre">result[&quot;ambiguous&quot;]</span></code> before you take it
-as the only one.</p>
+<p><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.convert()</span></code> returns one <a class="reference internal" href="reference.html#idtrack.results.ConversionResult" title="idtrack.results.ConversionResult"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.results.ConversionResult</span></code></a> with every candidate the search
+reached (<a class="reference internal" href="reference.html#idtrack.results.ConversionResult.candidates" title="idtrack.results.ConversionResult.candidates"><code class="xref py py-attr docutils literal notranslate"><span class="pre">candidates</span></code></a>), ranked, the best marked
+(<a class="reference internal" href="reference.html#idtrack.results.Candidate.best" title="idtrack.results.Candidate.best"><code class="xref py py-attr docutils literal notranslate"><span class="pre">idtrack.results.Candidate.best</span></code></a>): <code class="docutils literal notranslate"><span class="pre">result.view(&quot;best&quot;)</span></code> and <code class="docutils literal notranslate"><span class="pre">result.view(&quot;all&quot;)</span></code> are two views of the
+one search, and <code class="docutils literal notranslate"><span class="pre">result.targets(&quot;best&quot;)</span></code> / <code class="docutils literal notranslate"><span class="pre">result.targets(&quot;all&quot;)</span></code> their target ids. The best answer is one
+target, or, when several genes or targets are equal in all the evidence the graph holds, all of them in a fixed order
+(by the mapping score of each to the gene the identifier was read as, then by gene id and target id) with
+<code class="docutils literal notranslate"><span class="pre">result.tie</span></code> true. Nothing is chosen by position, and the same call on the same graph gives the same answer in every
+run. In <code class="docutils literal notranslate"><span class="pre">&quot;all&quot;</span></code> the genes of the best answer lead and the others follow by their evidence, the targets of one gene
+together. Each candidate carries its ranking record (final confidence, bridges, bridge gap, support of the entry
+gene, score, being the query itself, steps, and the annotation counts where they were compared), and
+<code class="docutils literal notranslate"><span class="pre">result.decided_by</span></code> names the criterion that put the best answer before the runner-up
+(<a class="reference internal" href="reference.html#idtrack.results.CRITERIA" title="idtrack.results.CRITERIA"><code class="xref py py-data docutils literal notranslate"><span class="pre">idtrack.results.CRITERIA</span></code></a>). <code class="docutils literal notranslate"><span class="pre">result.status</span></code> is <code class="docutils literal notranslate"><span class="pre">&quot;converted&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;tie&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;no_target&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;not_found&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;unknown_version&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;no_conversion&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;error&quot;</span></code>.</p>
 <p>A tie is judged among the genes that can be named in the database you ask for. One result has one final database:
-genes that have no id in it leave the result (<code class="docutils literal notranslate"><span class="pre">result[&quot;no_target_genes&quot;]</span></code> names them), and what remains is a tie or
+genes that have no id in it leave the result (<code class="docutils literal notranslate"><span class="pre">result.no_target_genes</span></code> names them), and what remains is a tie or
 not. A symbol that two databases give to two genes is therefore a tie when it is converted to Ensembl gene ids, and
 one answer when it is converted to a symbol database in which only one of the two genes has a symbol.</p>
 <p>Genes on alternative loci (haplotypes) and assembly patches, and LRG records, are copies of genes of the reference
 sequence with stable ids of their own (human; mouse GRCm38). When an identifier leads to a gene of the reference
 sequence and to such copies, the copies are not part of the answer: they are listed in
-<code class="docutils literal notranslate"><span class="pre">result[&quot;alternative_locus_genes&quot;]</span></code>. When only copies are reached, they are the answer. A queried Ensembl gene id
+<code class="docutils literal notranslate"><span class="pre">result.alternative_locus_genes</span></code>. When only copies are reached, they are the answer. A queried Ensembl gene id
 that exists at the target release is its own answer: its own version comes first, is never set apart as a copy, and is
-the answer of <code class="docutils literal notranslate"><span class="pre">strategy=&quot;best&quot;</span></code> whatever else its history reaches (<code class="docutils literal notranslate"><span class="pre">strategy=&quot;all&quot;</span></code> lists the other genes after
-it).</p>
+the best answer whatever else its history reaches (<code class="docutils literal notranslate"><span class="pre">result.view(&quot;all&quot;)</span></code> lists the other genes after it).</p>
 <p>Get the path behind an answer with <code class="docutils literal notranslate"><span class="pre">explain=True</span></code>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
 
-<span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="s2">"./idtrack_cache"</span><span class="p">)</span>
-<span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="s2">"homo_sapiens"</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="mi">115</span><span class="p">)</span>
+<span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="s2">"homo_sapiens"</span><span class="p">,</span> <span class="mi">115</span><span class="p">,</span> <span class="s2">"./idtrack_cache"</span><span class="p">)</span>
 
-<span class="n">result</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="s2">"TP53"</span><span class="p">,</span> <span class="n">explain</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">"Targets:"</span><span class="p">,</span> <span class="n">result</span><span class="p">[</span><span class="s2">"target_id"</span><span class="p">])</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">"Read as:"</span><span class="p">,</span> <span class="n">result</span><span class="p">[</span><span class="s2">"graph_id"</span><span class="p">],</span> <span class="s2">"| match:"</span><span class="p">,</span> <span class="n">result</span><span class="p">[</span><span class="s2">"match"</span><span class="p">],</span> <span class="s2">"| at release"</span><span class="p">,</span> <span class="n">result</span><span class="p">[</span><span class="s2">"from_release"</span><span class="p">])</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">"Tie:"</span><span class="p">,</span> <span class="n">result</span><span class="p">[</span><span class="s2">"tie"</span><span class="p">],</span> <span class="s2">"| copies on alternative loci:"</span><span class="p">,</span> <span class="n">result</span><span class="p">[</span><span class="s2">"alternative_locus_genes"</span><span class="p">])</span>
-<span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">result</span><span class="p">[</span><span class="s2">"the_path"</span><span class="p">]:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s2">"TP53"</span><span class="p">,</span> <span class="n">explain</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Targets:"</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">targets</span><span class="p">()))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Read as:"</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">graph_id</span><span class="p">,</span> <span class="s2">"| match:"</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">match</span><span class="p">,</span> <span class="s2">"| at release"</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">from_release</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Tie:"</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">tie</span><span class="p">,</span> <span class="s2">"| copies on alternative loci:"</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">alternative_locus_genes</span><span class="p">))</span>
+<span class="n">best</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="s2">"best"</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+<span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">best</span><span class="o">.</span><span class="n">path</span> <span class="o">+</span> <span class="n">best</span><span class="o">.</span><span class="n">final_path</span><span class="p">:</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">steps</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">kind</span><span class="p">,</span> <span class="n">step</span><span class="o">.</span><span class="n">source</span><span class="p">,</span> <span class="s2">"-&gt;"</span><span class="p">,</span> <span class="n">step</span><span class="o">.</span><span class="n">target</span><span class="p">,</span> <span class="s2">"| release"</span><span class="p">,</span> <span class="n">step</span><span class="o">.</span><span class="n">release</span><span class="p">,</span> <span class="s2">"|"</span><span class="p">,</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">databases</span><span class="p">))</span>
 </pre></div>
 </div>
 <p><strong>Expected output:</strong></p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Targets: ['ENSG00000141510.20']
 Read as: TP53 | match: exact | at release 115
 Tie: False | copies on alternative loci: ['LRG_321.1']
-{'ensembl_gene': 'ENSG00000141510.20', 'target_id': 'ENSG00000141510.20', 'entry_gene': 'ENSG00000141510.20', 'external_jump': 0, 'external_gap': 0, 'score': 1.0, 'edges': [['TP53', 'ENSG00000141510.20', 0, 115]]}
+entry TP53 -&gt; ENSG00000141510.20 | release 115 | HGNC Symbol, NCBI gene (formerly Entrezgene), UniProtKB Gene Name
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">the_path</span></code> has one entry per pair of <code class="docutils literal notranslate"><span class="pre">last_node</span></code>: the gene the identifier was read as (<code class="docutils literal notranslate"><span class="pre">entry_gene</span></code>), the number
-of bridges through external ids that the search needed (<code class="docutils literal notranslate"><span class="pre">external_jump</span></code>; 0 means Ensembl’s history alone), the
-product of Ensembl’s mapping scores along the history (<code class="docutils literal notranslate"><span class="pre">score</span></code>) and the edges walked. Every result is plain data
-(<code class="docutils literal notranslate"><span class="pre">json.dumps</span></code> works on it); <a class="reference internal" href="reference.html#idtrack.API.convert_identifier" title="idtrack.API.convert_identifier"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.convert_identifier()</span></code></a> lists every field.</p>
+<p><code class="docutils literal notranslate"><span class="pre">result.path</span></code> is an <a class="reference internal" href="reference.html#idtrack.results.ExplainedPath" title="idtrack.results.ExplainedPath"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.results.ExplainedPath</span></code></a>: one graph per conversion, with every node once
+(<a class="reference internal" href="reference.html#idtrack.results.PathNode" title="idtrack.results.PathNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.results.PathNode</span></code></a>: its kind, label, databases, active releases, the assemblies that serve them,
+the releases at which it lies outside the reference sequence) and every step once
+(<a class="reference internal" href="reference.html#idtrack.results.PathStep" title="idtrack.results.PathStep"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.results.PathStep</span></code></a>: its kind (<code class="docutils literal notranslate"><span class="pre">entry</span></code>, <code class="docutils literal notranslate"><span class="pre">history</span></code>, <code class="docutils literal notranslate"><span class="pre">self_loop</span></code>, <code class="docutils literal notranslate"><span class="pre">bridge_near</span></code>,
+<code class="docutils literal notranslate"><span class="pre">bridge_far</span></code>, <code class="docutils literal notranslate"><span class="pre">final</span></code>, <code class="docutils literal notranslate"><span class="pre">identity</span></code>), the releases, Ensembl’s mapping score, the splits and merges of a history
+event, the databases and the assembly of a cross-reference, and why the step was taken); each candidate lists the
+indices of its steps (<code class="docutils literal notranslate"><span class="pre">path</span></code> to the gene, <code class="docutils literal notranslate"><span class="pre">final_path</span></code> from the gene to the target). Every result is a frozen
+dataclass with <code class="docutils literal notranslate"><span class="pre">to_dict()</span></code>, strict JSON (<code class="docutils literal notranslate"><span class="pre">json.dumps(result.to_dict(),</span> <span class="pre">allow_nan=False)</span></code> works), and
+<code class="docutils literal notranslate"><span class="pre">ConversionResult.from_dict</span></code> reads it back.</p>
 </section>
 <section id="example-5-cross-release-conversion">
 <h2>Example 5: Cross-Release Conversion<a class="headerlink" href="#example-5-cross-release-conversion" title="Link to this heading"></a></h2>
 <p>Convert identifiers between different Ensembl releases to handle legacy data:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
 
-<span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="s2">"./idtrack_cache"</span><span class="p">)</span>
-<span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="s2">"homo_sapiens"</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="mi">115</span><span class="p">)</span>
+<span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="s2">"homo_sapiens"</span><span class="p">,</span> <span class="mi">115</span><span class="p">,</span> <span class="s2">"./idtrack_cache"</span><span class="p">)</span>
 
 <span class="c1"># An identifier from a table made with Ensembl release 100, converted to the snapshot release.</span>
 <span class="c1"># Retired, merged and split ids are followed through Ensembl's history.</span>
-<span class="n">result</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="s2">"ENSG00000141510"</span><span class="p">,</span> <span class="n">from_release</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">"Release 100 -&gt; Release 115:"</span><span class="p">,</span> <span class="n">result</span><span class="p">[</span><span class="s2">"target_id"</span><span class="p">])</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s2">"ENSG00000141510"</span><span class="p">,</span> <span class="n">from_release</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Release 100 -&gt; Release 115:"</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">targets</span><span class="p">()))</span>
 </pre></div>
 </div>
 <p><strong>Expected output:</strong></p>
@@ -389,11 +399,11 @@ product of Ensembl’s mapping scores along the history (<code class="docutils l
 </pre></div>
 </div>
 <p><strong>Working with an older Ensembl release.</strong> A graph covers every release from the organism’s first release in
-IDTrack to its <code class="docutils literal notranslate"><span class="pre">snapshot_release</span></code> (<a class="reference internal" href="reference.html#idtrack.API.graph_releases" title="idtrack.API.graph_releases"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.graph_releases()</span></code></a>; human 48 to 115), so the graph of the
+IDTrack to its <code class="docutils literal notranslate"><span class="pre">snapshot_release</span></code> (<code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.releases()</span></code>; human 48 to 115), so the graph of the
 latest snapshot already converts to and from any older release (<code class="docutils literal notranslate"><span class="pre">to_release=93</span></code>, <code class="docutils literal notranslate"><span class="pre">from_release=93</span></code>); no older
 graph is needed for that. Build a graph whose snapshot is an older release only to reproduce results as they were at
 that release (the graph then knows nothing after it):</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="s2">"homo_sapiens"</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="mi">93</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">api_93</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="s2">"homo_sapiens"</span><span class="p">,</span> <span class="mi">93</span><span class="p">,</span> <span class="s2">"./idtrack_cache"</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>The graph file is named after the organism, the primary assembly and the window
@@ -408,10 +418,10 @@ release was used (<code class="docutils literal notranslate"><span class="pre">f
 same for Ensembl ids, symbols and the ids of other databases. A symbol given without <code class="docutils literal notranslate"><span class="pre">from_release</span></code> is therefore
 read as what it names at the target release (or at its latest release), not as what it named years ago. If the graph
 does not hold the identifier at a given <code class="docutils literal notranslate"><span class="pre">from_release</span></code> (a wrong release, or an id of a database the graph does not
-include at that release), <a class="reference internal" href="reference.html#idtrack.API.convert_identifier" title="idtrack.API.convert_identifier"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.convert_identifier()</span></code></a> reads it by the rule without <code class="docutils literal notranslate"><span class="pre">from_release</span></code> and
-says so: <code class="docutils literal notranslate"><span class="pre">from_release_fallback</span></code> is true, <code class="docutils literal notranslate"><span class="pre">from_release_given</span></code> is the release you gave. (The engine,
-<a class="reference internal" href="reference.html#idtrack.Track.convert" title="idtrack.Track.convert"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.Track.convert()</span></code></a>, raises <a class="reference internal" href="reference.html#idtrack.InactiveAtReleaseError" title="idtrack.InactiveAtReleaseError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.InactiveAtReleaseError</span></code></a> instead, naming the releases at
-which the identifier exists.)</p>
+include at that release), <code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.convert()</span></code> reads it by the rule without <code class="docutils literal notranslate"><span class="pre">from_release</span></code> and says so:
+<code class="docutils literal notranslate"><span class="pre">from_release_fallback</span></code> is true, <code class="docutils literal notranslate"><span class="pre">from_release_given</span></code> is the release you gave. (The engine,
+<a class="reference internal" href="reference.html#idtrack.engine.Track.convert" title="idtrack.engine.Track.convert"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.engine.Track.convert()</span></code></a>, raises <a class="reference internal" href="reference.html#idtrack.errors.InactiveAtReleaseError" title="idtrack.errors.InactiveAtReleaseError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.errors.InactiveAtReleaseError</span></code></a> instead, naming the
+releases at which the identifier exists.)</p>
 <p><strong>Matching the string.</strong> Surrounding white space is ignored. When a string can mean several nodes of the graph (a
 symbol that was the name of one gene and is a synonym of another today), the one that exists at the release asked
 about (<code class="docutils literal notranslate"><span class="pre">from_release</span></code>, without it the snapshot release) is taken; an Ensembl stable id is never passed over for a
@@ -426,26 +436,30 @@ databases can write one name in two ways (at release 75 MGI wrote the mouse gene
 <code class="docutils literal notranslate"><span class="pre">BAP1</span></code>), so each of these spellings is an exact match where it was written, and is not taken for another gene’s
 synonym spelt the same (<code class="docutils literal notranslate"><span class="pre">BAP1</span></code> with <code class="docutils literal notranslate"><span class="pre">from_release=75</span></code> is that gene; today, when no database writes the name so,
 <code class="docutils literal notranslate"><span class="pre">BAP1</span></code> is exactly the synonym of another mouse gene). The
-graph keeps one node per identifier, named as at its last release, which is what <code class="docutils literal notranslate"><span class="pre">result[&quot;graph_id&quot;]</span></code> shows.
-Nothing else is ever cut off an external id (<code class="docutils literal notranslate"><span class="pre">SLA.7</span></code> is not <code class="docutils literal notranslate"><span class="pre">SLA</span></code>). <code class="docutils literal notranslate"><span class="pre">result[&quot;match&quot;]</span></code> says how the string
+graph keeps one node per identifier, named as at its last release, which is what <code class="docutils literal notranslate"><span class="pre">result.graph_id</span></code> shows.
+Nothing else is ever cut off an external id (<code class="docutils literal notranslate"><span class="pre">SLA.7</span></code> is not <code class="docutils literal notranslate"><span class="pre">SLA</span></code>). <code class="docutils literal notranslate"><span class="pre">result.match</span></code> says how the string
 matched (<code class="docutils literal notranslate"><span class="pre">&quot;exact&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;case&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;separator&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;version&quot;</span></code>, each also as <code class="docutils literal notranslate"><span class="pre">&quot;synonym:...&quot;</span></code>),
-<code class="docutils literal notranslate"><span class="pre">result[&quot;graph_id&quot;]</span></code> which node it was read as, and <code class="docutils literal notranslate"><span class="pre">result[&quot;from_databases&quot;]</span></code> the databases that attach the
+<code class="docutils literal notranslate"><span class="pre">result.graph_id</span></code> which node it was read as, and <code class="docutils literal notranslate"><span class="pre">result.from_databases</span></code> the databases that attach the
 identifier to its genes at the release it was read at (to a gene itself or to one of its transcripts or
 translations). With <code class="docutils literal notranslate"><span class="pre">from_database=&quot;HGNC</span> <span class="pre">Symbol&quot;</span></code> the string is read as an id of that database: it stands only for
 the genes that HGNC attaches it to, and between those the evidence of every database still counts (a symbol that the
 named database gives to two genes, of which other databases confirm one, is that one).</p>
 <p><strong>Versions.</strong> An Ensembl gene id without version stands for its version at the starting release. A version the graph
-does not hold is not answered with another version’s gene: the result has no target, <code class="docutils literal notranslate"><span class="pre">no_corresponding</span></code> is true and
-<code class="docutils literal notranslate"><span class="pre">known_versions</span></code> lists the versions that exist. The one exception is a version higher than every version the graph
+does not hold is not answered with another version’s gene: the result has no candidate, <code class="docutils literal notranslate"><span class="pre">status</span></code> is
+<code class="docutils literal notranslate"><span class="pre">&quot;unknown_version&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">known_versions</span></code> lists the versions that exist. The one exception is a version higher than every version the graph
 holds of an id that is still active at the snapshot release: it may come from a release newer than the graph, so it
 is read as the latest version (<code class="docutils literal notranslate"><span class="pre">ENSG00000141510.25</span></code> as <code class="docutils literal notranslate"><span class="pre">ENSG00000141510.20</span></code>) and <code class="docutils literal notranslate"><span class="pre">match</span></code> is
 <code class="docutils literal notranslate"><span class="pre">&quot;version_newer_than_graph&quot;</span></code>. Transcript and translation ids are read like gene ids (with or without version) and
 converted to their gene.</p>
 <p><strong>Arguments.</strong> Every argument is checked before the search starts: the identifier must be a non-empty string, the
-releases integers of the graph (<a class="reference internal" href="reference.html#idtrack.API.graph_releases" title="idtrack.API.graph_releases"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.graph_releases()</span></code></a>), <code class="docutils literal notranslate"><span class="pre">final_database</span></code> one of
-<a class="reference internal" href="reference.html#idtrack.API.valid_final_databases" title="idtrack.API.valid_final_databases"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.valid_final_databases()</span></code></a> for the target release (case is ignored), <code class="docutils literal notranslate"><span class="pre">from_database</span></code> one of
-<a class="reference internal" href="reference.html#idtrack.API.list_external_databases" title="idtrack.API.list_external_databases"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.list_external_databases()</span></code></a>. An invalid argument raises <code class="xref py py-class docutils literal notranslate"><span class="pre">TypeError</span></code> or
-<code class="xref py py-class docutils literal notranslate"><span class="pre">ValueError</span></code> naming it and the valid values, for every identifier alike.</p>
+releases integers of the graph (<code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.releases()</span></code>), <code class="docutils literal notranslate"><span class="pre">final_database</span></code> one of
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.final_databases()</span></code> for the target release (case is ignored), <code class="docutils literal notranslate"><span class="pre">from_database</span></code> one of
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.external_databases()</span></code>. An invalid argument raises an <a class="reference internal" href="reference.html#idtrack.errors.InputError" title="idtrack.errors.InputError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.errors.InputError</span></code></a> that
+names it (<code class="docutils literal notranslate"><span class="pre">error.argument</span></code>) and the valid values (<code class="docutils literal notranslate"><span class="pre">error.allowed</span></code>): <a class="reference internal" href="reference.html#idtrack.errors.ArgumentTypeError" title="idtrack.errors.ArgumentTypeError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.errors.ArgumentTypeError</span></code></a>
+(also a <code class="docutils literal notranslate"><span class="pre">TypeError</span></code>) for a value of the wrong type, <a class="reference internal" href="reference.html#idtrack.errors.MissingValueError" title="idtrack.errors.MissingValueError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.errors.MissingValueError</span></code></a> for an empty
+identifier, <a class="reference internal" href="reference.html#idtrack.errors.UnknownReleaseError" title="idtrack.errors.UnknownReleaseError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.errors.UnknownReleaseError</span></code></a> and <a class="reference internal" href="reference.html#idtrack.errors.UnknownDatabaseError" title="idtrack.errors.UnknownDatabaseError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.errors.UnknownDatabaseError</span></code></a> (also
+<code class="docutils literal notranslate"><span class="pre">ValueError</span></code>) for a value the graph does not have. Every error idtrack raises is an
+<a class="reference internal" href="reference.html#idtrack.errors.IdtrackError" title="idtrack.errors.IdtrackError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.errors.IdtrackError</span></code></a>; <a class="reference internal" href="reference.html#module-idtrack.errors" title="idtrack.errors"><code class="xref py py-mod docutils literal notranslate"><span class="pre">idtrack.errors</span></code></a> describes the hierarchy.</p>
 </section>
 <section id="environment-variable-configuration">
 <h2>Environment Variable Configuration<a class="headerlink" href="#environment-variable-configuration" title="Link to this heading"></a></h2>
@@ -483,14 +497,14 @@ Windows PowerShell</label><div class="sd-tab-content docutils" id="sd-tab-item-2
 
 <span class="c1"># IDTrack does not read the variable itself: pass it on</span>
 <span class="n">local_repo</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"IDTRACK_LOCAL_REPO"</span><span class="p">,</span> <span class="s2">"./idtrack_cache"</span><span class="p">)</span>
-<span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="n">local_repo</span><span class="p">)</span>
+<span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="s2">"homo_sapiens"</span><span class="p">,</span> <span class="mi">115</span><span class="p">,</span> <span class="n">local_repo</span><span class="p">)</span>
 </pre></div>
 </div>
 </section>
 <section id="supported-organisms">
 <h2>Supported Organisms<a class="headerlink" href="#supported-organisms" title="Link to this heading"></a></h2>
 <p>IDTrack supports the following organisms. Each is declared once, in the organism table
-<code class="docutils literal notranslate"><span class="pre">idtrack.DB.assembly_mysqlport_priority</span></code>, and ships a default external-database configuration
+<code class="xref py py-data docutils literal notranslate"><span class="pre">idtrack.organisms.ORGANISM_TABLE</span></code>, and ships a default external-database configuration
 (<code class="docutils literal notranslate"><span class="pre">idtrack/default_config/&lt;organism&gt;_externals_modified.yml</span></code>).</p>
 <table class="docutils align-default">
 <colgroup>
@@ -534,8 +548,8 @@ Windows PowerShell</label><div class="sd-tab-content docutils" id="sd-tab-item-2
 </tr>
 </tbody>
 </table>
-<p>The <strong>key</strong> of an assembly is what IDTrack uses everywhere (the <code class="docutils literal notranslate"><span class="pre">genome_assembly</span></code> argument of
-<a class="reference internal" href="reference.html#idtrack.DatabaseManager" title="idtrack.DatabaseManager"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.DatabaseManager</span></code></a>, node types such as <code class="docutils literal notranslate"><span class="pre">assembly_801_ensembl_gene</span></code>, the table folders
+<p>The <strong>key</strong> of an assembly is what IDTrack uses everywhere (the <code class="docutils literal notranslate"><span class="pre">assembly</span></code> argument of
+<a class="reference internal" href="reference.html#idtrack.build.DatabaseManager" title="idtrack.build.DatabaseManager"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.build.DatabaseManager</span></code></a>, node types such as <code class="docutils literal notranslate"><span class="pre">assembly_801_ensembl_gene</span></code>, the table folders
 <code class="docutils literal notranslate"><span class="pre">idtrack_tables/&lt;organism&gt;_assembly-&lt;key&gt;/</span></code>, the graph file names and the assembly keys of the externals YAML). It is
 Ensembl’s code from the core database name <code class="docutils literal notranslate"><span class="pre">&lt;organism&gt;_core_&lt;release&gt;_&lt;code&gt;</span></code> wherever that is unambiguous. Rhesus is
 the exception: Ensembl names both MMUL_1 (releases up to 85) and Mmul_10 (from 98)
@@ -549,11 +563,11 @@ converts on the assembly that Ensembl maintained at each release (human: GRCh38 
 above resolve; a short name declared for an organism wins over Ensembl’s other species of that common name (<code class="docutils literal notranslate"><span class="pre">&quot;pig&quot;</span></code>
 is <code class="docutils literal notranslate"><span class="pre">sus_scrofa</span></code>, not one of the pig breeds that Ensembl also lists). Another common name that several Ensembl
 species share raises an error listing the candidates.</p>
-<p>The symbol databases are the default final database of <a class="reference internal" href="reference.html#idtrack.HarmonizeFeatures" title="idtrack.HarmonizeFeatures"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.HarmonizeFeatures</span></code></a> (the first one) and
-the ones to try for gene symbols. In current Ensembl, macaque genes carry VGNC symbols on the newest assemblies
+<p>The symbol databases (<a class="reference internal" href="reference.html#idtrack.organisms.SYMBOL_DATABASES" title="idtrack.organisms.SYMBOL_DATABASES"><code class="xref py py-data docutils literal notranslate"><span class="pre">idtrack.organisms.SYMBOL_DATABASES</span></code></a>) are the default final database of
+<a class="reference internal" href="reference.html#idtrack.harmonize.HarmonizeFeatures" title="idtrack.harmonize.HarmonizeFeatures"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.harmonize.HarmonizeFeatures</span></code></a> (the first one) and the ones to try for gene symbols. In current Ensembl, macaque genes carry VGNC symbols on the newest assemblies
 and HGNC symbols on earlier ones, and cynomolgus 6.0 has few symbols of either kind.</p>
 <p>IDTrack reads Ensembl ids with their versions: an organism whose Ensembl ids carry no versions is not supported (a
-graph build refuses it with a <code class="xref py py-class docutils literal notranslate"><span class="pre">ValueError</span></code> that says so). The five organisms above all have versions.</p>
+graph build refuses it with an error that says so). The five organisms above all have versions.</p>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
 <p>Want to add support for another organism? See “Adding Organism Support” in <a class="reference internal" href="contributing.html"><span class="doc">Contributor Guide</span></a> for the
@@ -564,46 +578,67 @@ recipe, and <a class="reference internal" href="_notebooks/02_prepare_new_extern
 <h2>Common Patterns<a class="headerlink" href="#common-patterns" title="Link to this heading"></a></h2>
 <section id="reusing-built-graphs">
 <span id="id1"></span><h3>Reusing Built Graphs<a class="headerlink" href="#reusing-built-graphs" title="Link to this heading"></a></h3>
-<p>Once a graph is built, its file is in the local repository, and <a class="reference internal" href="reference.html#idtrack.API.build_graph" title="idtrack.API.build_graph"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.build_graph()</span></code></a> loads it from
-there:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="s2">"./idtrack_cache"</span><span class="p">)</span>
+<p>Once a graph is built, its file is in the local repository. <code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.build()</span></code> loads it from there instead
+of building it again, and <code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.load()</span></code> loads a graph file by its path and never builds:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Loaded from the graph file if it exists; built (and saved) only if it does not</span>
+<span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="s2">"homo_sapiens"</span><span class="p">,</span> <span class="mi">115</span><span class="p">,</span> <span class="s2">"./idtrack_cache"</span><span class="p">)</span>
 
-<span class="c1"># Loaded from the graph file if it exists; built (and saved) only if it does not</span>
-<span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="s2">"homo_sapiens"</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="mi">115</span><span class="p">)</span>
+<span class="c1"># The file alone: never a build, never the network (a missing file is an idtrack.errors.GraphFileError)</span>
+<span class="n">path</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="o">.</span><span class="n">graph_path</span><span class="p">(</span><span class="s2">"homo_sapiens"</span><span class="p">,</span> <span class="mi">115</span><span class="p">,</span> <span class="s2">"./idtrack_cache"</span><span class="p">)</span>
+<span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span><span class="o">.</span><span class="n">releases</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>  <span class="c1"># what the graph holds: organism, releases, assemblies, ...</span>
 </pre></div>
 </div>
-<p>Loading reads the graph file alone: no table, no <a class="reference internal" href="reference.html#idtrack.DatabaseManager" title="idtrack.DatabaseManager"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.DatabaseManager</span></code></a> and no network connection is
-needed, so a graph on disk also loads where Ensembl cannot be reached. The file is one <code class="docutils literal notranslate"><span class="pre">.npz</span></code> archive of arrays and
-JSON (no pickle: loading it executes no code). Its name, <code class="docutils literal notranslate"><span class="pre">graph_&lt;organism&gt;_assembly&lt;key&gt;_min&lt;first&gt;_max&lt;snapshot&gt;_narrow.npz</span></code>,
-says the organism, the primary assembly and the window; the file itself also records the selection of external
-databases it was built from, the organism table, the IDTrack graph format and the package version, and the history
-corrections made while building it (<code class="docutils literal notranslate"><span class="pre">api.track.graph.graph[&quot;manifest&quot;]</span></code>). When the file under the expected name holds
-another graph than the one asked for (it was built under another externals YAML, another organism table or by
-another version of the graph format), loading raises <a class="reference internal" href="reference.html#idtrack.GraphMismatchError" title="idtrack.GraphMismatchError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.GraphMismatchError</span></code></a>, which names the
-differences: IDTrack never answers silently from another graph, and never starts a build of hours without being asked.
-To build the graph again, move the file away and call <a class="reference internal" href="reference.html#idtrack.API.build_graph" title="idtrack.API.build_graph"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.build_graph()</span></code></a>, or replace it with
-<code class="docutils literal notranslate"><span class="pre">idtrack.GraphMaker(api.get_database_manager(&quot;homo_sapiens&quot;,</span> <span class="pre">115)).get_graph(create_even_if_exist=True)</span></code>.</p>
+<p>Loading reads the graph file alone: no table, no <a class="reference internal" href="reference.html#idtrack.build.DatabaseManager" title="idtrack.build.DatabaseManager"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.build.DatabaseManager</span></code></a> and no network connection
+is needed (and none of the build stack, pandas, h5py, PyMySQL or PyYAML, is imported), so a graph on disk also loads
+where Ensembl cannot be reached. The file is one <code class="docutils literal notranslate"><span class="pre">.npz</span></code> archive of arrays and JSON (no pickle: loading it executes no
+code). Its name, <code class="docutils literal notranslate"><span class="pre">graph_&lt;organism&gt;_assembly&lt;key&gt;_min&lt;first&gt;_max&lt;snapshot&gt;_narrow.npz</span></code>, says the organism, the
+primary assembly and the window; the file itself also records the selection of external databases it was built from,
+the organism table, the IDTrack graph format, the package version and (where it was known) the git commit that built
+it, and the history corrections made while building it (<code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.describe()</span></code>, and the whole record in
+<code class="docutils literal notranslate"><span class="pre">api.graph.manifest</span></code>). When the file under the expected name holds another graph than the one asked for (it was
+built under another externals YAML, another organism table or by another version of the graph format),
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.build()</span></code> raises <a class="reference internal" href="reference.html#idtrack.errors.GraphMismatchError" title="idtrack.errors.GraphMismatchError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.errors.GraphMismatchError</span></code></a>, which names the differences:
+IDTrack never answers silently from another graph, and never starts a build of hours without being asked. To build the
+graph again, call <code class="docutils literal notranslate"><span class="pre">idtrack.API.build(&quot;homo_sapiens&quot;,</span> <span class="pre">115,</span> <span class="pre">&quot;./idtrack_cache&quot;,</span> <span class="pre">rebuild=True)</span></code>, which replaces the file.</p>
 <p>Graphs written by IDTrack 0.0.5 (<code class="docutils literal notranslate"><span class="pre">graph_&lt;organism&gt;_min&lt;first&gt;_max&lt;snapshot&gt;_narrow.pickle</span></code>) and its table cache
 (<code class="docutils literal notranslate"><span class="pre">&lt;organism&gt;_assembly-&lt;key&gt;.h5</span></code>) are not read: build the graphs again with this version.</p>
 </section>
+<section id="names-per-database-and-release">
+<h3>Names per Database and Release<a class="headerlink" href="#names-per-database-and-release" title="Link to this heading"></a></h3>
+<p>Which genes does a name name, in which database, at which release? <code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.genes_named()</span></code> answers it as
+data, one <a class="reference internal" href="reference.html#idtrack.results.NameMatch" title="idtrack.results.NameMatch"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.results.NameMatch</span></code></a> per name, gene and database, with the releases at which it holds (on
+the assembly that serves each release, for genes of the reference sequence; <code class="docutils literal notranslate"><span class="pre">fold_case=True</span></code> ignores letter case);
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.names_of()</span></code> gives the names the databases attach to a gene:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">match</span> <span class="ow">in</span> <span class="n">api</span><span class="o">.</span><span class="n">genes_named</span><span class="p">(</span><span class="s2">"TP53"</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">database</span><span class="p">,</span> <span class="n">match</span><span class="o">.</span><span class="n">synonym</span><span class="p">,</span> <span class="n">match</span><span class="o">.</span><span class="n">gene</span><span class="p">,</span> <span class="n">match</span><span class="o">.</span><span class="n">releases</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">"-"</span><span class="p">,</span> <span class="n">match</span><span class="o">.</span><span class="n">releases</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">([</span><span class="n">m</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">api</span><span class="o">.</span><span class="n">names_of</span><span class="p">(</span><span class="s2">"ENSG00000141510.20"</span><span class="p">,</span> <span class="mi">115</span><span class="p">)</span> <span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">database</span> <span class="o">==</span> <span class="s2">"HGNC Symbol"</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>A name a database recorded as a synonym of the gene has <code class="docutils literal notranslate"><span class="pre">synonym</span></code> true; the name and its database are written as
+the graph holds them, with the prefix <code class="docutils literal notranslate"><span class="pre">synonym_id::</span></code> (<code class="docutils literal notranslate"><span class="pre">synonym_id::HGNC</span> <span class="pre">Symbol</span></code>).</p>
+</section>
 <section id="working-with-anndata-objects">
 <h3>Working with AnnData Objects<a class="headerlink" href="#working-with-anndata-objects" title="Link to this heading"></a></h3>
-<p><a class="reference internal" href="reference.html#idtrack.HarmonizeFeatures" title="idtrack.HarmonizeFeatures"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.HarmonizeFeatures</span></code></a> converts the features of several <code class="docutils literal notranslate"><span class="pre">.h5ad</span></code> datasets to one Ensembl release and
-merges them:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
+<p><a class="reference internal" href="reference.html#idtrack.harmonize.HarmonizeFeatures" title="idtrack.harmonize.HarmonizeFeatures"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.harmonize.HarmonizeFeatures</span></code></a> converts the features of several <code class="docutils literal notranslate"><span class="pre">.h5ad</span></code> datasets to one Ensembl
+release and merges them. It needs the <code class="docutils literal notranslate"><span class="pre">harmonize</span></code> extra (anndata and scipy):
+<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">&quot;idtrack[harmonize]</span> <span class="pre">&#64;</span> <span class="pre">git+https://github.com/theislab/idtrack.git&quot;</span></code>. Its pure core
+(<a class="reference internal" href="reference.html#idtrack.harmonize.convert_features" title="idtrack.harmonize.convert_features"><code class="xref py py-func docutils literal notranslate"><span class="pre">idtrack.harmonize.convert_features()</span></code></a>, <a class="reference internal" href="reference.html#idtrack.harmonize.feature_table" title="idtrack.harmonize.feature_table"><code class="xref py py-func docutils literal notranslate"><span class="pre">idtrack.harmonize.feature_table()</span></code></a>,
+<a class="reference internal" href="reference.html#idtrack.harmonize.output_plan" title="idtrack.harmonize.output_plan"><code class="xref py py-func docutils literal notranslate"><span class="pre">idtrack.harmonize.output_plan()</span></code></a>) works on a list of names without files and needs pandas only.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.harmonize</span><span class="w"> </span><span class="kn">import</span> <span class="n">HarmonizeFeatures</span>
 
-<span class="n">harmonizer</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">HarmonizeFeatures</span><span class="p">(</span>
+<span class="n">harmonizer</span> <span class="o">=</span> <span class="n">HarmonizeFeatures</span><span class="p">(</span>
     <span class="n">project_name</span><span class="o">=</span><span class="s2">"my_project"</span><span class="p">,</span>
     <span class="n">data_h5ad_dict</span><span class="o">=</span><span class="p">{</span><span class="s2">"study_a"</span><span class="p">:</span> <span class="s2">"study_a.h5ad"</span><span class="p">,</span> <span class="s2">"study_b"</span><span class="p">:</span> <span class="s2">"study_b.h5ad"</span><span class="p">},</span>
     <span class="n">project_local_repository</span><span class="o">=</span><span class="s2">"./harmonization"</span><span class="p">,</span>   <span class="c1"># result cache, one JSON file per dataset</span>
     <span class="n">idtrack_local_repository</span><span class="o">=</span><span class="s2">"./idtrack_cache"</span><span class="p">,</span>   <span class="c1"># the graph</span>
-    <span class="n">target_ensembl_release</span><span class="o">=</span><span class="mi">115</span><span class="p">,</span>
-    <span class="n">organism_name</span><span class="o">=</span><span class="s2">"homo_sapiens"</span><span class="p">,</span>
-    <span class="n">graph_last_ensembl_release</span><span class="o">=</span><span class="mi">115</span><span class="p">,</span>
+    <span class="n">to_release</span><span class="o">=</span><span class="mi">115</span><span class="p">,</span>
+    <span class="n">organism</span><span class="o">=</span><span class="s2">"homo_sapiens"</span><span class="p">,</span>
+    <span class="n">snapshot_release</span><span class="o">=</span><span class="mi">115</span><span class="p">,</span>
     <span class="n">final_database</span><span class="o">=</span><span class="s2">"HGNC Symbol"</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">harmonizer</span><span class="o">.</span><span class="n">conversion_report</span><span class="p">())</span>                         <span class="c1"># one row per input feature, with status and reason</span>
-<span class="n">adata</span> <span class="o">=</span> <span class="n">harmonizer</span><span class="o">.</span><span class="n">unify_multiple_anndatas</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"union"</span><span class="p">)</span>      <span class="c1"># or mode="intersect"</span>
+<span class="n">adata</span> <span class="o">=</span> <span class="n">harmonizer</span><span class="o">.</span><span class="n">unify_multiple_anndatas</span><span class="p">(</span><span class="n">features</span><span class="o">=</span><span class="s2">"union"</span><span class="p">)</span>      <span class="c1"># or features="intersect"</span>
 </pre></div>
 </div>
 <p>The constructor converts every feature (the long part; the results are cached). The rules of the output:</p>
@@ -614,22 +649,22 @@ database is in a column named after the database (a gene without one has a missi
 <li><p>Nothing is dropped silently: every output feature has <code class="docutils literal notranslate"><span class="pre">var[&quot;idtrack_status&quot;]</span></code> (<code class="docutils literal notranslate"><span class="pre">&quot;converted&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;merged&quot;</span></code>,
 <code class="docutils literal notranslate"><span class="pre">&quot;unconverted_ambiguous&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;unconverted_not_in_graph&quot;</span></code>, …) and <code class="docutils literal notranslate"><span class="pre">var[&quot;idtrack_reason&quot;]</span></code>. Unconverted
 features keep their input names; <code class="docutils literal notranslate"><span class="pre">keep_unconverted=False</span></code> (of
-<a class="reference internal" href="reference.html#idtrack.HarmonizeFeatures.unify_multiple_anndatas" title="idtrack.HarmonizeFeatures.unify_multiple_anndatas"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.HarmonizeFeatures.unify_multiple_anndatas()</span></code></a> and
-<a class="reference internal" href="reference.html#idtrack.HarmonizeFeatures.feature_harmonizer" title="idtrack.HarmonizeFeatures.feature_harmonizer"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.HarmonizeFeatures.feature_harmonizer()</span></code></a>) leaves them out.</p></li>
+<a class="reference internal" href="reference.html#idtrack.harmonize.HarmonizeFeatures.unify_multiple_anndatas" title="idtrack.harmonize.HarmonizeFeatures.unify_multiple_anndatas"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.harmonize.HarmonizeFeatures.unify_multiple_anndatas()</span></code></a> and
+<a class="reference internal" href="reference.html#idtrack.harmonize.HarmonizeFeatures.feature_harmonizer" title="idtrack.harmonize.HarmonizeFeatures.feature_harmonizer"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.harmonize.HarmonizeFeatures.feature_harmonizer()</span></code></a>) leaves them out.</p></li>
 <li><p>Several input features of one dataset on one gene (<code class="docutils literal notranslate"><span class="pre">merge=</span></code> of the same two methods): <code class="docutils literal notranslate"><span class="pre">merge=&quot;sum&quot;</span></code> adds them
 up (right for counts); <code class="docutils literal notranslate"><span class="pre">merge=&quot;flag&quot;</span></code> (default) keeps the one that names the gene itself as the gene’s feature and flags the others
 (<code class="docutils literal notranslate"><span class="pre">&quot;unconverted_merge_partner&quot;</span></code>).</p></li>
 <li><p>Each dataset is converted on its own: a dataset is harmonised the same alone and together with others. A feature
 that is a gene id existing at the target release is that gene.
-<code class="docutils literal notranslate"><span class="pre">source_releases={&quot;study_a&quot;:</span> <span class="pre">100}</span></code> reads a dataset’s features at the release it was annotated with;
-<code class="docutils literal notranslate"><span class="pre">source_databases={&quot;study_a&quot;:</span> <span class="pre">&quot;HGNC</span> <span class="pre">Symbol&quot;}</span></code> reads them as ids of that database (a symbol that another database
+<code class="docutils literal notranslate"><span class="pre">from_release_by_dataset={&quot;study_a&quot;:</span> <span class="pre">100}</span></code> reads a dataset’s features at the release it was annotated with;
+<code class="docutils literal notranslate"><span class="pre">from_database_by_dataset={&quot;study_a&quot;:</span> <span class="pre">&quot;HGNC</span> <span class="pre">Symbol&quot;}</span></code> reads them as ids of that database (a symbol that another database
 gives to another gene is then that database’s gene, not a tie). Nothing is inferred on your behalf. Without it, a
 symbol that two databases give to two genes is <code class="docutils literal notranslate"><span class="pre">&quot;unconverted_ambiguous&quot;</span></code> when both genes can be named in the
 final database; when only one of them has a name there, the feature is converted to that gene (a tie is judged
 among the genes that can be named in the final database, see Example 4).</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">api=</span></code> passes an <a class="reference internal" href="reference.html#idtrack.API" title="idtrack.API"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.API</span></code></a> whose graph is already loaded.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">api=</span></code> passes an <code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.API</span></code> whose graph is already loaded.</p></li>
 </ul>
-<p><a class="reference internal" href="reference.html#idtrack.HarmonizeFeatures.unify_multiple_anndatas" title="idtrack.HarmonizeFeatures.unify_multiple_anndatas"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.HarmonizeFeatures.unify_multiple_anndatas()</span></code></a> merges the harmonised datasets without losing or
+<p><a class="reference internal" href="reference.html#idtrack.harmonize.HarmonizeFeatures.unify_multiple_anndatas" title="idtrack.harmonize.HarmonizeFeatures.unify_multiple_anndatas"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.harmonize.HarmonizeFeatures.unify_multiple_anndatas()</span></code></a> merges the harmonised datasets without losing or
 rewriting anything by default: <code class="docutils literal notranslate"><span class="pre">obs</span></code> keeps every column of any dataset (<code class="docutils literal notranslate"><span class="pre">obs_join=&quot;outer&quot;</span></code>; a dataset without a
 column has missing values there; <code class="docutils literal notranslate"><span class="pre">obs_join=&quot;inner&quot;</span></code> keeps only the common columns, and <code class="docutils literal notranslate"><span class="pre">obs_columns_to_keep</span></code>
 selects among them), every <code class="docutils literal notranslate"><span class="pre">var</span></code> column is kept (one column where the datasets agree on each feature, else one per
@@ -724,10 +759,12 @@ HTTPS, so the build time is mostly download time and depends on the network):</p
 <p>The first load of a file on a machine reads it from disk and took up to 7 s. The conversions are a fixed, seeded
 mix of gene ids, ids without version, symbols and other external ids of every release of the window, converted to a
 release of the graph and partly to an external database. Each conversion has a budget
-(<a class="reference internal" href="reference.html#idtrack.Track.search_budget_states" title="idtrack.Track.search_budget_states"><code class="xref py py-attr docutils literal notranslate"><span class="pre">idtrack.Track.search_budget_states</span></code></a>, 200,000 search states, and
-<a class="reference internal" href="reference.html#idtrack.Track.search_budget_seconds" title="idtrack.Track.search_budget_seconds"><code class="xref py py-attr docutils literal notranslate"><span class="pre">idtrack.Track.search_budget_seconds</span></code></a>, 30 s); a search past it raises
-<a class="reference internal" href="reference.html#idtrack.SearchBudgetExceededError" title="idtrack.SearchBudgetExceededError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.SearchBudgetExceededError</span></code></a> (no conversion of the measurements came near it). The graph is only read
-by conversions, so several threads can share one <a class="reference internal" href="reference.html#idtrack.API" title="idtrack.API"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.API</span></code></a>, but they do not convert in parallel.</p>
+(<a class="reference internal" href="reference.html#idtrack.settings.SearchSettings" title="idtrack.settings.SearchSettings"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.settings.SearchSettings</span></code></a>: 200,000 search states and 30 s by default; <code class="docutils literal notranslate"><span class="pre">API.load(path,</span>
+<span class="pre">search=SearchSettings(...))</span></code> sets other defaults, and <code class="docutils literal notranslate"><span class="pre">budget_states=</span></code> / <code class="docutils literal notranslate"><span class="pre">budget_seconds=</span></code> of
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.convert()</span></code> bound one call); a search past it raises
+<a class="reference internal" href="reference.html#idtrack.errors.SearchBudgetExceededError" title="idtrack.errors.SearchBudgetExceededError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.errors.SearchBudgetExceededError</span></code></a> (no conversion of the measurements came near it). The graph is
+only read by conversions, so several threads can share one <code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.API</span></code>, but they do not convert in
+parallel: a server scales with processes.</p>
 </section>
 <section id="what-s-next">
 <h2>What’s Next?<a class="headerlink" href="#what-s-next" title="Link to this heading"></a></h2>

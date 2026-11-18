@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Part 5 — Real-World Experiments: Harmonization &mdash; idtrack 0.0.5 documentation</title>
+  <title>Part 5 — Real-World Experiments: Harmonization &mdash; idtrack 0.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=6a604523" />
@@ -17,7 +17,7 @@
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=282f96c0"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../_static/design-tabs.js?v=fcb327ea"></script>
@@ -107,7 +107,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../changes.html">Changes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributor Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../authors.html">Credits</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code_of_conduct.html">Code of Conduct</a></li>
 </ul>
 
         </div>
@@ -150,6 +150,7 @@
 </ul>
 <blockquote>
 <div><p><strong>Tip:</strong> Start with the toy demo first. The exact same logic scales to large datasets.</p>
+<p><strong>Install:</strong> harmonization of <code class="docutils literal notranslate"><span class="pre">.h5ad</span></code> files needs the <code class="docutils literal notranslate"><span class="pre">harmonize</span></code> extra (anndata and scipy): <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">&quot;idtrack[harmonize]</span> <span class="pre">&#64;</span> <span class="pre">git+https://github.com/theislab/idtrack.git&quot;</span></code>.</p>
 </div></blockquote>
 <section id="5.0-—-Why-harmonization-matters-(plain-language)">
 <h2>5.0 — Why harmonization matters (plain language)<a class="headerlink" href="#5.0-—-Why-harmonization-matters-(plain-language)" title="Link to this heading"></a></h2>
@@ -202,12 +203,14 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">sparse</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack</span><span class="w"> </span><span class="kn">import</span> <span class="n">API</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.harmonize</span><span class="w"> </span><span class="kn">import</span> <span class="n">HarmonizeFeatures</span>
 
 <span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'IDTRACK_LOCAL_REPO'</span><span class="p">,</span> <span class="s1">'idtrack_cache'</span><span class="p">))</span>
 <span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
 <span class="nb">print</span><span class="p">(</span><span class="s1">'IDTrack local repository:'</span><span class="p">,</span> <span class="n">LOCAL_REPOSITORY</span><span class="p">)</span>
-<br/></pre></div>
+</pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -266,10 +269,10 @@ IDTrack local repository: idtrack_cache
 <p>Key parameters (interpretation):</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">idtrack_local_repository</span></code>: where your built graph snapshot lives</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">graph_last_ensembl_release</span></code>: which snapshot release the graph contains (must match your build)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">target_ensembl_release</span></code>: the release you want to harmonize <em>to</em></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">snapshot_release</span></code>: which snapshot release the graph contains (must match your build)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">to_release</span></code>: the release you want to harmonize <em>to</em></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">final_database</span></code>: the database whose names are reported beside each gene (HGNC, MGI, …); the features themselves are Ensembl genes</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">source_releases</span></code> / <code class="docutils literal notranslate"><span class="pre">source_databases</span></code> (optional, per dataset): the release a dataset was annotated with, and the database its feature names are ids of; nothing is inferred on your behalf</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">from_release_by_dataset</span></code> / <code class="docutils literal notranslate"><span class="pre">from_database_by_dataset</span></code> (optional, per dataset): the release a dataset was annotated with, and the database its feature names are ids of; nothing is inferred on your behalf</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">api</span></code> (optional): an <code class="docutils literal notranslate"><span class="pre">idtrack.API</span></code> whose graph is already loaded</p></li>
 </ul>
 <div class="nbinput docutils container">
@@ -291,20 +294,20 @@ project_out.mkdir(parents=True, exist_ok=True)
 
 SNAPSHOT_RELEASE = 115  # the snapshot of the graph built in Part 3 (pinned)
 
-harmonizer = idtrack.HarmonizeFeatures(
+harmonizer = HarmonizeFeatures(
     project_name='toy_demo',
     data_h5ad_dict=data_h5ad_dict,
     project_local_repository=str(project_out),
     idtrack_local_repository=str(LOCAL_REPOSITORY),
-    target_ensembl_release=SNAPSHOT_RELEASE,
+    to_release=SNAPSHOT_RELEASE,
     final_database='HGNC Symbol',
-    organism_name='homo_sapiens',
-    graph_last_ensembl_release=SNAPSHOT_RELEASE,
-    verbose_level=1,
+    organism='homo_sapiens',
+    snapshot_release=SNAPSHOT_RELEASE,
+    verbosity=1,
 )
 
 harmonizer
-<br/></pre></div>
+</pre></div>
 </div>
 </div>
 <div class="nboutput docutils container">
@@ -319,7 +322,7 @@ harmonizer
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;idtrack._harmonize_features.HarmonizeFeatures at 0x7fe047eda3c0&gt;
+&lt;idtrack.harmonize.features.HarmonizeFeatures at 0x7f73451002f0&gt;
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -328,8 +331,8 @@ harmonizer
 <div class="output_area rendered_html docutils container">
 <details class="idtrack-collapse">
 <summary>Click to show conversion logs</summary>
-<pre class="idtrack-collapse-content"><span class="stderr">toy_A: 100%|#########################################################| 5/5 [00:00&lt;00:00, 453.39it/s]
-toy_B: 100%|##########################################################| 4/4 [00:00&lt;00:00, 12.82it/s]</span></pre>
+<pre class="idtrack-collapse-content"><span class="stderr">100%|################################################################| 5/5 [00:00&lt;00:00, 296.19it/s]
+100%|#################################################################| 4/4 [00:00&lt;00:00, 30.74it/s]</span></pre>
 </details></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -337,7 +340,7 @@ toy_B: 100%|##########################################################| 4/4 [00:
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;idtrack._harmonize_features.HarmonizeFeatures at 0x7fe047eda3c0&gt;
+&lt;idtrack.harmonize.features.HarmonizeFeatures at 0x7f73451002f0&gt;
 </pre></div></div>
 </div>
 </section>
@@ -520,8 +523,8 @@ its features are not harmonised.</p>
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Merge the toy datasets (this uses AnnData.concat under the hood)</span>
-<span class="n">unified_union</span> <span class="o">=</span> <span class="n">harmonizer</span><span class="o">.</span><span class="n">unify_multiple_anndatas</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s1">'union'</span><span class="p">)</span>
-<span class="n">unified_intersect</span> <span class="o">=</span> <span class="n">harmonizer</span><span class="o">.</span><span class="n">unify_multiple_anndatas</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s1">'intersect'</span><span class="p">)</span>
+<span class="n">unified_union</span> <span class="o">=</span> <span class="n">harmonizer</span><span class="o">.</span><span class="n">unify_multiple_anndatas</span><span class="p">(</span><span class="n">features</span><span class="o">=</span><span class="s1">'union'</span><span class="p">)</span>
+<span class="n">unified_intersect</span> <span class="o">=</span> <span class="n">harmonizer</span><span class="o">.</span><span class="n">unify_multiple_anndatas</span><span class="p">(</span><span class="n">features</span><span class="o">=</span><span class="s1">'intersect'</span><span class="p">)</span>
 
 <span class="nb">print</span><span class="p">(</span><span class="s1">'Union shape:'</span><span class="p">,</span> <span class="n">unified_union</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">'Intersect shape:'</span><span class="p">,</span> <span class="n">unified_intersect</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
@@ -534,8 +537,8 @@ its features are not harmonised.</p>
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:00&lt;00:00, 30.03it/s]
-100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:00&lt;00:00, 62.26it/s]
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:00&lt;00:00, 14.94it/s]
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:00&lt;00:00, 78.66it/s]
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -729,7 +732,7 @@ Intersect shape: (110, 1)
 <ul>
 <li><p>drop ambiguous features (<code class="docutils literal notranslate"><span class="pre">keep_unconverted=False</span></code> drops every unconverted feature)</p></li>
 <li><p>keep them as they are (the default)</p></li>
-<li><p>resolve them with knowledge the graph does not have (the source release or database of a dataset: <code class="docutils literal notranslate"><span class="pre">source_releases</span></code>, <code class="docutils literal notranslate"><span class="pre">source_databases</span></code>)</p></li>
+<li><p>resolve them with knowledge the graph does not have (the source release or database of a dataset: <code class="docutils literal notranslate"><span class="pre">from_release_by_dataset</span></code>, <code class="docutils literal notranslate"><span class="pre">from_database_by_dataset</span></code>)</p></li>
 </ul>
 </li>
 <li><p><strong>Pilot first</strong>: run harmonization on a small subset and inspect diagnostics before scaling up.</p></li>
@@ -1012,18 +1015,18 @@ else:
     # The snapshot of the human graph of Part 3, and the release to harmonize to (pinned; any release of the graph works)
     TARGET_RELEASE = 115
 
-    harmonizer_hlca = idtrack.HarmonizeFeatures(
+    harmonizer_hlca = HarmonizeFeatures(
         project_name='hlca_tutorial',
         data_h5ad_dict=data_h5ad_dict_hlca_tutorial,
         project_local_repository=str(project_out_hlca),
         idtrack_local_repository=str(LOCAL_REPOSITORY),
-        target_ensembl_release=TARGET_RELEASE,
+        to_release=TARGET_RELEASE,
         final_database='HGNC Symbol',
-        organism_name='homo_sapiens',
-        graph_last_ensembl_release=115,
-        verbose_level=1,
+        organism='homo_sapiens',
+        snapshot_release=115,
+        verbosity=1,
     )
-<br/></pre></div>
+</pre></div>
 </div>
 </div>
 <div class="nboutput docutils container">
@@ -1038,10 +1041,10 @@ else:
 <div class="output_area rendered_html docutils container">
 <details class="idtrack-collapse">
 <summary>Click to show conversion logs</summary>
-<pre class="idtrack-collapse-content"><span class="stderr">Kaminski_2020: 100%|########################################| 45947/45947 [00:29&lt;00:00, 1539.47it/s]
-Meyer_2021: 100%|############################################| 20922/20922 [00:23&lt;00:00, 889.88it/s]
-MeyerNikolic_unpubl: 100%|###################################| 33582/33582 [00:34&lt;00:00, 968.63it/s]
-Barbry_unpubl: 100%|#########################################| 16859/16859 [00:20&lt;00:00, 838.47it/s]</span></pre>
+<pre class="idtrack-collapse-content"><span class="stderr">100%|#######################################################| 45947/45947 [00:26&lt;00:00, 1736.27it/s]
+100%|#######################################################| 20922/20922 [00:20&lt;00:00, 1039.08it/s]
+100%|#######################################################| 33582/33582 [00:26&lt;00:00, 1268.78it/s]
+100%|########################################################| 16859/16859 [00:18&lt;00:00, 924.10it/s]</span></pre>
 </details></div>
 </div>
 </section>
@@ -1055,7 +1058,7 @@ Barbry_unpubl: 100%|#########################################| 16859/16859 [00:2
 <li><p>how many were ambiguous (1→n)</p></li>
 <li><p>how many HGNC targets were actually <strong>fallbacks</strong> (the gene has no HGNC symbol at the snapshot, so the target is its Ensembl id)</p></li>
 </ul>
-<p><code class="docutils literal notranslate"><span class="pre">harmonizer.matchings</span></code> holds the conversion of every feature (the results of <code class="docutils literal notranslate"><span class="pre">API.convert_identifier</span></code>), and <code class="docutils literal notranslate"><span class="pre">conversion_report()</span></code> the status of every feature. We keep the output as small tables so it is easy to read in a tutorial notebook.</p>
+<p><code class="docutils literal notranslate"><span class="pre">harmonizer.matchings</span></code> holds the conversion of every feature (the results of <code class="docutils literal notranslate"><span class="pre">API.convert</span></code>), and <code class="docutils literal notranslate"><span class="pre">conversion_report()</span></code> the status of every feature. We keep the output as small tables so it is easy to read in a tutorial notebook.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>11
 </pre></div>
@@ -1067,7 +1070,7 @@ Barbry_unpubl: 100%|#########################################| 16859/16859 [00:2
 <span class="k">else</span><span class="p">:</span>
     <span class="n">matchings_by_dataset</span> <span class="o">=</span> <span class="n">harmonizer_hlca</span><span class="o">.</span><span class="n">matchings</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_summarize_matchings</span><span class="p">(</span><span class="n">matchings</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_summarize_matchings</span><span class="p">(</span><span class="n">matchings</span><span class="p">:</span> <span class="nb">list</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
         <span class="n">c</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s1">'input_ids'</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
             <span class="s1">'one_to_one'</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
@@ -1079,25 +1082,18 @@ Barbry_unpubl: 100%|#########################################| 16859/16859 [00:2
 
         <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">matchings</span><span class="p">:</span>
             <span class="n">c</span><span class="p">[</span><span class="s1">'input_ids'</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">n_targets</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">targets</span><span class="p">(</span><span class="s1">'best'</span><span class="p">))</span>  <span class="c1"># the best answer of each feature</span>
 
-            <span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'no_corresponding'</span><span class="p">)</span> <span class="ow">or</span> <span class="n">m</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'no_conversion'</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">n_targets</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="n">c</span><span class="p">[</span><span class="s1">'one_to_none'</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
-                <span class="k">continue</span>
-
-            <span class="n">target_ids</span> <span class="o">=</span> <span class="n">m</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'target_id'</span><span class="p">,</span> <span class="p">[])</span>
-            <span class="n">n_targets</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">target_ids</span><span class="p">)</span>
-
-            <span class="k">if</span> <span class="n">n_targets</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">elif</span> <span class="n">n_targets</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
                 <span class="n">c</span><span class="p">[</span><span class="s1">'one_to_one'</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
-                <span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'no_target'</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">no_target</span><span class="p">:</span>
                     <span class="n">c</span><span class="p">[</span><span class="s1">'fallback_1_to_1'</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
-            <span class="k">elif</span> <span class="n">n_targets</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="n">c</span><span class="p">[</span><span class="s1">'one_to_many'</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
-                <span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'no_target'</span><span class="p">):</span>
-                    <span class="n">c</span><span class="p">[</span><span class="s1">'fallback_1_to_n'</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="c1"># Defensive fallback: treat empty target list as 1→0</span>
-                <span class="n">c</span><span class="p">[</span><span class="s1">'one_to_none'</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">c</span><span class="p">[</span><span class="s1">'one_to_many'</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">no_target</span><span class="p">:</span>
+                    <span class="n">c</span><span class="p">[</span><span class="s1">'fallback_1_to_n'</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
 
         <span class="k">return</span> <span class="n">c</span>
 
@@ -1128,7 +1124,7 @@ Barbry_unpubl: 100%|#########################################| 16859/16859 [00:2
     <span class="c1"># The status of every input feature, per dataset</span>
     <span class="n">report</span> <span class="o">=</span> <span class="n">harmonizer_hlca</span><span class="o">.</span><span class="n">conversion_report</span><span class="p">()</span>
     <span class="n">display</span><span class="p">(</span><span class="n">report</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">'dataset'</span><span class="p">)[</span><span class="s1">'status'</span><span class="p">]</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span><span class="o">.</span><span class="n">unstack</span><span class="p">(</span><span class="n">fill_value</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
-<br/></pre></div>
+</pre></div>
 </div>
 </div>
 <div class="nboutput docutils container">
@@ -1320,8 +1316,8 @@ if 'harmonizer_hlca' not in globals() or harmonizer_hlca is None:
     hlca_union = None
     hlca_intersect = None
 else:
-    hlca_union = harmonizer_hlca.unify_multiple_anndatas(mode='union')
-    hlca_intersect = harmonizer_hlca.unify_multiple_anndatas(mode='intersect')
+    hlca_union = harmonizer_hlca.unify_multiple_anndatas(features='union')
+    hlca_intersect = harmonizer_hlca.unify_multiple_anndatas(features='intersect')
 
     comparison = pd.DataFrame(
         {
@@ -1406,8 +1402,8 @@ else:
 <details class="idtrack-collapse">
 <summary>Click to show merge logs</summary>
 <pre class="idtrack-collapse-content">Genes present in all datasets (from union .var[&#x27;intersection&#x27;]): 13421
-<span class="stderr">100%|#########################################################################################################| 4/4 [00:44&lt;00:00, 11.04s/it]
-100%|#########################################################################################################| 4/4 [00:30&lt;00:00,  7.67s/it]</span></pre>
+<span class="stderr">100%|#########################################################################################################| 4/4 [00:40&lt;00:00, 10.08s/it]
+100%|#########################################################################################################| 4/4 [00:39&lt;00:00,  9.88s/it]</span></pre>
 </details></div>
 </div>
 <div class="nbinput docutils container">
@@ -1466,11 +1462,8 @@ AnnData object with n_obs × n_vars = 774178 × 13421
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Legacy rescue demo (human)</span>
 
-<span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
-<span class="n">api</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
-
 <span class="n">SNAPSHOT_RELEASE</span> <span class="o">=</span> <span class="mi">115</span>
-<span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="s1">'homo_sapiens'</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">)</span>
+<span class="n">api</span> <span class="o">=</span> <span class="n">API</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="s1">'homo_sapiens'</span><span class="p">,</span> <span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
 
 <span class="n">legacy_ids</span> <span class="o">=</span> <span class="p">[</span>
     <span class="s1">'TP53'</span><span class="p">,</span>                <span class="c1"># HGNC symbol (common)</span>
@@ -1482,23 +1475,22 @@ AnnData object with n_obs × n_vars = 774178 × 13421
 <span class="p">]</span>
 
 <span class="c1"># Convert into Ensembl gene IDs at the snapshot boundary (stable backbone)</span>
-<span class="n">results</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert_identifier_multiple</span><span class="p">(</span><span class="n">legacy_ids</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">final_database</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">strategy</span><span class="o">=</span><span class="s1">'all'</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-<span class="n">summary</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">classify_multiple_conversion</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
-<span class="n">api</span><span class="o">.</span><span class="n">print_binned_conversion</span><span class="p">(</span><span class="n">summary</span><span class="p">)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert_many</span><span class="p">(</span><span class="n">legacy_ids</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">API</span><span class="o">.</span><span class="n">classification_summary</span><span class="p">(</span><span class="n">API</span><span class="o">.</span><span class="n">classify</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="s1">'all'</span><span class="p">)))</span>
 
 <span class="c1"># Show how each was read and what it became</span>
 <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">r</span><span class="p">[</span><span class="s1">'query_id'</span><span class="p">]</span><span class="si">:</span><span class="s2">&lt;16</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">r</span><span class="p">[</span><span class="s1">'target_id'</span><span class="p">]</span><span class="si">}</span><span class="s2"> | read as </span><span class="si">{</span><span class="n">r</span><span class="p">[</span><span class="s1">'graph_id'</span><span class="p">]</span><span class="si">!r}</span><span class="s2"> (</span><span class="si">{</span><span class="n">r</span><span class="p">[</span><span class="s1">'match'</span><span class="p">]</span><span class="si">}</span><span class="s2">), "</span>
-          <span class="sa">f</span><span class="s2">"copies on alternative loci: </span><span class="si">{</span><span class="n">r</span><span class="p">[</span><span class="s1">'alternative_locus_genes'</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-<br/></pre></div>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">query_id</span><span class="si">:</span><span class="s2">&lt;16</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">targets</span><span class="p">(</span><span class="s1">'all'</span><span class="p">))</span><span class="si">}</span><span class="s2"> | read as </span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">graph_id</span><span class="si">!r}</span><span class="s2"> (</span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">match</span><span class="si">}</span><span class="s2">), "</span>
+          <span class="sa">f</span><span class="s2">"copies on alternative loci: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">alternative_locus_genes</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
 </div>
 </div>
-<div class="nboutput docutils container">
+<div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area stderr docutils container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
-2026-11-12 23:18:36 INFO:idtrack._api:
+
 IDTrack conversion summary:
   Total processed: 6
   1→0: 1 (16.7%)
@@ -1509,18 +1501,9 @@ IDTrack conversion summary:
   1→n: 0 (0.0%)
     Changed only: 0 (0.0%)
     Alternative targets: 0 (0.0%)
-  Diagnostics:
-    no_corresponding: 1
-    no_conversion:   0
-    no_target:       0
-    errors:          0
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
+  Statuses:
+    converted: 5
+    not_found: 1
 TP53             -&gt; [&#39;ENSG00000141510.20&#39;] | read as &#39;TP53&#39; (exact), copies on alternative loci: [&#39;LRG_321.1&#39;]
 P53              -&gt; [&#39;ENSG00000141510.20&#39;] | read as &#39;synonym_id::P53&#39; (synonym:exact), copies on alternative loci: [&#39;LRG_321.1&#39;]
 ENSG00000141510  -&gt; [&#39;ENSG00000141510.20&#39;] | read as &#39;ENSG00000141510&#39; (exact), copies on alternative loci: []
