@@ -82,7 +82,9 @@ def describe_cut_graphs(organisms: list[str]) -> dict[str, dict]:
 def main(argv: list[str] | None = None) -> int:
     """Run the command line."""
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    parser.add_argument("--answers", help="the answers written by tools/contract_answers.py (default: keep the present)")
+    parser.add_argument(
+        "--answers", help="the answers written by tools/contract_answers.py (default: keep the present)"
+    )
     parser.add_argument("--out", default=str(CONTRACT), help="the file to write (default: the present file)")
     parser.add_argument("--check", action="store_true", help="write nothing; compare with the present file")
     arguments = parser.parse_args(argv)

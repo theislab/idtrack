@@ -61,7 +61,9 @@ def test_make_externals_enables_on_the_cut_tables_what_the_shipped_file_enables(
     shipped = {kind: tool.SHIPPED / tool.file_name(ORGANISM, kind) for kind in tool.KINDS}
     made = _entries(paths["modified"], ORGANISM, enabled=True)
     assert made and made == _entries(shipped["modified"], ORGANISM, enabled=True)
-    template, shipped_template = (_entries(p, ORGANISM, enabled=False) for p in (paths["template"], shipped["template"]))
+    template, shipped_template = (
+        _entries(p, ORGANISM, enabled=False) for p in (paths["template"], shipped["template"])
+    )
     assert set(template) <= set(shipped_template)
     assert all(set(releases) <= set(shipped_template[key]) for key, releases in template.items())
     assert tool.check(ORGANISM, shipped)  # the shipped files equal themselves (the comparison's own check)
