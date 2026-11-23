@@ -43,7 +43,7 @@ def tables_path(organism: str) -> Path:
 
 
 def genes_path(organism: str) -> Path:
-    """Return the file that lists an organism's genes (the input of the build script)."""
+    """Return the file that lists an organism's genes (the input of ``tools/cut_tables.py``)."""
     return DATA_DIRECTORY / f"{organism}.genes.txt"
 
 
