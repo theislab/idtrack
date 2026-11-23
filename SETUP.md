@@ -144,13 +144,13 @@ The documentation's Quickstart (`docs/usage.rst`) and tutorials (`docs/_notebook
 
 In the clone, with the tools of section 1 on the path (`export PATH="$PWD/../idtrack-tools/bin:$PATH"` in a new shell).
 
-The test suite (tests marked slow are skipped; about 25 minutes; it builds the graphs of pig and human from the cut Ensembl tables in `tests/data/real`, without network; tests that need Ensembl skip themselves when it cannot be reached):
+The test suite (tests marked slow are skipped; about 30 minutes; it builds the graphs of pig and human from the cut Ensembl tables in `tests/data/real`, without network; tests that need Ensembl skip themselves when it cannot be reached):
 
 ```bash
 make test
 ```
 
-Its last line counts `2623 passed, 57 skipped` and the warnings of other packages (anndata's under pandas 3). One file, or the tests matching a name: `poetry run pytest tests/unit/test_api.py`, `poetry run pytest -k convert`. The tests marked slow (`--runslow`) download from Ensembl for hours; they are not part of a setup. Lint and formatting (black, isort, flake8 with the plugins of `.flake8`), and the documentation, every warning an error (into `docs/_build/html`):
+Its last line counts `2629 passed, 57 skipped` and the warnings of other packages (anndata's under pandas 3). One file, or the tests matching a name: `poetry run pytest tests/unit/test_api.py`, `poetry run pytest -k convert`. The tests marked slow (`--runslow`) download from Ensembl for hours; they are not part of a setup. Lint and formatting (black, isort, flake8 with the plugins of `.flake8`), and the documentation, every warning an error (into `docs/_build/html`):
 
 ```bash
 make lint
