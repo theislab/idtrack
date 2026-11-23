@@ -501,7 +501,8 @@ themselves when Ensembl is not reachable):</p>
 typeguard session, where typeguard refuses the argument first).</p>
 <p>The tests that can catch a wrong mapping are <code class="docutils literal notranslate"><span class="pre">tests/unit/test_real_*.py</span></code>. They need no network:
 <code class="docutils literal notranslate"><span class="pre">tests/_real_tables.py</span></code> serves real Ensembl tables of pig and human, cut down to a few hundred genes
-(<code class="docutils literal notranslate"><span class="pre">tests/data/real/&lt;organism&gt;.tables.json.xz</span></code>, each under 500 kB), to <a class="reference internal" href="reference.html#idtrack.build.DatabaseManager" title="idtrack.build.DatabaseManager"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.build.DatabaseManager</span></code></a>, so the
+(<code class="docutils literal notranslate"><span class="pre">tests/data/real/&lt;organism&gt;.tables.json.xz</span></code>, each under 600 kB: the repository’s size check for added files; the
+tables are not part of the package’s distributions), to <a class="reference internal" href="reference.html#idtrack.build.DatabaseManager" title="idtrack.build.DatabaseManager"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.build.DatabaseManager</span></code></a>, so the
 graphs of both organisms are built by the production code (tables, history, graph file, engine, API) in the test
 session. Conversions are compared with expected answers that were derived from Ensembl’s own files
 (<code class="docutils literal notranslate"><span class="pre">tests/data/real/&lt;organism&gt;.truth.jsonl</span></code>) and with the tables themselves, read by independent code; the package’s
@@ -729,7 +730,7 @@ cross-references with the <code class="docutils literal notranslate"><span class
 <section id="adding-organism-support">
 <h2>Adding Organism Support<a class="headerlink" href="#adding-organism-support" title="Link to this heading"></a></h2>
 <p>An organism is declared in one place, the organism table <code class="docutils literal notranslate"><span class="pre">ORGANISM_TABLE</span></code> in <code class="docutils literal notranslate"><span class="pre">idtrack/organisms.py</span></code>
-(<code class="xref py py-data docutils literal notranslate"><span class="pre">idtrack.organisms.ORGANISM_TABLE</span></code>); everything else (supported organisms, assembly node types, assembly priorities) is derived
+(<code class="xref py py-data docutils literal notranslate"><span class="pre">idtrack.organisms.ORGANISM_TABLE</span></code>); everything else (supported organisms, assembly labels, assembly priorities) is derived
 from it. Rhesus and cynomolgus macaque were added this way. The recipe:</p>
 <ol class="arabic">
 <li><p><strong>Establish the assemblies.</strong> List the organism’s core databases in Ensembl’s dump listings

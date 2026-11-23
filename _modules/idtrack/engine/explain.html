@@ -103,17 +103,21 @@
 <span class="sd">``(source, target, 0, release)`` for a cross-reference edge used at a release (``None`` for the final hop of</span>
 <span class="sd">confidence 1), and ``(None, gene, None)`` for a gene that is its own answer. :py:class:`PathBuilder` turns them into</span>
 <span class="sd">:py:class:`idtrack.results.PathStep` and :py:class:`idtrack.results.PathNode` records with what the graph says about</span>
-<span class="sd">each (releases, scores, splits and merges, databases and assemblies), every step and node once per conversion.</span>
+<span class="sd">each (releases, scores, splits and merges, databases and assemblies, where each gene lies and whether a history step</span>
+<span class="sd">moves it), every step and node once per conversion, and the bridges the search considered with the rule that took or</span>
+<span class="sd">refused each (:py:class:`idtrack.results.BridgeCheck`).</span>
 <span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">dataclasses</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack</span><span class="w"> </span><span class="kn">import</span> <span class="n">ids</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">IntegrityError</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.results</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExplainedPath</span><span class="p">,</span> <span class="n">PathNode</span><span class="p">,</span> <span class="n">PathStep</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.graph</span><span class="w"> </span><span class="kn">import</span> <span class="n">genes</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.results</span><span class="w"> </span><span class="kn">import</span> <span class="n">BridgeCheck</span><span class="p">,</span> <span class="n">ExplainedPath</span><span class="p">,</span> <span class="n">GenePlace</span><span class="p">,</span> <span class="n">PathNode</span><span class="p">,</span> <span class="n">PathStep</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.graph.graph</span><span class="w"> </span><span class="kn">import</span> <span class="n">TheGraph</span>
@@ -148,6 +152,10 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_serving_masks</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">((</span><span class="nb">int</span><span class="p">(</span><span class="n">assembly</span><span class="p">),</span> <span class="n">releases</span><span class="o">.</span><span class="n">mask</span><span class="p">)</span> <span class="k">for</span> <span class="n">assembly</span><span class="p">,</span> <span class="n">releases</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">serving_line</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_last</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">snapshot_release</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_real</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_facts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">genes</span><span class="o">.</span><span class="n">GeneFacts</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_places</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_bridges</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">BridgeCheck</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_refused</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">PathStep</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
 
     <span class="c1"># ------------------------------------------------------------------ nodes</span>
 
@@ -161,6 +169,7 @@
         <span class="n">active</span><span class="p">:</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="p">()</span>
         <span class="n">assemblies</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
         <span class="n">non_reference</span><span class="p">:</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="p">()</span>
+        <span class="n">places</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">GenePlace</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
         <span class="k">if</span> <span class="n">node_type</span> <span class="o">==</span> <span class="n">ids</span><span class="o">.</span><span class="n">EXTERNAL</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">ids</span><span class="o">.</span><span class="n">SYNONYM_PREFIX</span><span class="p">):</span>
                 <span class="n">kind</span> <span class="o">=</span> <span class="s2">"synonym"</span>
@@ -178,8 +187,19 @@
                     <span class="n">alive</span> <span class="o">|=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="n">high</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="n">low</span><span class="p">)</span>
             <span class="n">assemblies</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">assembly</span> <span class="k">for</span> <span class="n">assembly</span><span class="p">,</span> <span class="n">served</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_serving_masks</span> <span class="k">if</span> <span class="n">served</span> <span class="o">&amp;</span> <span class="n">alive</span><span class="p">))</span>
             <span class="n">outside</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">non_reference_releases</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">outside</span><span class="o">.</span><span class="n">mask</span><span class="p">:</span>
-                <span class="n">non_reference</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">((</span><span class="nb">int</span><span class="p">(</span><span class="n">a</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">b</span><span class="p">))</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">list_to_ranges</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">outside</span><span class="p">)))</span>
+            <span class="n">non_reference</span> <span class="o">=</span> <span class="n">outside</span><span class="o">.</span><span class="n">ranges</span><span class="p">()</span>
+            <span class="n">places</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
+                <span class="n">GenePlace</span><span class="p">(</span>
+                    <span class="n">assembly</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">place</span><span class="o">.</span><span class="n">assembly</span><span class="p">),</span>
+                    <span class="n">region</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">place</span><span class="o">.</span><span class="n">region</span><span class="p">),</span>
+                    <span class="n">start</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">place</span><span class="o">.</span><span class="n">start</span><span class="p">),</span>
+                    <span class="n">end</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">place</span><span class="o">.</span><span class="n">end</span><span class="p">),</span>
+                    <span class="n">strand</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">place</span><span class="o">.</span><span class="n">strand</span><span class="p">),</span>
+                    <span class="n">releases</span><span class="o">=</span><span class="n">place</span><span class="o">.</span><span class="n">releases</span><span class="o">.</span><span class="n">ranges</span><span class="p">(),</span>
+                    <span class="n">reference</span><span class="o">=</span><span class="ow">not</span> <span class="n">place</span><span class="o">.</span><span class="n">releases</span><span class="o">.</span><span class="n">mask</span> <span class="o">&amp;</span> <span class="n">outside</span><span class="o">.</span><span class="n">mask</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="k">for</span> <span class="n">place</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_places_of</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_nodes</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">PathNode</span><span class="p">(</span>
             <span class="nb">id</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
             <span class="n">kind</span><span class="o">=</span><span class="n">kind</span><span class="p">,</span>
@@ -188,6 +208,7 @@
             <span class="n">active</span><span class="o">=</span><span class="n">active</span><span class="p">,</span>
             <span class="n">assemblies</span><span class="o">=</span><span class="n">assemblies</span><span class="p">,</span>
             <span class="n">non_reference</span><span class="o">=</span><span class="n">non_reference</span><span class="p">,</span>
+            <span class="n">places</span><span class="o">=</span><span class="n">places</span><span class="p">,</span>
         <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_is_real</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
@@ -234,6 +255,9 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">reason</span> <span class="o">=</span> <span class="s2">"replaced"</span>
         <span class="n">old_release</span> <span class="o">=</span> <span class="n">_finite</span><span class="p">(</span><span class="n">old</span><span class="p">)</span>
+        <span class="n">relation</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">"history"</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_real</span><span class="p">(</span><span class="n">tail</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_real</span><span class="p">(</span><span class="n">head</span><span class="p">):</span>
+            <span class="n">relation</span> <span class="o">=</span> <span class="n">genes</span><span class="o">.</span><span class="n">relation</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_place_facts</span><span class="p">(</span><span class="n">tail</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_place_facts</span><span class="p">(</span><span class="n">head</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">PathStep</span><span class="p">(</span>
             <span class="n">kind</span><span class="o">=</span><span class="n">kind</span><span class="p">,</span>
             <span class="n">source</span><span class="o">=</span><span class="n">source</span><span class="p">,</span>
@@ -247,7 +271,22 @@
             <span class="n">assembly</span><span class="o">=</span><span class="kc">None</span> <span class="k">if</span> <span class="n">new_release</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_assembly</span><span class="p">(</span><span class="n">new_release</span><span class="p">),</span>
             <span class="n">old_assembly</span><span class="o">=</span><span class="kc">None</span> <span class="k">if</span> <span class="n">old_release</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_assembly</span><span class="p">(</span><span class="n">old_release</span><span class="p">),</span>
             <span class="n">reason</span><span class="o">=</span><span class="n">reason</span><span class="p">,</span>
+            <span class="n">places</span><span class="o">=</span><span class="n">relation</span><span class="p">,</span>
         <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_places_of</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""The places of a gene, read once per conversion (for its node and for the history steps it is on)."""</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_places</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">found</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">found</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_places</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">places</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">found</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_place_facts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">genes</span><span class="o">.</span><span class="n">GeneFacts</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""The facts of a gene version for :py:func:`idtrack.graph.genes.relation`, read once: the engine's facts."""</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_facts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">found</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">found</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_facts</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">genes</span><span class="o">.</span><span class="n">facts_of_nodes</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span> <span class="p">[</span><span class="n">name</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">found</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_assembly</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">release</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">assembly</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_serving</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">release</span><span class="p">)</span>
@@ -353,15 +392,87 @@
         <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_add</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="s2">"final"</span><span class="p">)</span> <span class="k">for</span> <span class="n">raw</span> <span class="ow">in</span> <span class="n">raw_path</span><span class="p">)</span></div>
 
 
+<div class="viewcode-block" id="PathBuilder.bridges">
+<a class="viewcode-back" href="../../../reference.html#idtrack.engine.explain.PathBuilder.bridges">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">bridges</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">checks</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">BridgeCheck</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Record the bridges the search considered, and their nodes (both genes and every id between them).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            checks: The bridges, ordered by source and target.</span>
+<span class="sd">        """</span>
+        <span class="k">for</span> <span class="n">check</span> <span class="ow">in</span> <span class="n">checks</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_node</span><span class="p">(</span><span class="n">check</span><span class="o">.</span><span class="n">source</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_node</span><span class="p">(</span><span class="n">check</span><span class="o">.</span><span class="n">target</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">middle</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">check</span><span class="o">.</span><span class="n">through</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_node</span><span class="p">(</span><span class="n">middle</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_bridges</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">checks</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="PathBuilder.refused">
+<a class="viewcode-back" href="../../../reference.html#idtrack.engine.explain.PathBuilder.refused">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">refused</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">steps</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Record the history steps the search did not follow, each with its rule, and their nodes.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            steps: ``{(gene, other, key): rule}`` as the walk would have taken each step (a key of</span>
+<span class="sd">                :py:data:`idtrack.results.STEP_REASONS`).</span>
+<span class="sd">        """</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">key</span><span class="p">),</span> <span class="n">rule</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">steps</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
+            <span class="n">step</span> <span class="o">=</span> <span class="n">dataclasses</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_history</span><span class="p">(</span><span class="s2">"history"</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">key</span><span class="p">),</span> <span class="n">reason</span><span class="o">=</span><span class="n">rule</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_node</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_node</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_refused</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">step</span><span class="p">)</span></div>
+
+
 <div class="viewcode-block" id="PathBuilder.result">
 <a class="viewcode-back" href="../../../reference.html#idtrack.engine.explain.PathBuilder.result">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">result</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ExplainedPath</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Return the explanation collected.</span>
+<span class="w">        </span><span class="sd">"""Return the explanation collected, its nodes and databases named as results name them (decision 56).</span>
+
+<span class="sd">        A synonym is named without the graph's prefix (its node is of kind ``synonym``), as is the database of a</span>
+<span class="sd">        synonym; should the same text name another node of the same explanation as well, the synonym's id is written</span>
+<span class="sd">        ``synonym:&lt;text&gt;`` so that every node keeps an id of its own. The bridges considered name their genes and the</span>
+<span class="sd">        ids between them by the same ids as the nodes.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            ExplainedPath: Nodes and steps.</span>
+<span class="sd">            ExplainedPath: Nodes, steps and the bridges considered.</span>
 <span class="sd">        """</span>
-        <span class="k">return</span> <span class="n">ExplainedPath</span><span class="p">(</span><span class="n">nodes</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_nodes</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span> <span class="n">steps</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_steps</span><span class="p">))</span></div>
+        <span class="n">plain</span> <span class="o">=</span> <span class="p">{</span><span class="n">name</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nodes</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">ids</span><span class="o">.</span><span class="n">SYNONYM_PREFIX</span><span class="p">)}</span>
+        <span class="n">public</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nodes</span><span class="p">:</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="n">ids</span><span class="o">.</span><span class="n">public_name</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">public</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"synonym:</span><span class="si">{</span><span class="n">text</span><span class="si">}</span><span class="s2">"</span> <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">plain</span> <span class="ow">and</span> <span class="n">text</span> <span class="ow">in</span> <span class="n">plain</span> <span class="k">else</span> <span class="n">text</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">databases</span><span class="p">(</span><span class="n">found</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">sorted</span><span class="p">({</span><span class="n">ids</span><span class="o">.</span><span class="n">public_name</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">found</span><span class="p">}))</span>
+
+        <span class="n">nodes</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
+            <span class="n">dataclasses</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">public</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="n">ids</span><span class="o">.</span><span class="n">public_name</span><span class="p">(</span><span class="n">name</span><span class="p">),</span> <span class="n">databases</span><span class="o">=</span><span class="n">databases</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">databases</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nodes</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="p">)</span>
+        <span class="n">steps</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
+            <span class="n">dataclasses</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
+                <span class="n">step</span><span class="p">,</span>
+                <span class="n">source</span><span class="o">=</span><span class="kc">None</span> <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">source</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">public</span><span class="p">[</span><span class="n">step</span><span class="o">.</span><span class="n">source</span><span class="p">],</span>
+                <span class="n">target</span><span class="o">=</span><span class="n">public</span><span class="p">[</span><span class="n">step</span><span class="o">.</span><span class="n">target</span><span class="p">],</span>
+                <span class="n">databases</span><span class="o">=</span><span class="n">databases</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">databases</span><span class="p">),</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_steps</span>
+        <span class="p">)</span>
+        <span class="n">bridges</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
+            <span class="n">dataclasses</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
+                <span class="n">check</span><span class="p">,</span>
+                <span class="n">source</span><span class="o">=</span><span class="n">public</span><span class="p">[</span><span class="n">check</span><span class="o">.</span><span class="n">source</span><span class="p">],</span>
+                <span class="n">target</span><span class="o">=</span><span class="n">public</span><span class="p">[</span><span class="n">check</span><span class="o">.</span><span class="n">target</span><span class="p">],</span>
+                <span class="n">through</span><span class="o">=</span><span class="nb">tuple</span><span class="p">((</span><span class="n">public</span><span class="p">[</span><span class="n">middle</span><span class="p">],</span> <span class="n">rule</span><span class="p">)</span> <span class="k">for</span> <span class="n">middle</span><span class="p">,</span> <span class="n">rule</span> <span class="ow">in</span> <span class="n">check</span><span class="o">.</span><span class="n">through</span><span class="p">),</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">check</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bridges</span>
+        <span class="p">)</span>
+        <span class="n">refused</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
+            <span class="n">dataclasses</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="n">public</span><span class="p">[</span><span class="n">step</span><span class="o">.</span><span class="n">source</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">],</span> <span class="n">target</span><span class="o">=</span><span class="n">public</span><span class="p">[</span><span class="n">step</span><span class="o">.</span><span class="n">target</span><span class="p">])</span>
+            <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_refused</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">ExplainedPath</span><span class="p">(</span><span class="n">nodes</span><span class="o">=</span><span class="n">nodes</span><span class="p">,</span> <span class="n">steps</span><span class="o">=</span><span class="n">steps</span><span class="p">,</span> <span class="n">bridges</span><span class="o">=</span><span class="n">bridges</span><span class="p">,</span> <span class="n">refused</span><span class="o">=</span><span class="n">refused</span><span class="p">)</span></div>
 </div>
 
 </pre></div>

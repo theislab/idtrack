@@ -274,14 +274,16 @@
 <div class="viewcode-block" id="UnknownVersionError">
 <a class="viewcode-back" href="../../reference.html#idtrack.errors.UnknownVersionError">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">UnknownVersionError</span><span class="p">(</span><span class="n">InputError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""The identifier is an Ensembl id with a version that the graph does not hold.</span>
+<span class="w">    </span><span class="sd">"""The identifier is an Ensembl id, or a sequence accession, with a version that the graph does not hold.</span>
 
 <span class="sd">    The version never existed, or the graph cannot know it (a version lower than the latest, or of an id that is no</span>
-<span class="sd">    longer active). It is not answered with another version's gene.</span>
+<span class="sd">    longer active; of an accession, a version below the latest that Ensembl's cross references never attached). It is</span>
+<span class="sd">    not answered with another version's gene.</span>
 
 <span class="sd">    Attributes:</span>
 <span class="sd">        identifier (str): The identifier as given.</span>
-<span class="sd">        versions (tuple[str, ...]): The ``&lt;id&gt;.&lt;version&gt;`` ids that the graph holds, by ascending version.</span>
+<span class="sd">        versions (tuple[str, ...]): The ``&lt;id&gt;.&lt;version&gt;`` ids (or ``&lt;accession&gt;.&lt;version&gt;``) that the graph holds, by</span>
+<span class="sd">            ascending version.</span>
 <span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">identifier</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">versions</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]):</span>  <span class="c1"># noqa: B042 - __reduce__</span>

@@ -1,0 +1,960 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>idtrack.graph.genes &mdash; idtrack 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=6a604523" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/tutorials.css?v=0e72a3a5" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../../_static/design-tabs.js?v=fcb327ea"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />  
+<!-- Google tag (gtag.js) -->
+<script
+    async
+    src="https://www.googletagmanager.com/gtag/js?id=G-FYKLWNJBVK"
+></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() {
+        dataLayer.push(arguments);
+    }
+    gtag("js", new Date());
+
+    gtag("config", "G-FYKLWNJBVK");
+</script>
+
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            idtrack
+              <img src="../../../_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../changes.html">Changes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../code_of_conduct.html">Code of Conduct</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">idtrack</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">idtrack.graph.genes</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for idtrack.graph.genes</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""What one gene is: the one rule of the package for telling whether gene ids name the same gene.</span>
+
+<span class="sd">Ensembl gives a gene a new stable id more often than the gene changes: a model is replaced by one at the same</span>
+<span class="sd">place, two models are merged, a gene is annotated again on an alternative locus, an assembly patch or an LRG record</span>
+<span class="sd">beside the reference sequence. Several stable ids can therefore stand for one gene, and a rule that counts genes by</span>
+<span class="sd">stable id counts these as several. The rules that ask how many genes an identifier names over the releases</span>
+<span class="sd">(decision 73: an entry of :py:data:`idtrack.build.database_manager.ONE_GENE_ONLY` links genes only where it names one</span>
+<span class="sd">gene; decision 74: a label of more genes than an identity can is a family name,</span>
+<span class="sd">:py:attr:`idtrack.TheGraph.label_families`), the rule of bridges (decision 72: an id is evidence of a lineage only</span>
+<span class="sd">where it leaves one gene for another at the same place) and the Y copies of pseudoautosomal genes (decisions 93 and</span>
+<span class="sd">95, :py:meth:`idtrack.TheGraph.y_copies`) read it here, from what the graph holds of Ensembl's own tables (the count</span>
+<span class="sd">of genes at one release, :py:meth:`idtrack.TheGraph.genes_linked_at_once`, counts stable ids; it says why):</span>
+
+<span class="sd">- **places** (:py:meth:`idtrack.TheGraph.places`, from Ensembl's ``gene`` and ``seq_region`` tables): two genes are</span>
+<span class="sd">  at one place when, on one assembly, a place of one shares a base with a place of the other on one sequence region</span>
+<span class="sd">  and one strand (:py:func:`overlap`). Places are compared base by base on the reference sequence; a patch, a</span>
+<span class="sd">  haplotype, an alternative locus or an LRG record lies on a sequence of its own, whose coordinates are not those of</span>
+<span class="sd">  the reference sequence;</span>
+<span class="sd">- **places carried across an assembly change** (:py:meth:`idtrack.TheGraph.carried_places`, decision 103): where</span>
+<span class="sd">  Ensembl publishes a mapping of an earlier assembly onto a later one (its chain files,</span>
+<span class="sd">  :py:mod:`idtrack.build.assembly_chain`), a place on the earlier assembly is carried onto the later one by its aligned</span>
+<span class="sd">  bases at build, and compared there by overlap as places on one assembly are; where Ensembl publishes none (pig</span>
+<span class="sd">  Sscrofa10.2 to Sscrofa11.1, the macaques), places of two assemblies are compared by the names of their sequences</span>
+<span class="sd">  only (below);</span>
+<span class="sd">- **the region a patch or a haplotype stands for** (:py:meth:`idtrack.TheGraph.assembly_exceptions`, Ensembl's</span>
+<span class="sd">  ``assembly_exception`` table of each release): a gene on a patch or a haplotype is a copy of, or an alternative to,</span>
+<span class="sd">  a gene of that region of the reference sequence, so it and a gene whose places share no base with the region (on</span>
+<span class="sd">  either strand) lie apart; inside the region the bases are not compared (the table maps the region, not each base);</span>
+<span class="sd">- **what a sequence is** (:py:attr:`idtrack.graph.types.Place.kind`, from Ensembl's ``coord_system`` and</span>
+<span class="sd">  ``seq_region_attrib`` tables): a chromosome (:py:data:`CHROMOSOME`), the mitochondrial genome</span>
+<span class="sd">  (:py:data:`MITOCHONDRIAL`) or a sequence below them (:py:data:`SCAFFOLD`: a scaffold, a supercontig, a contig). The</span>
+<span class="sd">  assemblies of one organism name its chromosomes alike from one to the next (by its karyotype), and an organism has</span>
+<span class="sd">  one mitochondrial genome; so across assemblies, where no base can be compared, two genes whose places</span>
+<span class="sd">  all lie on such whole sequences, and on no sequence of the same name (the mitochondrial genome compared by its</span>
+<span class="sd">  kind), lie apart. A scaffold's name says nothing of where its bases lie in another assembly;</span>
+<span class="sd">- **outside the reference sequence** (:py:meth:`idtrack.TheGraph.non_reference_releases`, Ensembl's ``non_ref``</span>
+<span class="sd">  attribute of a sequence region): a gene that never lies on the reference sequence is a copy of, or an alternative</span>
+<span class="sd">  to, a gene of the reference sequence, never a gene of its own;</span>
+<span class="sd">- **Ensembl's history** (the stable-id events between two stable ids): an id that Ensembl's history carried to</span>
+<span class="sd">  another id that follows it (no release at which both live) is that gene under another id. Two ids that live at one</span>
+<span class="sd">  release are two genes unless their places overlap at that release, whatever history they share: a split of one id</span>
+<span class="sd">  into two ids that then live side by side is Ensembl saying "two genes";</span>
+<span class="sd">- **a region that repeats another**: a pseudoautosomal region of Y is the same sequence as the region of X it repeats,</span>
+<span class="sd">  so a place in it is read on that region of X (:py:func:`idtrack.organisms.pseudoautosomal_repeats`, GRC's regions,</span>
+<span class="sd">  equal to Ensembl's ``PAR`` assembly exceptions): the Y copy of a pseudoautosomal gene, which Ensembl gives an id of</span>
+<span class="sd">  its own from release 110, lies at its gene's place (decisions 93 and 95).</span>
+
+<span class="sd">The rule of bridges compares two genes by their places only (:py:func:`relation`, the keys of</span>
+<span class="sd">:py:data:`idtrack.results.PLACE_RELATIONS`: the walk follows Ensembl's history itself), over every version of each</span>
+<span class="sd">stable id; the explained path compares the two versions of a history step the same way</span>
+<span class="sd">(:py:attr:`idtrack.results.PathStep.places`). The count of genes (:py:func:`count_genes`) counts what the graph shows</span>
+<span class="sd">apart on one assembly and by the names of whole sequences, and no more: ids that nothing tells apart (holders on two</span>
+<span class="sd">assemblies without a history link and without a comparable place) are not counted as two genes; it does not read the</span>
+<span class="sd">places carried across an assembly change or the regions of the copies, which only :py:func:`relation` compares.</span>
+
+<span class="sd">Copies are not grouped with their own gene of the reference sequence: Ensembl's ``alt_allele`` table says which gene</span>
+<span class="sd">of the reference sequence a copy is an allele of, but the graph does not read it (Ensembl's core databases fill it for</span>
+<span class="sd">human, for mouse at some releases and not at 115, and not for pig or the macaques at 115); a copy therefore adds no</span>
+<span class="sd">gene to any count.</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Collection</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Mapping</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">types</span><span class="w"> </span><span class="kn">import</span> <span class="n">MappingProxyType</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">NamedTuple</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack</span><span class="w"> </span><span class="kn">import</span> <span class="n">ids</span>
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.graph.graph</span><span class="w"> </span><span class="kn">import</span> <span class="n">TheGraph</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.graph.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">Place</span>
+
+<span class="c1">#: A place on the sequence of one assembly: ``(region, start, end, strand)``.</span>
+<span class="n">Segment</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span>
+<span class="c1">#: A region of the sequence of one assembly, on both strands: ``(region, start, end)``.</span>
+<span class="n">Region</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span>
+<span class="c1">#: Ensembl's assembly exceptions of a graph, per assembly and sequence region outside the reference sequence:</span>
+<span class="c1">#: ``{(assembly, region): ((start, end, release mask, reference region, its start, its end, its kind, carried), ...)}``,</span>
+<span class="c1">#: ``carried`` the reference region carried onto later assemblies, ``((assembly, region, start, end), ...)``.</span>
+<span class="n">Exceptions</span> <span class="o">=</span> <span class="n">Mapping</span><span class="p">[</span>
+    <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="o">...</span><span class="p">]],</span> <span class="o">...</span><span class="p">]</span>
+<span class="p">]</span>
+<span class="c1">#: Places carried onto later assemblies: ``(assembly, region, start, end, strand)`` (:py:attr:`GeneFacts.carried`).</span>
+<span class="n">Carried</span> <span class="o">=</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span>
+<span class="c1">#: Per assembly, the regions that repeat another: ``(region, first base, last base, region repeated, its first base)``.</span>
+<span class="n">Repeats</span> <span class="o">=</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="o">...</span><span class="p">]]</span>
+
+<span class="n">_EMPTY</span><span class="p">:</span> <span class="n">Mapping</span> <span class="o">=</span> <span class="n">MappingProxyType</span><span class="p">({})</span>
+
+<span class="c1">#: The kind of a sequence that is a chromosome of the organism: a region of Ensembl's coordinate system ``chromosome``,</span>
+<span class="c1">#: or a region Ensembl ranks in the organism's karyotype (attribute ``karyotype_rank``: the chromosomes of an assembly</span>
+<span class="c1">#: that Ensembl loads with one level of sequences, ``primary_assembly``).</span>
+<span class="n">CHROMOSOME</span> <span class="o">=</span> <span class="s2">"chromosome"</span>
+<span class="c1">#: The kind of the mitochondrial genome: a region that Ensembl translates with an alternate genetic code (attribute</span>
+<span class="c1">#: ``codon_table``; in a vertebrate core database the mitochondrial genome alone).</span>
+<span class="n">MITOCHONDRIAL</span> <span class="o">=</span> <span class="s2">"mitochondrial"</span>
+<span class="c1">#: The kind of every other sequence: a scaffold, a supercontig, a contig (a part of a chromosome, or of none known).</span>
+<span class="n">SCAFFOLD</span> <span class="o">=</span> <span class="s2">"scaffold"</span>
+<span class="c1">#: The kinds of :py:attr:`idtrack.graph.types.Place.kind`.</span>
+<span class="n">PLACE_KINDS</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">CHROMOSOME</span><span class="p">,</span> <span class="n">MITOCHONDRIAL</span><span class="p">,</span> <span class="n">SCAFFOLD</span><span class="p">)</span>
+<span class="c1">#: The kinds of sequences that are whole, and named alike, in every assembly of an organism.</span>
+<span class="n">WHOLE_SEQUENCES</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="n">CHROMOSOME</span><span class="p">,</span> <span class="n">MITOCHONDRIAL</span><span class="p">})</span>
+
+
+<div class="viewcode-block" id="overlap">
+<a class="viewcode-back" href="../../../reference.html#idtrack.graph.genes.overlap">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">overlap</span><span class="p">(</span><span class="n">one</span><span class="p">:</span> <span class="n">Segment</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">Segment</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Tell whether two places on one assembly share a base on one sequence region and one strand.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        one: ``(region, start, end, strand)``, start and end 1-based and inclusive, as Ensembl counts.</span>
+<span class="sd">        other: The same of the other place.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        bool: ``True`` when the regions and strands are the same and the two ranges have a base in common.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">one</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">other</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">and</span> <span class="n">one</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">==</span> <span class="n">other</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="ow">and</span> <span class="n">one</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">other</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="ow">and</span> <span class="n">other</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">one</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="GeneFacts">
+<a class="viewcode-back" href="../../../reference.html#idtrack.graph.genes.GeneFacts">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">GeneFacts</span><span class="p">(</span><span class="n">NamedTuple</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Where a gene lies and when it lives, as far as :py:mod:`idtrack.graph.genes` compares genes.</span>
+
+<span class="sd">    The fields: ``reference``, its places on the reference sequence by assembly (``{assembly: (segment, ...)}``, every</span>
+<span class="sd">    version together); ``outside``, whether it lies outside the reference sequence at some release; ``placed``,</span>
+<span class="sd">    whether the graph holds any place of it (a graph made in memory holds none); ``spans``, every place on the</span>
+<span class="sd">    reference sequence with the releases at which it is there (``(assembly, segment, release mask)``); ``alive``, the</span>
+<span class="sd">    releases at which it lives (a bit mask; 0 when the graph does not say); ``outside_at``, the releases at which it</span>
+<span class="sd">    lies outside the reference sequence; ``sequences``, the names of the sequences of its places on the reference</span>
+<span class="sd">    sequence when every one of them is a whole sequence (:py:data:`WHOLE_SEQUENCES`; the mitochondrial genome named by</span>
+<span class="sd">    its kind), else ``None``; ``carried``, its places on the reference sequence carried onto later assemblies by</span>
+<span class="sd">    Ensembl's mapping of the assemblies (``{assembly: (segment, ...)}``); ``regions``, the regions of the reference</span>
+<span class="sd">    sequence that its places outside it stand for (Ensembl's assembly exceptions), on their own assembly and carried</span>
+<span class="sd">    onto later ones (``{assembly: ((region, first base, last base), ...)}``, on both strands); ``region_sequences``,</span>
+<span class="sd">    the names of the sequences of those regions on their own assembly when every one is a whole sequence, else</span>
+<span class="sd">    ``None``.</span>
+<span class="sd">    """</span>
+
+    <span class="n">reference</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Segment</span><span class="p">,</span> <span class="o">...</span><span class="p">]]</span>
+    <span class="n">outside</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">placed</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">spans</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Segment</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
+    <span class="n">alive</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">outside_at</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">sequences</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">carried</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Segment</span><span class="p">,</span> <span class="o">...</span><span class="p">]]</span> <span class="o">=</span> <span class="n">_EMPTY</span>
+    <span class="n">regions</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Region</span><span class="p">,</span> <span class="o">...</span><span class="p">]]</span> <span class="o">=</span> <span class="n">_EMPTY</span>
+    <span class="n">region_sequences</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Whether the gene lies only outside the reference sequence (a copy, never a gene of its own)."""</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">outside</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">reference</span></div>
+
+
+
+<span class="c1">#: The facts of a gene of which the graph holds nothing (a graph made in memory).</span>
+<span class="n">NO_FACTS</span> <span class="o">=</span> <span class="n">GeneFacts</span><span class="p">({},</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_sequence_name</span><span class="p">(</span><span class="n">region</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the name a whole sequence is compared by across assemblies: its name, the mitochondrial genome its kind."""</span>
+    <span class="k">return</span> <span class="n">MITOCHONDRIAL</span> <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="n">MITOCHONDRIAL</span> <span class="k">else</span> <span class="n">region</span>
+
+
+<div class="viewcode-block" id="facts_of">
+<a class="viewcode-back" href="../../../reference.html#idtrack.graph.genes.facts_of">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">facts_of</span><span class="p">(</span>
+    <span class="n">places</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">tuple</span><span class="p">],</span>
+    <span class="n">outside</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">repeats</span><span class="p">:</span> <span class="n">Repeats</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">alive</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">carried</span><span class="p">:</span> <span class="n">Carried</span> <span class="o">=</span> <span class="p">(),</span>
+    <span class="n">exceptions</span><span class="p">:</span> <span class="n">Exceptions</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GeneFacts</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the facts of one gene version from its places.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        places: ``(assembly, region, start, end, strand, release mask)`` of every place of the version, optionally</span>
+<span class="sd">            followed by the kind of the region (:py:data:`PLACE_KINDS`; :py:data:`SCAFFOLD` when not given).</span>
+<span class="sd">        outside: The bit mask of the releases at which the version lies outside the reference sequence.</span>
+<span class="sd">        repeats: The regions that repeat another, per assembly (:py:data:`Repeats`); a place that lies in one is read</span>
+<span class="sd">            on the region it repeats.</span>
+<span class="sd">        alive: The bit mask of the releases at which the version lives; by default the releases of its places.</span>
+<span class="sd">        carried: Its places on the reference sequence carried onto later assemblies by Ensembl's mapping</span>
+<span class="sd">            (:py:data:`Carried`, :py:meth:`idtrack.TheGraph.carried_places`).</span>
+<span class="sd">        exceptions: Ensembl's assembly exceptions (:py:data:`Exceptions`, :py:meth:`idtrack.TheGraph.assembly_exceptions`):</span>
+<span class="sd">            a place outside the reference sequence on a region they list, at a release they list it, stands for</span>
+<span class="sd">            the reference region they give.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        GeneFacts: Its places at releases at which it lies on the reference sequence, by assembly.</span>
+<span class="sd">    """</span>
+    <span class="n">reference</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">set</span><span class="p">[</span><span class="n">Segment</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">spans</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Segment</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="n">names</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="n">regions</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">set</span><span class="p">[</span><span class="n">Region</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">region_names</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="n">whole_regions</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">whole</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">placed</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">lives</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">place</span> <span class="ow">in</span> <span class="n">places</span><span class="p">:</span>
+        <span class="n">assembly</span><span class="p">,</span> <span class="n">region</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">strand</span><span class="p">,</span> <span class="n">releases</span> <span class="o">=</span> <span class="n">place</span><span class="p">[:</span><span class="mi">6</span><span class="p">]</span>
+        <span class="n">kind</span> <span class="o">=</span> <span class="n">place</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">place</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">6</span> <span class="k">else</span> <span class="n">SCAFFOLD</span>
+        <span class="n">placed</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">lives</span> <span class="o">|=</span> <span class="nb">int</span><span class="p">(</span><span class="n">releases</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">releases</span><span class="p">)</span> <span class="o">&amp;</span> <span class="nb">int</span><span class="p">(</span><span class="n">outside</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">first</span><span class="p">,</span> <span class="n">last</span><span class="p">,</span> <span class="n">mask</span><span class="p">,</span> <span class="n">ref</span><span class="p">,</span> <span class="n">ref_start</span><span class="p">,</span> <span class="n">ref_end</span><span class="p">,</span> <span class="n">ref_kind</span><span class="p">,</span> <span class="n">onto</span> <span class="ow">in</span> <span class="p">(</span><span class="n">exceptions</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+                <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">assembly</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">region</span><span class="p">)),</span> <span class="p">()</span>
+            <span class="p">):</span>
+                <span class="k">if</span> <span class="n">mask</span> <span class="o">&amp;</span> <span class="nb">int</span><span class="p">(</span><span class="n">releases</span><span class="p">)</span> <span class="ow">and</span> <span class="n">first</span> <span class="o">&lt;=</span> <span class="nb">int</span><span class="p">(</span><span class="n">end</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">int</span><span class="p">(</span><span class="n">start</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">last</span><span class="p">:</span>
+                    <span class="n">regions</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">assembly</span><span class="p">),</span> <span class="nb">set</span><span class="p">())</span><span class="o">.</span><span class="n">add</span><span class="p">((</span><span class="n">ref</span><span class="p">,</span> <span class="n">ref_start</span><span class="p">,</span> <span class="n">ref_end</span><span class="p">))</span>
+                    <span class="k">for</span> <span class="n">later</span><span class="p">,</span> <span class="n">onto_region</span><span class="p">,</span> <span class="n">onto_start</span><span class="p">,</span> <span class="n">onto_end</span> <span class="ow">in</span> <span class="n">onto</span><span class="p">:</span>
+                        <span class="n">regions</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">later</span><span class="p">),</span> <span class="nb">set</span><span class="p">())</span><span class="o">.</span><span class="n">add</span><span class="p">((</span><span class="n">onto_region</span><span class="p">,</span> <span class="n">onto_start</span><span class="p">,</span> <span class="n">onto_end</span><span class="p">))</span>
+                    <span class="n">whole_regions</span> <span class="o">=</span> <span class="n">whole_regions</span> <span class="ow">and</span> <span class="n">ref_kind</span> <span class="ow">in</span> <span class="n">WHOLE_SEQUENCES</span>
+                    <span class="n">region_names</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">_sequence_name</span><span class="p">(</span><span class="n">ref</span><span class="p">,</span> <span class="n">ref_kind</span><span class="p">))</span>
+            <span class="k">continue</span>
+        <span class="n">segment</span> <span class="o">=</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">region</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">start</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">end</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">strand</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">repeating</span><span class="p">,</span> <span class="n">first</span><span class="p">,</span> <span class="n">last</span><span class="p">,</span> <span class="n">repeated</span><span class="p">,</span> <span class="n">there</span> <span class="ow">in</span> <span class="p">(</span><span class="n">repeats</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">assembly</span><span class="p">),</span> <span class="p">()):</span>
+            <span class="k">if</span> <span class="n">region</span> <span class="o">==</span> <span class="n">repeating</span> <span class="ow">and</span> <span class="n">first</span> <span class="o">&lt;=</span> <span class="n">start</span> <span class="ow">and</span> <span class="n">end</span> <span class="o">&lt;=</span> <span class="n">last</span><span class="p">:</span>
+                <span class="n">segment</span> <span class="o">=</span> <span class="p">(</span><span class="n">repeated</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">start</span><span class="p">)</span> <span class="o">-</span> <span class="n">first</span> <span class="o">+</span> <span class="n">there</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">end</span><span class="p">)</span> <span class="o">-</span> <span class="n">first</span> <span class="o">+</span> <span class="n">there</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">strand</span><span class="p">))</span>
+        <span class="n">reference</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">assembly</span><span class="p">),</span> <span class="nb">set</span><span class="p">())</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">segment</span><span class="p">)</span>
+        <span class="n">spans</span><span class="o">.</span><span class="n">add</span><span class="p">((</span><span class="nb">int</span><span class="p">(</span><span class="n">assembly</span><span class="p">),</span> <span class="n">segment</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">releases</span><span class="p">)))</span>
+        <span class="n">whole</span> <span class="o">=</span> <span class="n">whole</span> <span class="ow">and</span> <span class="n">kind</span> <span class="ow">in</span> <span class="n">WHOLE_SEQUENCES</span>
+        <span class="n">names</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">_sequence_name</span><span class="p">(</span><span class="n">segment</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">kind</span><span class="p">))</span>
+    <span class="n">moved</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">set</span><span class="p">[</span><span class="n">Segment</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">assembly</span><span class="p">,</span> <span class="n">region</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">strand</span> <span class="ow">in</span> <span class="n">carried</span><span class="p">:</span>
+        <span class="n">moved</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">assembly</span><span class="p">),</span> <span class="nb">set</span><span class="p">())</span><span class="o">.</span><span class="n">add</span><span class="p">((</span><span class="nb">str</span><span class="p">(</span><span class="n">region</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">start</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">end</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">strand</span><span class="p">)))</span>
+    <span class="k">return</span> <span class="n">GeneFacts</span><span class="p">(</span>
+        <span class="p">{</span><span class="n">a</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">s</span><span class="p">))</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">reference</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span>
+        <span class="nb">bool</span><span class="p">(</span><span class="n">outside</span><span class="p">),</span>
+        <span class="n">placed</span><span class="p">,</span>
+        <span class="nb">tuple</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">spans</span><span class="p">)),</span>
+        <span class="n">lives</span> <span class="k">if</span> <span class="n">alive</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">int</span><span class="p">(</span><span class="n">alive</span><span class="p">),</span>
+        <span class="nb">int</span><span class="p">(</span><span class="n">outside</span><span class="p">),</span>
+        <span class="nb">frozenset</span><span class="p">(</span><span class="n">names</span><span class="p">)</span> <span class="k">if</span> <span class="n">names</span> <span class="ow">and</span> <span class="n">whole</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">{</span><span class="n">a</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">s</span><span class="p">))</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">moved</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span>
+        <span class="p">{</span><span class="n">a</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">s</span><span class="p">))</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">regions</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span>
+        <span class="nb">frozenset</span><span class="p">(</span><span class="n">region_names</span><span class="p">)</span> <span class="k">if</span> <span class="n">region_names</span> <span class="ow">and</span> <span class="n">whole_regions</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="facts_of_places">
+<a class="viewcode-back" href="../../../reference.html#idtrack.graph.genes.facts_of_places">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">facts_of_places</span><span class="p">(</span>
+    <span class="n">places</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Place</span><span class="p">],</span>
+    <span class="n">outside</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">repeats</span><span class="p">:</span> <span class="n">Repeats</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">alive</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">carried</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Place</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span>
+    <span class="n">exceptions</span><span class="p">:</span> <span class="n">Exceptions</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GeneFacts</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the facts of one gene version from its places as the graph gives them (:py:meth:`idtrack.TheGraph.places`).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        places: The places of the version.</span>
+<span class="sd">        outside: The bit mask of the releases at which the version lies outside the reference sequence.</span>
+<span class="sd">        repeats: The regions that repeat another, per assembly (:py:data:`Repeats`).</span>
+<span class="sd">        alive: The bit mask of the releases at which the version lives; by default the releases of its places.</span>
+<span class="sd">        carried: Its places carried onto later assemblies (:py:meth:`idtrack.TheGraph.carried_places`).</span>
+<span class="sd">        exceptions: Ensembl's assembly exceptions of the graph (:py:attr:`idtrack.TheGraph.exception_regions`).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        GeneFacts: Its facts (:py:func:`facts_of`).</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">facts_of</span><span class="p">(</span>
+        <span class="p">((</span><span class="n">p</span><span class="o">.</span><span class="n">assembly</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">region</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">start</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">end</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">strand</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">releases</span><span class="o">.</span><span class="n">mask</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">kind</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">places</span><span class="p">),</span>
+        <span class="n">outside</span><span class="p">,</span>
+        <span class="n">repeats</span><span class="p">,</span>
+        <span class="n">alive</span><span class="p">,</span>
+        <span class="p">((</span><span class="n">p</span><span class="o">.</span><span class="n">assembly</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">region</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">start</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">end</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">strand</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">carried</span><span class="p">),</span>
+        <span class="n">exceptions</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="merged">
+<a class="viewcode-back" href="../../../reference.html#idtrack.graph.genes.merged">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">merged</span><span class="p">(</span><span class="n">facts</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">GeneFacts</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">GeneFacts</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the facts of a stable id from those of its versions.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        facts: The facts of every version.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        GeneFacts: Every version's places on the reference sequence together; outside or placed when one version is;</span>
+<span class="sd">        the releases at which a version lives or lies outside, together; the whole sequences when every version's are.</span>
+<span class="sd">    """</span>
+    <span class="n">reference</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">set</span><span class="p">[</span><span class="n">Segment</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">carried</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">set</span><span class="p">[</span><span class="n">Segment</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">regions</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">set</span><span class="p">[</span><span class="n">Region</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">spans</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Segment</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="n">names</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="n">region_names</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="n">whole</span> <span class="o">=</span> <span class="n">whole_regions</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">outside</span> <span class="o">=</span> <span class="n">placed</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">alive</span> <span class="o">=</span> <span class="n">outside_at</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">one</span> <span class="ow">in</span> <span class="n">facts</span><span class="p">:</span>
+        <span class="n">outside</span> <span class="o">=</span> <span class="n">outside</span> <span class="ow">or</span> <span class="n">one</span><span class="o">.</span><span class="n">outside</span>
+        <span class="n">placed</span> <span class="o">=</span> <span class="n">placed</span> <span class="ow">or</span> <span class="n">one</span><span class="o">.</span><span class="n">placed</span>
+        <span class="n">alive</span> <span class="o">|=</span> <span class="n">one</span><span class="o">.</span><span class="n">alive</span>
+        <span class="n">outside_at</span> <span class="o">|=</span> <span class="n">one</span><span class="o">.</span><span class="n">outside_at</span>
+        <span class="n">spans</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">one</span><span class="o">.</span><span class="n">spans</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">assembly</span><span class="p">,</span> <span class="n">segments</span> <span class="ow">in</span> <span class="n">one</span><span class="o">.</span><span class="n">reference</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">reference</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">assembly</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">segments</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">assembly</span><span class="p">,</span> <span class="n">segments</span> <span class="ow">in</span> <span class="n">one</span><span class="o">.</span><span class="n">carried</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">carried</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">assembly</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">segments</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">assembly</span><span class="p">,</span> <span class="n">found</span> <span class="ow">in</span> <span class="n">one</span><span class="o">.</span><span class="n">regions</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">regions</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">assembly</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">found</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">one</span><span class="o">.</span><span class="n">reference</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">one</span><span class="o">.</span><span class="n">sequences</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">whole</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">names</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">one</span><span class="o">.</span><span class="n">sequences</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">one</span><span class="o">.</span><span class="n">regions</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">one</span><span class="o">.</span><span class="n">region_sequences</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">whole_regions</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">region_names</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">one</span><span class="o">.</span><span class="n">region_sequences</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">GeneFacts</span><span class="p">(</span>
+        <span class="p">{</span><span class="n">a</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">s</span><span class="p">))</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">reference</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span>
+        <span class="n">outside</span><span class="p">,</span>
+        <span class="n">placed</span><span class="p">,</span>
+        <span class="nb">tuple</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">spans</span><span class="p">)),</span>
+        <span class="n">alive</span><span class="p">,</span>
+        <span class="n">outside_at</span><span class="p">,</span>
+        <span class="nb">frozenset</span><span class="p">(</span><span class="n">names</span><span class="p">)</span> <span class="k">if</span> <span class="n">names</span> <span class="ow">and</span> <span class="n">whole</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">{</span><span class="n">a</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">s</span><span class="p">))</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">carried</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span>
+        <span class="p">{</span><span class="n">a</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">s</span><span class="p">))</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">regions</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span>
+        <span class="nb">frozenset</span><span class="p">(</span><span class="n">region_names</span><span class="p">)</span> <span class="k">if</span> <span class="n">region_names</span> <span class="ow">and</span> <span class="n">whole_regions</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="facts_by_stable_id">
+<a class="viewcode-back" href="../../../reference.html#idtrack.graph.genes.facts_by_stable_id">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">facts_by_stable_id</span><span class="p">(</span>
+    <span class="n">places</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">tuple</span><span class="p">]],</span>
+    <span class="n">outside</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span>
+    <span class="n">history</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]],</span>
+    <span class="n">repeats</span><span class="p">:</span> <span class="n">Repeats</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">alive_of</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">unplaced</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span>
+    <span class="n">carried</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Carried</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">exceptions</span><span class="p">:</span> <span class="n">Exceptions</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">GeneFacts</span><span class="p">],</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]:</span>
+<span class="w">    </span><span class="sd">"""Return the facts of every gene by stable id and the stable ids Ensembl's history joins (:py:func:`count_genes`).</span>
+
+<span class="sd">    The one place where the facts of the one rule are assembled: the builder calls it with what it collected</span>
+<span class="sd">    (:py:func:`idtrack.build.builder._gene_counter`), a graph with what it holds (:py:meth:`idtrack.TheGraph.count_genes`).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        places: ``{gene version: (assembly, region, start, end, strand, release mask, kind), ...}``; a version lives at</span>
+<span class="sd">            the releases of its places.</span>
+<span class="sd">        outside: ``{gene version: release mask}`` of the versions outside the reference sequence.</span>
+<span class="sd">        history: ``(gene version, gene version)`` of every step of Ensembl's history between two versions.</span>
+<span class="sd">        repeats: The regions that repeat another, per assembly (:py:data:`Repeats`).</span>
+<span class="sd">        alive_of: The releases at which a version that holds no place lives (a mask); ``None``: at none.</span>
+<span class="sd">        unplaced: The gene versions that hold no place (a graph made in memory; a built graph places every version).</span>
+<span class="sd">        carried: ``{gene version: carried places}`` (:py:data:`Carried`).</span>
+<span class="sd">        exceptions: Ensembl's assembly exceptions (:py:data:`Exceptions`).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple: ``{stable id: facts}`` (every version of the id together, :py:func:`merged`) and ``{stable id: the</span>
+<span class="sd">        stable ids Ensembl's history joins to it}``.</span>
+<span class="sd">    """</span>
+    <span class="n">versions</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">GeneFacts</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">version</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">places</span><span class="p">)</span> <span class="o">|</span> <span class="nb">set</span><span class="p">(</span><span class="n">outside</span><span class="p">)</span> <span class="o">|</span> <span class="nb">set</span><span class="p">(</span><span class="n">unplaced</span><span class="p">):</span>
+        <span class="n">held</span> <span class="o">=</span> <span class="n">places</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">version</span><span class="p">,</span> <span class="p">())</span>
+        <span class="n">alive</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">version</span> <span class="ow">in</span> <span class="n">places</span> <span class="ow">or</span> <span class="n">alive_of</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">alive_of</span><span class="p">(</span><span class="n">version</span><span class="p">)</span>
+        <span class="n">versions</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">_stable_id_of</span><span class="p">(</span><span class="n">version</span><span class="p">),</span> <span class="p">[])</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">facts_of</span><span class="p">(</span><span class="n">held</span><span class="p">,</span> <span class="n">outside</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">version</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">repeats</span><span class="p">,</span> <span class="n">alive</span><span class="p">,</span> <span class="p">(</span><span class="n">carried</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">version</span><span class="p">,</span> <span class="p">()),</span> <span class="n">exceptions</span><span class="p">)</span>
+        <span class="p">)</span>
+    <span class="n">facts</span> <span class="o">=</span> <span class="p">{</span><span class="n">stable_id</span><span class="p">:</span> <span class="n">merged</span><span class="p">(</span><span class="n">found</span><span class="p">)</span> <span class="k">for</span> <span class="n">stable_id</span><span class="p">,</span> <span class="n">found</span> <span class="ow">in</span> <span class="n">versions</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+    <span class="n">joined</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">one</span><span class="p">,</span> <span class="n">other</span> <span class="ow">in</span> <span class="n">history</span><span class="p">:</span>
+        <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="o">=</span> <span class="n">_stable_id_of</span><span class="p">(</span><span class="n">one</span><span class="p">),</span> <span class="n">_stable_id_of</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">a</span> <span class="o">!=</span> <span class="n">b</span><span class="p">:</span>
+            <span class="n">joined</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+            <span class="n">joined</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">facts</span><span class="p">,</span> <span class="p">{</span><span class="n">stable_id</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">found</span><span class="p">)</span> <span class="k">for</span> <span class="n">stable_id</span><span class="p">,</span> <span class="n">found</span> <span class="ow">in</span> <span class="n">joined</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_stable_id_of</span><span class="p">(</span><span class="n">version</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the stable id of a gene version ``&lt;id&gt;.&lt;version&gt;`` (a name without a version is its own)."""</span>
+    <span class="k">return</span> <span class="n">ids</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">version</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">ids</span><span class="o">.</span><span class="n">is_versioned_name</span><span class="p">(</span><span class="n">version</span><span class="p">)</span> <span class="k">else</span> <span class="n">version</span>
+
+
+<div class="viewcode-block" id="facts_of_nodes">
+<a class="viewcode-back" href="../../../reference.html#idtrack.graph.genes.facts_of_nodes">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">facts_of_nodes</span><span class="p">(</span><span class="n">graph</span><span class="p">:</span> <span class="n">TheGraph</span><span class="p">,</span> <span class="n">nodes</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">GeneFacts</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the facts of a gene from the graph: the places and marks of the given versions together.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        graph: The graph.</span>
+<span class="sd">        nodes: Gene versions (backbone nodes): one version, or every version of a stable id.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        GeneFacts: Their places on the reference sequence by assembly (:py:meth:`idtrack.TheGraph.places`), whether one</span>
+<span class="sd">        lies outside the reference sequence at some release (:py:meth:`idtrack.TheGraph.non_reference_releases`),</span>
+<span class="sd">        whether the graph holds any place of them, their places carried onto later assemblies</span>
+<span class="sd">        (:py:meth:`idtrack.TheGraph.carried_places`) and the reference regions their copies stand for</span>
+<span class="sd">        (:py:attr:`idtrack.TheGraph.exception_regions`).</span>
+<span class="sd">    """</span>
+    <span class="n">exceptions</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">exception_regions</span>
+    <span class="k">return</span> <span class="n">merged</span><span class="p">(</span>
+        <span class="n">facts_of_places</span><span class="p">(</span>
+            <span class="n">graph</span><span class="o">.</span><span class="n">places</span><span class="p">(</span><span class="n">node</span><span class="p">),</span>
+            <span class="n">graph</span><span class="o">.</span><span class="n">non_reference_releases</span><span class="p">(</span><span class="n">node</span><span class="p">)</span><span class="o">.</span><span class="n">mask</span><span class="p">,</span>
+            <span class="n">graph</span><span class="o">.</span><span class="n">repeated_regions</span><span class="p">,</span>
+            <span class="n">carried</span><span class="o">=</span><span class="n">graph</span><span class="o">.</span><span class="n">carried_places</span><span class="p">(</span><span class="n">node</span><span class="p">),</span>
+            <span class="n">exceptions</span><span class="o">=</span><span class="n">exceptions</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="place_kinds">
+<a class="viewcode-back" href="../../../reference.html#idtrack.graph.genes.place_kinds">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">place_kinds</span><span class="p">(</span><span class="n">graph</span><span class="p">:</span> <span class="n">TheGraph</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">release</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return the kinds of the places of a gene version at a release.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        graph: The graph.</span>
+<span class="sd">        node: A gene version (a backbone node).</span>
+<span class="sd">        release: The release.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        set[str]: The kinds (:py:data:`PLACE_KINDS`) of the places that hold the release; empty for a version without a</span>
+<span class="sd">        place there and for a graph that holds no places.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="p">{</span><span class="n">place</span><span class="o">.</span><span class="n">kind</span> <span class="k">for</span> <span class="n">place</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">places</span><span class="p">(</span><span class="n">node</span><span class="p">)</span> <span class="k">if</span> <span class="n">release</span> <span class="ow">in</span> <span class="n">place</span><span class="o">.</span><span class="n">releases</span><span class="p">}</span></div>
+
+
+
+<div class="viewcode-block" id="joins_mitochondrial_and_nuclear">
+<a class="viewcode-back" href="../../../reference.html#idtrack.graph.genes.joins_mitochondrial_and_nuclear">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">joins_mitochondrial_and_nuclear</span><span class="p">(</span>
+    <span class="n">graph</span><span class="p">:</span> <span class="n">TheGraph</span><span class="p">,</span> <span class="n">older</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">old_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">newer</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">new_release</span><span class="p">:</span> <span class="nb">int</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Tell whether a history step joins a gene of the mitochondrial genome and a gene of a nuclear sequence (decision 91).</span>
+
+<span class="sd">    One version lies on the mitochondrial genome at its side of the event, the other has a place at its side and none</span>
+<span class="sd">    on the mitochondrial genome (a chromosome or a scaffold: the kind says it is nuclear, whatever the relation of the</span>
+<span class="sd">    two places across an assembly change). A version without a place there is no evidence either way.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        graph: The graph.</span>
+<span class="sd">        older: The version on the old side of the event.</span>
+<span class="sd">        old_release: The last release of the old side.</span>
+<span class="sd">        newer: The version on the new side.</span>
+<span class="sd">        new_release: The first release of the new side.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        bool: ``True`` when the step joins the two genomes (Ensembl reused a mitochondrial gene's id for a nuclear gene,</span>
+<span class="sd">        or the reverse).</span>
+<span class="sd">    """</span>
+    <span class="n">kinds_older</span> <span class="o">=</span> <span class="n">place_kinds</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">older</span><span class="p">,</span> <span class="n">old_release</span><span class="p">)</span>
+    <span class="n">kinds_newer</span> <span class="o">=</span> <span class="n">place_kinds</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">newer</span><span class="p">,</span> <span class="n">new_release</span><span class="p">)</span>
+    <span class="n">on_older</span><span class="p">,</span> <span class="n">on_newer</span> <span class="o">=</span> <span class="n">MITOCHONDRIAL</span> <span class="ow">in</span> <span class="n">kinds_older</span><span class="p">,</span> <span class="n">MITOCHONDRIAL</span> <span class="ow">in</span> <span class="n">kinds_newer</span>
+    <span class="k">return</span> <span class="n">on_older</span> <span class="o">!=</span> <span class="n">on_newer</span> <span class="ow">and</span> <span class="nb">bool</span><span class="p">(</span><span class="n">kinds_newer</span> <span class="k">if</span> <span class="n">on_older</span> <span class="k">else</span> <span class="n">kinds_older</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="lies_on_mitochondrial_genome">
+<a class="viewcode-back" href="../../../reference.html#idtrack.graph.genes.lies_on_mitochondrial_genome">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">lies_on_mitochondrial_genome</span><span class="p">(</span><span class="n">graph</span><span class="p">:</span> <span class="n">TheGraph</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">release</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Tell whether a gene version lies on the organism's mitochondrial genome at a release.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        graph: The graph.</span>
+<span class="sd">        node: A gene version (a backbone node).</span>
+<span class="sd">        release: The release.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        bool: ``True`` when a place of the version at that release lies on a region of kind :py:data:`MITOCHONDRIAL`;</span>
+<span class="sd">        ``False`` for a graph that holds no places.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">MITOCHONDRIAL</span> <span class="ow">in</span> <span class="n">place_kinds</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">release</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="same_place">
+<a class="viewcode-back" href="../../../reference.html#idtrack.graph.genes.same_place">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">same_place</span><span class="p">(</span><span class="n">one</span><span class="p">:</span> <span class="n">GeneFacts</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">GeneFacts</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Tell whether two genes lie at one place: a place of each on one assembly's reference sequence overlaps.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        one: The facts of one gene.</span>
+<span class="sd">        other: The facts of the other.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        bool: ``True`` when, on an assembly on whose reference sequence both lie, two of their places overlap</span>
+<span class="sd">        (:py:func:`overlap`).</span>
+<span class="sd">    """</span>
+    <span class="k">for</span> <span class="n">assembly</span> <span class="ow">in</span> <span class="n">one</span><span class="o">.</span><span class="n">reference</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="o">&amp;</span> <span class="n">other</span><span class="o">.</span><span class="n">reference</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">segment</span> <span class="ow">in</span> <span class="n">one</span><span class="o">.</span><span class="n">reference</span><span class="p">[</span><span class="n">assembly</span><span class="p">]:</span>
+            <span class="k">for</span> <span class="n">segment_2</span> <span class="ow">in</span> <span class="n">other</span><span class="o">.</span><span class="n">reference</span><span class="p">[</span><span class="n">assembly</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="n">overlap</span><span class="p">(</span><span class="n">segment</span><span class="p">,</span> <span class="n">segment_2</span><span class="p">):</span>
+                    <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">return</span> <span class="kc">False</span></div>
+
+
+
+<div class="viewcode-block" id="on_other_sequences">
+<a class="viewcode-back" href="../../../reference.html#idtrack.graph.genes.on_other_sequences">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">on_other_sequences</span><span class="p">(</span><span class="n">one</span><span class="p">:</span> <span class="n">GeneFacts</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">GeneFacts</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Tell whether two genes lie on whole sequences of different names (the comparison across assemblies).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        one: The facts of one gene.</span>
+<span class="sd">        other: The facts of the other.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        bool: ``True`` when every place of each on the reference sequence lies on a chromosome or the mitochondrial</span>
+<span class="sd">        genome (:py:attr:`GeneFacts.sequences`) and no sequence of one is a sequence of the other.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">one</span><span class="o">.</span><span class="n">sequences</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">other</span><span class="o">.</span><span class="n">sequences</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">one</span><span class="o">.</span><span class="n">sequences</span> <span class="o">&amp;</span> <span class="n">other</span><span class="o">.</span><span class="n">sequences</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_carried_relation</span><span class="p">(</span><span class="n">one</span><span class="p">:</span> <span class="n">GeneFacts</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">GeneFacts</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Compare a gene's places carried onto another assembly with the other gene's places there (decision 103).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str | None: ``same_place`` when a carried place of one overlaps a place of the other on its assembly,</span>
+<span class="sd">        ``places_apart`` when places were carried onto an assembly of the other and none overlaps, ``None`` when no</span>
+<span class="sd">        place of either was carried onto an assembly on whose reference sequence the other lies.</span>
+<span class="sd">    """</span>
+    <span class="n">compared</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">for</span> <span class="n">mine</span><span class="p">,</span> <span class="n">theirs</span> <span class="ow">in</span> <span class="p">((</span><span class="n">one</span><span class="p">,</span> <span class="n">other</span><span class="p">),</span> <span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">one</span><span class="p">)):</span>
+        <span class="k">for</span> <span class="n">assembly</span> <span class="ow">in</span> <span class="n">mine</span><span class="o">.</span><span class="n">carried</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="o">&amp;</span> <span class="n">theirs</span><span class="o">.</span><span class="n">reference</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">compared</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">overlap</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">mine</span><span class="o">.</span><span class="n">carried</span><span class="p">[</span><span class="n">assembly</span><span class="p">]</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">theirs</span><span class="o">.</span><span class="n">reference</span><span class="p">[</span><span class="n">assembly</span><span class="p">]):</span>
+                <span class="k">return</span> <span class="s2">"same_place"</span>
+    <span class="k">return</span> <span class="s2">"places_apart"</span> <span class="k">if</span> <span class="n">compared</span> <span class="k">else</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_stands</span><span class="p">(</span><span class="n">facts</span><span class="p">:</span> <span class="n">GeneFacts</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">set</span><span class="p">[</span><span class="n">Region</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""Return what a gene's places stand for on each assembly, on both strands: its places and its copies' regions."""</span>
+    <span class="n">found</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">set</span><span class="p">[</span><span class="n">Region</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">table</span> <span class="ow">in</span> <span class="p">(</span><span class="n">facts</span><span class="o">.</span><span class="n">reference</span><span class="p">,</span> <span class="n">facts</span><span class="o">.</span><span class="n">carried</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">assembly</span><span class="p">,</span> <span class="n">segments</span> <span class="ow">in</span> <span class="n">table</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">found</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">assembly</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span><span class="o">.</span><span class="n">update</span><span class="p">((</span><span class="n">s</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">s</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">segments</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">assembly</span><span class="p">,</span> <span class="n">regions</span> <span class="ow">in</span> <span class="n">facts</span><span class="o">.</span><span class="n">regions</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">found</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">assembly</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">regions</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">found</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_regions_relation</span><span class="p">(</span><span class="n">one</span><span class="p">:</span> <span class="n">GeneFacts</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">GeneFacts</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Compare two genes through the reference regions that their copies stand for (Ensembl's assembly exceptions).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str | None: ``places_apart`` when, on an assembly where both stand (a copy by its region, a gene of the</span>
+<span class="sd">        reference sequence by its places, on either strand), nothing of one shares a base with the other, or when one</span>
+<span class="sd">        copy's regions lie on whole sequences of other names than every place of the other (across assemblies);</span>
+<span class="sd">        ``None`` when they share a base (the bases inside a region are not compared) or nothing compares them.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">one</span><span class="o">.</span><span class="n">regions</span> <span class="ow">or</span> <span class="n">other</span><span class="o">.</span><span class="n">regions</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">mine</span><span class="p">,</span> <span class="n">theirs</span> <span class="o">=</span> <span class="n">_stands</span><span class="p">(</span><span class="n">one</span><span class="p">),</span> <span class="n">_stands</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+    <span class="n">common</span> <span class="o">=</span> <span class="n">mine</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="o">&amp;</span> <span class="n">theirs</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">common</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">assembly</span> <span class="ow">in</span> <span class="n">common</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">and</span> <span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">b</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="ow">and</span> <span class="n">b</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">a</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">mine</span><span class="p">[</span><span class="n">assembly</span><span class="p">]</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">theirs</span><span class="p">[</span><span class="n">assembly</span><span class="p">]):</span>
+                <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="s2">"places_apart"</span>
+    <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">region_sequences</span> <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">regions</span> <span class="k">else</span> <span class="n">f</span><span class="o">.</span><span class="n">sequences</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="p">(</span><span class="n">one</span><span class="p">,</span> <span class="n">other</span><span class="p">)]</span>
+    <span class="k">if</span> <span class="n">names</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">names</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">names</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&amp;</span> <span class="n">names</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="s2">"places_apart"</span>
+    <span class="k">return</span> <span class="kc">None</span>
+
+
+<div class="viewcode-block" id="relation">
+<a class="viewcode-back" href="../../../reference.html#idtrack.graph.genes.relation">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">relation</span><span class="p">(</span><span class="n">one</span><span class="p">:</span> <span class="n">GeneFacts</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">GeneFacts</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return where two genes lie relative to each other (a key of :py:data:`idtrack.results.PLACE_RELATIONS`).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        one: The facts of one gene.</span>
+<span class="sd">        other: The facts of the other.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: In this order: ``same_place`` when, on an assembly on whose reference sequence both lie, a place of one</span>
+<span class="sd">        overlaps a place of the other (:py:func:`same_place`); ``places_apart`` when they lie on the reference sequence</span>
+<span class="sd">        of a common assembly and no places overlap there; else, where a place of one was carried onto an assembly on</span>
+<span class="sd">        whose reference sequence the other lies (Ensembl's mapping of the assemblies, decision 103), ``same_place``</span>
+<span class="sd">        when a carried place overlaps a place of the other there and ``places_apart`` when none does; else, where</span>
+<span class="sd">        either lies outside the reference sequence, ``places_apart`` when the reference region a copy stands for</span>
+<span class="sd">        (Ensembl's assembly exception) shares no base with what the other stands for, or lies on whole sequences of</span>
+<span class="sd">        other names, and ``outside_reference`` otherwise; else ``no_place`` when the graph holds no place of either;</span>
+<span class="sd">        else ``places_apart`` when they lie on whole sequences of different names (:py:func:`on_other_sequences`: two</span>
+<span class="sd">        chromosomes, or a chromosome and the mitochondrial genome, which no assembly change turns one into the other);</span>
+<span class="sd">        else ``other_assemblies``.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">one</span><span class="o">.</span><span class="n">reference</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="o">&amp;</span> <span class="n">other</span><span class="o">.</span><span class="n">reference</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="k">return</span> <span class="s2">"same_place"</span> <span class="k">if</span> <span class="n">same_place</span><span class="p">(</span><span class="n">one</span><span class="p">,</span> <span class="n">other</span><span class="p">)</span> <span class="k">else</span> <span class="s2">"places_apart"</span>
+    <span class="n">carried</span> <span class="o">=</span> <span class="n">_carried_relation</span><span class="p">(</span><span class="n">one</span><span class="p">,</span> <span class="n">other</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">carried</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">carried</span>
+    <span class="k">if</span> <span class="n">one</span><span class="o">.</span><span class="n">outside</span> <span class="ow">or</span> <span class="n">other</span><span class="o">.</span><span class="n">outside</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_regions_relation</span><span class="p">(</span><span class="n">one</span><span class="p">,</span> <span class="n">other</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">"outside_reference"</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">one</span><span class="o">.</span><span class="n">placed</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">other</span><span class="o">.</span><span class="n">placed</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">"no_place"</span>
+    <span class="k">if</span> <span class="n">on_other_sequences</span><span class="p">(</span><span class="n">one</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">"places_apart"</span>
+    <span class="k">return</span> <span class="s2">"other_assemblies"</span></div>
+
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_Union</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Components of the members of one frame (union-find)."""</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">members</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="p">{</span><span class="n">member</span><span class="p">:</span> <span class="n">member</span> <span class="k">for</span> <span class="n">member</span> <span class="ow">in</span> <span class="n">members</span><span class="p">}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">root</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">member</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">parent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span>
+        <span class="k">while</span> <span class="n">parent</span><span class="p">[</span><span class="n">member</span><span class="p">]</span> <span class="o">!=</span> <span class="n">member</span><span class="p">:</span>
+            <span class="n">parent</span><span class="p">[</span><span class="n">member</span><span class="p">]</span> <span class="o">=</span> <span class="n">parent</span><span class="p">[</span><span class="n">parent</span><span class="p">[</span><span class="n">member</span><span class="p">]]</span>
+            <span class="n">member</span> <span class="o">=</span> <span class="n">parent</span><span class="p">[</span><span class="n">member</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">member</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">join</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">one</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="p">(</span><span class="n">one</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">a</span> <span class="o">!=</span> <span class="n">b</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">[</span><span class="nb">max</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)]</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">join_overlaps</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">segments</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Join the members whose places overlap: ``(run key, start, end, member)``, one run per region and strand.</span>
+
+<span class="sd">        The components of the overlap graph of each run, by one sweep over the places sorted by start (a place that</span>
+<span class="sd">        starts before the reach of the run overlaps the place that reaches furthest in it).</span>
+<span class="sd">        """</span>
+        <span class="n">run</span><span class="p">:</span> <span class="nb">tuple</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">reach</span><span class="p">,</span> <span class="n">furthest</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">""</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">member</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">segments</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">run</span> <span class="o">==</span> <span class="n">key</span> <span class="ow">and</span> <span class="n">start</span> <span class="o">&lt;=</span> <span class="n">reach</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">member</span><span class="p">,</span> <span class="n">furthest</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">end</span> <span class="o">&gt;</span> <span class="n">reach</span><span class="p">:</span>
+                    <span class="n">reach</span><span class="p">,</span> <span class="n">furthest</span> <span class="o">=</span> <span class="n">end</span><span class="p">,</span> <span class="n">member</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">run</span><span class="p">,</span> <span class="n">reach</span><span class="p">,</span> <span class="n">furthest</span> <span class="o">=</span> <span class="n">key</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">member</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">count</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">({</span><span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="p">(</span><span class="n">member</span><span class="p">)</span> <span class="k">for</span> <span class="n">member</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">})</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_at_release</span><span class="p">(</span><span class="n">members</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">facts</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">GeneFacts</span><span class="p">],</span> <span class="n">release</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return the loci of the ids that live at a release, as ``{id: locus}``: overlapping places there are one locus.</span>
+
+<span class="sd">    An id that lies outside the reference sequence at the release is not among them; an id that lives at the release</span>
+<span class="sd">    without a place there is a locus of its own.</span>
+<span class="sd">    """</span>
+    <span class="n">bit</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="n">release</span>
+    <span class="n">present</span> <span class="o">=</span> <span class="p">[</span><span class="n">member</span> <span class="k">for</span> <span class="n">member</span> <span class="ow">in</span> <span class="n">members</span> <span class="k">if</span> <span class="n">facts</span><span class="p">[</span><span class="n">member</span><span class="p">]</span><span class="o">.</span><span class="n">alive</span> <span class="o">&amp;</span> <span class="n">bit</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">facts</span><span class="p">[</span><span class="n">member</span><span class="p">]</span><span class="o">.</span><span class="n">outside_at</span> <span class="o">&amp;</span> <span class="n">bit</span><span class="p">]</span>
+    <span class="n">union</span> <span class="o">=</span> <span class="n">_Union</span><span class="p">(</span><span class="n">present</span><span class="p">)</span>
+    <span class="n">union</span><span class="o">.</span><span class="n">join_overlaps</span><span class="p">(</span>
+        <span class="p">((</span><span class="n">assembly</span><span class="p">,</span> <span class="n">segment</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">segment</span><span class="p">[</span><span class="mi">3</span><span class="p">]),</span> <span class="n">segment</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">segment</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">member</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">member</span> <span class="ow">in</span> <span class="n">present</span>
+        <span class="k">for</span> <span class="n">assembly</span><span class="p">,</span> <span class="n">segment</span><span class="p">,</span> <span class="n">mask</span> <span class="ow">in</span> <span class="n">facts</span><span class="p">[</span><span class="n">member</span><span class="p">]</span><span class="o">.</span><span class="n">spans</span>
+        <span class="k">if</span> <span class="n">mask</span> <span class="o">&amp;</span> <span class="n">bit</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span><span class="n">member</span><span class="p">:</span> <span class="n">union</span><span class="o">.</span><span class="n">root</span><span class="p">(</span><span class="n">member</span><span class="p">)</span> <span class="k">for</span> <span class="n">member</span> <span class="ow">in</span> <span class="n">present</span><span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_successive</span><span class="p">(</span><span class="n">one</span><span class="p">:</span> <span class="n">GeneFacts</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">GeneFacts</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Tell whether two ids follow one another: no release at which both live (or the graph does not say when)."""</span>
+    <span class="k">return</span> <span class="ow">not</span> <span class="n">one</span><span class="o">.</span><span class="n">alive</span> <span class="o">&amp;</span> <span class="n">other</span><span class="o">.</span><span class="n">alive</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_lineages</span><span class="p">(</span><span class="n">members</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">facts</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">GeneFacts</span><span class="p">],</span> <span class="n">joined</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Collection</span><span class="p">[</span><span class="nb">str</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">_Union</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the lineages of the ids: ids that Ensembl's history carried one to the other where they follow one another."""</span>
+    <span class="n">union</span> <span class="o">=</span> <span class="n">_Union</span><span class="p">(</span><span class="n">members</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">member</span> <span class="ow">in</span> <span class="n">members</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">other</span> <span class="ow">in</span> <span class="n">joined</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">member</span><span class="p">,</span> <span class="p">()):</span>
+            <span class="k">if</span> <span class="n">other</span> <span class="ow">in</span> <span class="n">union</span><span class="o">.</span><span class="n">parent</span> <span class="ow">and</span> <span class="n">_successive</span><span class="p">(</span><span class="n">facts</span><span class="p">[</span><span class="n">member</span><span class="p">],</span> <span class="n">facts</span><span class="p">[</span><span class="n">other</span><span class="p">]):</span>
+                <span class="n">union</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">member</span><span class="p">,</span> <span class="n">other</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">union</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_on_assembly</span><span class="p">(</span><span class="n">members</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">facts</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">GeneFacts</span><span class="p">],</span> <span class="n">lineage</span><span class="p">:</span> <span class="n">_Union</span><span class="p">,</span> <span class="n">assembly</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return the loci of the ids placed on one assembly's reference sequence, over its releases, as ``{id: locus}``.</span>
+
+<span class="sd">    Ids whose places on the assembly overlap are one locus, and so are ids of one lineage (:py:func:`_lineages`).</span>
+<span class="sd">    """</span>
+    <span class="n">present</span> <span class="o">=</span> <span class="p">[</span><span class="n">member</span> <span class="k">for</span> <span class="n">member</span> <span class="ow">in</span> <span class="n">members</span> <span class="k">if</span> <span class="n">assembly</span> <span class="ow">in</span> <span class="n">facts</span><span class="p">[</span><span class="n">member</span><span class="p">]</span><span class="o">.</span><span class="n">reference</span><span class="p">]</span>
+    <span class="n">union</span> <span class="o">=</span> <span class="n">_Union</span><span class="p">(</span><span class="n">present</span><span class="p">)</span>
+    <span class="n">first_of</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">member</span> <span class="ow">in</span> <span class="n">present</span><span class="p">:</span>
+        <span class="n">root</span> <span class="o">=</span> <span class="n">lineage</span><span class="o">.</span><span class="n">root</span><span class="p">(</span><span class="n">member</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">root</span> <span class="ow">in</span> <span class="n">first_of</span><span class="p">:</span>
+            <span class="n">union</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">member</span><span class="p">,</span> <span class="n">first_of</span><span class="p">[</span><span class="n">root</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">first_of</span><span class="p">[</span><span class="n">root</span><span class="p">]</span> <span class="o">=</span> <span class="n">member</span>
+    <span class="n">union</span><span class="o">.</span><span class="n">join_overlaps</span><span class="p">(</span>
+        <span class="p">((</span><span class="n">segment</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">segment</span><span class="p">[</span><span class="mi">3</span><span class="p">]),</span> <span class="n">segment</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">segment</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">member</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">member</span> <span class="ow">in</span> <span class="n">present</span>
+        <span class="k">for</span> <span class="n">segment</span> <span class="ow">in</span> <span class="n">facts</span><span class="p">[</span><span class="n">member</span><span class="p">]</span><span class="o">.</span><span class="n">reference</span><span class="p">[</span><span class="n">assembly</span><span class="p">]</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span><span class="n">member</span><span class="p">:</span> <span class="n">union</span><span class="o">.</span><span class="n">root</span><span class="p">(</span><span class="n">member</span><span class="p">)</span> <span class="k">for</span> <span class="n">member</span> <span class="ow">in</span> <span class="n">present</span><span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_by_sequence</span><span class="p">(</span><span class="n">members</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">facts</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">GeneFacts</span><span class="p">],</span> <span class="n">lineage</span><span class="p">:</span> <span class="n">_Union</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return the groups, across assemblies, of the ids that lie on whole sequences only, as ``{id: group}``.</span>
+
+<span class="sd">    Ids on a sequence of one name (a chromosome, the mitochondrial genome) are one group, and so are ids of one</span>
+<span class="sd">    lineage (:py:func:`_lineages`); an id with a place on a scaffold is not among them.</span>
+<span class="sd">    """</span>
+    <span class="n">present</span> <span class="o">=</span> <span class="p">[</span><span class="n">member</span> <span class="k">for</span> <span class="n">member</span> <span class="ow">in</span> <span class="n">members</span> <span class="k">if</span> <span class="n">facts</span><span class="p">[</span><span class="n">member</span><span class="p">]</span><span class="o">.</span><span class="n">sequences</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
+    <span class="n">union</span> <span class="o">=</span> <span class="n">_Union</span><span class="p">(</span><span class="n">present</span><span class="p">)</span>
+    <span class="n">first_on</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">member</span> <span class="ow">in</span> <span class="n">present</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"lineage:</span><span class="si">{</span><span class="n">lineage</span><span class="o">.</span><span class="n">root</span><span class="p">(</span><span class="n">member</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+            <span class="o">*</span><span class="p">(</span><span class="sa">f</span><span class="s2">"sequence:</span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">facts</span><span class="p">[</span><span class="n">member</span><span class="p">]</span><span class="o">.</span><span class="n">sequences</span> <span class="ow">or</span> <span class="p">())),</span>
+        <span class="p">):</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">first_on</span><span class="p">:</span>
+                <span class="n">union</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">member</span><span class="p">,</span> <span class="n">first_on</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">first_on</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">member</span>
+    <span class="k">return</span> <span class="p">{</span><span class="n">member</span><span class="p">:</span> <span class="n">union</span><span class="o">.</span><span class="n">root</span><span class="p">(</span><span class="n">member</span><span class="p">)</span> <span class="k">for</span> <span class="n">member</span> <span class="ow">in</span> <span class="n">present</span><span class="p">}</span>
+
+
+<div class="viewcode-block" id="count_genes">
+<a class="viewcode-back" href="../../../reference.html#idtrack.graph.genes.count_genes">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">count_genes</span><span class="p">(</span>
+    <span class="n">stable_ids</span><span class="p">:</span> <span class="n">Collection</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">facts</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">GeneFacts</span><span class="p">],</span>
+    <span class="n">joined</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Collection</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
+    <span class="n">release</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return how many genes some stable ids name: the size of a set of them that the graph tells pairwise apart.</span>
+
+<span class="sd">    A copy (:py:attr:`GeneFacts.copy`: it lies only outside the reference sequence) adds no gene: it stands for a gene</span>
+<span class="sd">    of the reference sequence; copies alone stand for one gene. The other ids are compared in each frame in which the</span>
+<span class="sd">    graph can tell loci apart:</span>
+
+<span class="sd">    - **one release**: the ids that live at it and lie on the reference sequence there; ids whose places at that release</span>
+<span class="sd">      overlap (one region, one strand; a chain of overlaps among the ids counted) are one locus, every other id is a</span>
+<span class="sd">      locus of its own (two ids that live at once are two genes unless their places overlap, whatever history they</span>
+<span class="sd">      share: a split of one id into two that then live side by side is two genes);</span>
+<span class="sd">    - **one assembly**: the ids placed on its reference sequence, over its releases; ids whose places overlap are one</span>
+<span class="sd">      locus, and so are ids of one lineage (Ensembl's history carried one to the other where they follow one another,</span>
+<span class="sd">      no release at which both live); a later id at another place without a history link is another locus;</span>
+<span class="sd">    - **the names of whole sequences across assemblies**: the ids all of whose places lie on chromosomes or the</span>
+<span class="sd">      mitochondrial genome; ids on a sequence of one name, or of one lineage, are one group (a gene of chromosome 15 in</span>
+<span class="sd">      one assembly and a gene of chromosome 6 in the next are two).</span>
+
+<span class="sd">    Two ids are told apart when a frame that holds both puts them at two loci. The count is the size of a set of ids</span>
+<span class="sd">    that are pairwise told apart, built from the frame that shows the most loci (one id of each of its loci, the first</span>
+<span class="sd">    by id) and extended, in the order of the ids, by every other id told apart from each id of the set so far, the</span>
+<span class="sd">    other ids of that frame among them (a gene of chromosome 1 of the next assembly beside five genes that live apart</span>
+<span class="sd">    on other chromosomes at once is a sixth gene; two genes at one place at one release that lie apart at the next are</span>
+<span class="sd">    two). The set is built in this order, not searched for the largest, so the count is a lower bound of the most ids</span>
+<span class="sd">    told pairwise apart. Ids that nothing tells apart are one gene:</span>
+<span class="sd">    holders on two assemblies without a history link and without a comparable place, or ids of which the graph holds</span>
+<span class="sd">    neither a place nor the releases at which they live, are not evidence of two loci.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        stable_ids: The stable gene ids (without version).</span>
+<span class="sd">        facts: ``{stable id: facts}``; an id missing here has :py:data:`NO_FACTS`.</span>
+<span class="sd">        joined: ``{stable id: stable ids}`` that Ensembl's history carried it to or from; an id missing here has none.</span>
+<span class="sd">        release: Count at this release only (the frame of one release; an id that does not live at it adds none).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        int: The number of genes; 0 for no id, at least 1 for some.</span>
+<span class="sd">    """</span>
+    <span class="n">given</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">stable_ids</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">given</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">0</span>
+    <span class="n">known</span> <span class="o">=</span> <span class="p">{</span><span class="n">member</span><span class="p">:</span> <span class="n">facts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">member</span><span class="p">,</span> <span class="n">NO_FACTS</span><span class="p">)</span> <span class="k">for</span> <span class="n">member</span> <span class="ow">in</span> <span class="n">given</span><span class="p">}</span>
+    <span class="n">members</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">member</span> <span class="k">for</span> <span class="n">member</span> <span class="ow">in</span> <span class="n">given</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">known</span><span class="p">[</span><span class="n">member</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">members</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">1</span>
+    <span class="k">if</span> <span class="n">release</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">_at_release</span><span class="p">(</span><span class="n">members</span><span class="p">,</span> <span class="n">known</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">release</span><span class="p">))</span><span class="o">.</span><span class="n">values</span><span class="p">())))</span>
+    <span class="n">lineage</span> <span class="o">=</span> <span class="n">_lineages</span><span class="p">(</span><span class="n">members</span><span class="p">,</span> <span class="n">known</span><span class="p">,</span> <span class="n">joined</span><span class="p">)</span>
+    <span class="n">frames</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">seen</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">frozenset</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">add</span><span class="p">(</span><span class="n">frame</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">signature</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">frame</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">signature</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">seen</span><span class="p">:</span>
+            <span class="n">seen</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">signature</span><span class="p">)</span>
+            <span class="n">frames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">frame</span><span class="p">)</span>
+
+    <span class="n">lives</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">assemblies</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">member</span> <span class="ow">in</span> <span class="n">members</span><span class="p">:</span>
+        <span class="n">lives</span> <span class="o">|=</span> <span class="n">known</span><span class="p">[</span><span class="n">member</span><span class="p">]</span><span class="o">.</span><span class="n">alive</span>
+        <span class="n">assemblies</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">known</span><span class="p">[</span><span class="n">member</span><span class="p">]</span><span class="o">.</span><span class="n">reference</span><span class="p">)</span>
+    <span class="n">release_now</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">while</span> <span class="n">lives</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">lives</span> <span class="o">&amp;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">add</span><span class="p">(</span><span class="n">_at_release</span><span class="p">(</span><span class="n">members</span><span class="p">,</span> <span class="n">known</span><span class="p">,</span> <span class="n">release_now</span><span class="p">))</span>
+        <span class="n">lives</span> <span class="o">&gt;&gt;=</span> <span class="mi">1</span>
+        <span class="n">release_now</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">for</span> <span class="n">assembly</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">assemblies</span><span class="p">):</span>
+        <span class="n">add</span><span class="p">(</span><span class="n">_on_assembly</span><span class="p">(</span><span class="n">members</span><span class="p">,</span> <span class="n">known</span><span class="p">,</span> <span class="n">lineage</span><span class="p">,</span> <span class="n">assembly</span><span class="p">))</span>
+    <span class="n">add</span><span class="p">(</span><span class="n">_by_sequence</span><span class="p">(</span><span class="n">members</span><span class="p">,</span> <span class="n">known</span><span class="p">,</span> <span class="n">lineage</span><span class="p">))</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">frames</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">1</span>
+    <span class="n">best</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">frames</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">frame</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">values</span><span class="p">())))</span>
+    <span class="c1"># one id of each locus of that frame (the first by id): ids of two loci of one frame are told apart</span>
+    <span class="n">chosen</span> <span class="o">=</span> <span class="nb">list</span><span class="p">({</span><span class="n">best</span><span class="p">[</span><span class="n">member</span><span class="p">]:</span> <span class="n">member</span> <span class="k">for</span> <span class="n">member</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">best</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)}</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">chosen</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">members</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">chosen</span><span class="p">)</span>
+    <span class="n">where</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span><span class="n">member</span><span class="p">:</span> <span class="p">{}</span> <span class="k">for</span> <span class="n">member</span> <span class="ow">in</span> <span class="n">members</span><span class="p">}</span>
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">frame</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">frames</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">member</span><span class="p">,</span> <span class="n">locus</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">where</span><span class="p">[</span><span class="n">member</span><span class="p">][</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">locus</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">apart</span><span class="p">(</span><span class="n">one</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="n">mine</span><span class="p">,</span> <span class="n">theirs</span> <span class="o">=</span> <span class="n">where</span><span class="p">[</span><span class="n">one</span><span class="p">],</span> <span class="n">where</span><span class="p">[</span><span class="n">other</span><span class="p">]</span>
+        <span class="k">return</span> <span class="nb">any</span><span class="p">(</span><span class="n">index</span> <span class="ow">in</span> <span class="n">theirs</span> <span class="ow">and</span> <span class="n">theirs</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">!=</span> <span class="n">locus</span> <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">locus</span> <span class="ow">in</span> <span class="n">mine</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+
+    <span class="c1"># every id not chosen, those of the frame of most loci among them (an id that shares a locus with the chosen id of</span>
+    <span class="c1"># that frame may be told apart from it by another frame)</span>
+    <span class="k">for</span> <span class="n">member</span> <span class="ow">in</span> <span class="n">members</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">member</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">chosen</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span><span class="n">apart</span><span class="p">(</span><span class="n">member</span><span class="p">,</span> <span class="n">other</span><span class="p">)</span> <span class="k">for</span> <span class="n">other</span> <span class="ow">in</span> <span class="n">chosen</span><span class="p">):</span>
+            <span class="n">chosen</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">member</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">chosen</span><span class="p">)</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Kemal Inecik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

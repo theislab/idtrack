@@ -123,6 +123,7 @@
  | <a href="#V"><strong>V</strong></a>
  | <a href="#W"><strong>W</strong></a>
  | <a href="#X"><strong>X</strong></a>
+ | <a href="#Y"><strong>Y</strong></a>
  
 </div>
 <h2 id="A">A</h2>
@@ -134,7 +135,7 @@
 </li>
       <li><a href="reference.html#idtrack.settings.ACCESS_MODES">ACCESS_MODES (in module idtrack.settings)</a>
 </li>
-      <li><a href="reference.html#idtrack.ids.ACCESSION_DATABASE_PREFIXES">ACCESSION_DATABASE_PREFIXES (in module idtrack.ids)</a>
+      <li><a href="reference.html#idtrack.graph.TheGraph.accession_versions">accession_versions() (TheGraph method)</a>
 </li>
       <li><a href="reference.html#idtrack.results.PathNode.active">active (PathNode attribute)</a>
 </li>
@@ -154,6 +155,14 @@
 </li>
       <li><a href="reference.html#idtrack.organisms.ALIASES">ALIASES (in module idtrack.organisms)</a>
 </li>
+      <li><a href="reference.html#idtrack.graph.genes.GeneFacts.alive">alive (GeneFacts attribute)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.GraphRecord.all_external">all_external (GraphRecord attribute)</a>
+
+      <ul>
+        <li><a href="reference.html#idtrack.graph.TheGraph.all_external">(TheGraph property)</a>
+</li>
+      </ul></li>
       <li><a href="reference.html#idtrack.errors.InputError.allowed">allowed (InputError attribute)</a>
 </li>
       <li><a href="reference.html#idtrack.engine.Conversion.alternative_locus_genes">alternative_locus_genes (Conversion attribute)</a>
@@ -168,14 +177,14 @@
 </li>
       <li><a href="reference.html#idtrack.build.default_externals.apply_allowlist">apply_allowlist() (in module idtrack.build.default_externals)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack.errors.InputError.argument">argument (InputError attribute)</a>
 </li>
       <li><a href="reference.html#idtrack.errors.ArgumentTypeError">ArgumentTypeError</a>
 </li>
       <li><a href="reference.html#idtrack.graph.Connection.as_dict">as_dict (Connection attribute)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack.results.GraphDescription.assemblies">assemblies (GraphDescription attribute)</a>
 
       <ul>
@@ -187,20 +196,36 @@
       <li><a href="reference.html#idtrack.results.AssemblyDescription.assembly">assembly (AssemblyDescription attribute)</a>
 
       <ul>
+        <li><a href="reference.html#idtrack.results.GenePlace.assembly">(GenePlace attribute)</a>
+</li>
         <li><a href="reference.html#idtrack.results.PathStep.assembly">(PathStep attribute)</a>
 </li>
+        <li><a href="reference.html#idtrack.graph.Place.assembly">(Place attribute)</a>
+</li>
       </ul></li>
+      <li><a href="reference.html#idtrack.build.DatabaseManager.assembly_chain">assembly_chain() (DatabaseManager method)</a>
+</li>
+      <li><a href="reference.html#idtrack.build.database_manager.ASSEMBLY_EXCEPTION_COLUMNS">ASSEMBLY_EXCEPTION_COLUMNS (in module idtrack.build.database_manager)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.TheGraph.assembly_exceptions">assembly_exceptions (TheGraph property)</a>
+</li>
       <li><a href="reference.html#idtrack.organisms.assembly_key">assembly_key() (in module idtrack.organisms)</a>
 </li>
-      <li><a href="reference.html#idtrack.organisms.assembly_name">assembly_name() (in module idtrack.organisms)</a>
+      <li><a href="reference.html#idtrack.organisms.ASSEMBLY_LABELS">ASSEMBLY_LABELS (in module idtrack.organisms)</a>
 </li>
-      <li><a href="reference.html#idtrack.organisms.ASSEMBLY_NODE_TYPES">ASSEMBLY_NODE_TYPES (in module idtrack.organisms)</a>
+      <li><a href="reference.html#idtrack.graph.GraphRecord.assembly_mappings">assembly_mappings (GraphRecord attribute)</a>
+</li>
+      <li><a href="reference.html#idtrack.organisms.assembly_name">assembly_name() (in module idtrack.organisms)</a>
 </li>
       <li><a href="reference.html#idtrack.graph.TheGraph.assembly_releases">assembly_releases (TheGraph property)</a>
 </li>
       <li><a href="reference.html#idtrack.results.AssemblyDescription">AssemblyDescription (class in idtrack.results)</a>
 </li>
       <li><a href="reference.html#idtrack.graph.Connection.attr">attr (Connection property)</a>
+</li>
+      <li><a href="reference.html#idtrack.results.Candidate.authority">authority (Candidate attribute)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.TheGraph.authority_databases">authority_databases (TheGraph property)</a>
 </li>
       <li><a href="reference.html#idtrack.graph.TheGraph.available_assemblies">available_assemblies (TheGraph property)</a>
 </li>
@@ -222,6 +247,8 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack.ids.BACKBONE_FORM">BACKBONE_FORM (in module idtrack.ids)</a>
 </li>
+      <li><a href="reference.html#idtrack.results.SourceInference.band">band (SourceInference attribute)</a>
+</li>
       <li><a href="reference.html#idtrack.ids.BASE_ENSEMBL_TYPE">BASE_ENSEMBL_TYPE (in module idtrack.ids)</a>
 </li>
       <li><a href="reference.html#idtrack.ids.BASE_GENE">BASE_GENE (in module idtrack.ids)</a>
@@ -234,15 +261,31 @@
         <li><a href="reference.html#idtrack.results.ConversionResult.best">(ConversionResult property)</a>
 </li>
       </ul></li>
+      <li><a href="reference.html#idtrack.engine.ranking.best_order">best_order() (in module idtrack.engine.ranking)</a>
+</li>
       <li><a href="reference.html#idtrack.api.BINS">BINS (in module idtrack.api)</a>
+</li>
+      <li><a href="reference.html#idtrack.build.database_manager.BIOTYPE_RESTRICTED">BIOTYPE_RESTRICTED (in module idtrack.build.database_manager)</a>
 </li>
       <li><a href="reference.html#idtrack.results.Candidate.bridge_gap">bridge_gap (Candidate attribute)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack.settings.SearchSettings.bridge_limit">bridge_limit (SearchSettings attribute)</a>
 </li>
+      <li><a href="reference.html#idtrack.results.BRIDGE_RULES">BRIDGE_RULES (in module idtrack.results)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#idtrack.results.BRIDGE_RULES_TAKEN">BRIDGE_RULES_TAKEN (in module idtrack.results)</a>
+</li>
+      <li><a href="reference.html#idtrack.results.BridgeCheck">BridgeCheck (class in idtrack.results)</a>
+</li>
       <li><a href="reference.html#idtrack.results.Candidate.bridges">bridges (Candidate attribute)</a>
+
+      <ul>
+        <li><a href="reference.html#idtrack.results.ExplainedPath.bridges">(ExplainedPath attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="reference.html#idtrack.engine.explain.PathBuilder.bridges">bridges() (PathBuilder method)</a>
 </li>
       <li><a href="reference.html#idtrack.errors.SearchBudgetExceededError.budget_seconds">budget_seconds (SearchBudgetExceededError attribute)</a>
 
@@ -259,7 +302,11 @@
       <li><a href="reference.html#idtrack.api.API.build">build() (API class method)</a>
 </li>
       <li><a href="reference.html#idtrack.results.GraphDescription.build_date">build_date (GraphDescription attribute)</a>
+
+      <ul>
+        <li><a href="reference.html#idtrack.graph.GraphRecord.build_date">(GraphRecord attribute)</a>
 </li>
+      </ul></li>
       <li><a href="reference.html#idtrack.errors.BuildError">BuildError</a>
 </li>
   </ul></td>
@@ -282,6 +329,12 @@
         <li><a href="reference.html#idtrack.results.ConversionResult.candidates">(ConversionResult attribute)</a>
 </li>
       </ul></li>
+      <li><a href="reference.html#idtrack.graph.genes.GeneFacts.carried">carried (GeneFacts attribute)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.genes.Carried">Carried (in module idtrack.graph.genes)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.TheGraph.carried_places">carried_places() (TheGraph method)</a>
+</li>
       <li><a href="reference.html#idtrack.build.DatabaseManager.change_assembly">change_assembly() (DatabaseManager method)</a>
 </li>
       <li><a href="reference.html#idtrack.build.DatabaseManager.change_form">change_form() (DatabaseManager method)</a>
@@ -301,6 +354,10 @@
       <li><a href="reference.html#idtrack.results.check_strategy">check_strategy() (in module idtrack.results)</a>
 </li>
       <li><a href="reference.html#idtrack.checks.CheckResult">CheckResult (class in idtrack.checks)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.genes.CHROMOSOME">CHROMOSOME (in module idtrack.graph.genes)</a>
+</li>
+      <li><a href="reference.html#idtrack.build.database_manager.CHROMOSOME_COORD_SYSTEM">CHROMOSOME_COORD_SYSTEM (in module idtrack.build.database_manager)</a>
 </li>
       <li><a href="reference.html#idtrack.api.API.classification_summary">classification_summary() (API static method)</a>
 </li>
@@ -322,16 +379,22 @@
 </li>
       <li><a href="reference.html#idtrack.graph.TheGraph.connection">connection() (TheGraph method)</a>
 </li>
+      <li><a href="reference.html#idtrack.graph.GraphRecord.connection_form">connection_form (GraphRecord attribute)</a>
+</li>
       <li><a href="reference.html#idtrack.ids.CONNECTION_KEY">CONNECTION_KEY (in module idtrack.ids)</a>
+</li>
+      <li><a href="reference.html#idtrack.settings.EnsemblSettings.connection_timeout">connection_timeout (EnsemblSettings attribute)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="reference.html#idtrack.settings.EnsemblSettings.connection_timeout">connection_timeout (EnsemblSettings attribute)</a>
-</li>
       <li><a href="reference.html#idtrack.build.GraphMaker.construct_graph">construct_graph() (GraphMaker method)</a>
 </li>
       <li><a href="reference.html#idtrack.results.GraphDescription.content_digest">content_digest (GraphDescription attribute)</a>
+
+      <ul>
+        <li><a href="reference.html#idtrack.graph.GraphRecord.content_digest">(GraphRecord attribute)</a>
 </li>
+      </ul></li>
       <li><a href="reference.html#idtrack.engine.Conversion">Conversion (class in idtrack.engine)</a>
 </li>
       <li><a href="reference.html#idtrack.harmonize.HarmonizeFeatures.conversion_report">conversion_report() (HarmonizeFeatures method)</a>
@@ -348,6 +411,8 @@
 </li>
       <li><a href="reference.html#idtrack.api.API.convert_many">convert_many() (API method)</a>
 </li>
+      <li><a href="reference.html#idtrack.graph.genes.GeneFacts.copy">copy (GeneFacts property)</a>
+</li>
       <li><a href="reference.html#idtrack.graph.ReleaseSet.copy">copy() (ReleaseSet method)</a>
 
       <ul>
@@ -357,10 +422,28 @@
       <li><a href="reference.html#idtrack.organisms.core_db_name_pattern">core_db_name_pattern() (in module idtrack.organisms)</a>
 </li>
       <li><a href="reference.html#idtrack.graph.HistoryEdge.count">count() (HistoryEdge method)</a>
+
+      <ul>
+        <li><a href="reference.html#idtrack.graph.Place.count">(Place method)</a>
 </li>
+      </ul></li>
+      <li><a href="reference.html#idtrack.graph.genes.count_genes">count_genes() (in module idtrack.graph.genes)</a>
+
+      <ul>
+        <li><a href="reference.html#idtrack.graph.TheGraph.count_genes">(TheGraph method)</a>
+</li>
+      </ul></li>
       <li><a href="reference.html#idtrack.results.GraphDescription.counts">counts (GraphDescription attribute)</a>
+
+      <ul>
+        <li><a href="reference.html#idtrack.graph.GraphRecord.counts">(GraphRecord attribute)</a>
 </li>
+        <li><a href="reference.html#idtrack.results.SourceInference.counts">(SourceInference attribute)</a>
+</li>
+      </ul></li>
       <li><a href="reference.html#idtrack.build.ExternalDatabases.covered_releases">covered_releases() (ExternalDatabases method)</a>
+</li>
+      <li><a href="reference.html#idtrack.build.DatabaseManager.create_assembly_exceptions">create_assembly_exceptions() (DatabaseManager method)</a>
 </li>
       <li><a href="reference.html#idtrack.build.DatabaseManager.create_available_databases">create_available_databases() (DatabaseManager method)</a>
 </li>
@@ -394,11 +477,15 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack.results.NameMatch.database">database (NameMatch attribute)</a>
 </li>
+      <li><a href="reference.html#idtrack.build.DatabaseManager.database_filing">database_filing() (DatabaseManager method)</a>
+</li>
       <li><a href="reference.html#idtrack.api.API.database_forms">database_forms() (API method)</a>
 </li>
       <li><a href="reference.html#idtrack.checks.GraphChecks.database_manager">database_manager (GraphChecks attribute)</a>
 </li>
       <li><a href="reference.html#idtrack.api.API.database_manager">database_manager() (API static method)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.GraphRecord.database_names">database_names (GraphRecord attribute)</a>
 </li>
       <li><a href="reference.html#idtrack.build.DatabaseManager">DatabaseManager (class in idtrack.build)</a>
 </li>
@@ -412,8 +499,6 @@
       </ul></li>
       <li><a href="reference.html#idtrack.api.API.databases_by_assembly">databases_by_assembly() (API method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack.organisms.db_suffix">db_suffix() (in module idtrack.organisms)</a>
 </li>
       <li><a href="reference.html#idtrack.engine.Conversion.decided_by">decided_by (Conversion attribute)</a>
@@ -422,9 +507,13 @@
         <li><a href="reference.html#idtrack.results.ConversionResult.decided_by">(ConversionResult attribute)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack.engine.ranking.decided_by">decided_by() (in module idtrack.engine.ranking)</a>
 </li>
       <li><a href="reference.html#idtrack.harmonize.HarmonizeFeatures.default_final_database">default_final_database() (HarmonizeFeatures static method)</a>
+</li>
+      <li><a href="reference.html#idtrack.build.database_manager.DERIVED_GENE_NAME_SUFFIX">DERIVED_GENE_NAME_SUFFIX (in module idtrack.build.database_manager)</a>
 </li>
       <li><a href="reference.html#idtrack.api.API.describe">describe() (API method)</a>
 </li>
@@ -434,6 +523,18 @@
 </li>
       <li><a href="reference.html#idtrack.graph.ReleaseSet.difference">difference() (ReleaseSet method)</a>
 </li>
+      <li><a href="reference.html#idtrack.build.database_manager.DISPLAY_LABEL_ONLY">DISPLAY_LABEL_ONLY (in module idtrack.build.database_manager)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.TheGraph.display_links">display_links() (TheGraph method)</a>
+</li>
+      <li><a href="reference.html#idtrack.results.Candidate.display_name">display_name (Candidate attribute)</a>
+</li>
+      <li><a href="reference.html#idtrack.results.Candidate.display_rank">display_rank (Candidate attribute)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.TheGraph.display_rank">display_rank() (TheGraph method)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.TheGraph.display_releases">display_releases() (TheGraph method)</a>
+</li>
       <li><a href="reference.html#idtrack.build.DatabaseManager.download_table">download_table() (DatabaseManager method)</a>
 </li>
   </ul></td>
@@ -442,6 +543,14 @@
 <h2 id="E">E</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#idtrack.graph.TheGraph.edit_counter_databases">edit_counter_databases() (TheGraph method)</a>
+</li>
+      <li><a href="reference.html#idtrack.results.GenePlace.end">end (GenePlace attribute)</a>
+
+      <ul>
+        <li><a href="reference.html#idtrack.graph.Place.end">(Place attribute)</a>
+</li>
+      </ul></li>
       <li><a href="reference.html#idtrack.api.API.engine">engine (API attribute)</a>
 </li>
       <li><a href="reference.html#idtrack.settings.ENSEMBL">ENSEMBL (in module idtrack.settings)</a>
@@ -464,6 +573,16 @@
 </li>
       <li><a href="reference.html#idtrack.settings.EnsemblSettings">EnsemblSettings (class in idtrack.settings)</a>
 </li>
+      <li><a href="reference.html#idtrack.graph.GraphRecord.entries_of_several_genes">entries_of_several_genes (GraphRecord attribute)</a>
+
+      <ul>
+        <li><a href="reference.html#idtrack.graph.TheGraph.entries_of_several_genes">(TheGraph property)</a>
+</li>
+      </ul></li>
+      <li><a href="reference.html#idtrack.build.database_manager.entries_of_several_genes">entries_of_several_genes() (in module idtrack.build.database_manager)</a>
+</li>
+      <li><a href="reference.html#idtrack.results.Candidate.entry_databases">entry_databases (Candidate attribute)</a>
+</li>
       <li><a href="reference.html#idtrack.results.Candidate.entry_gene">entry_gene (Candidate attribute)</a>
 </li>
       <li><a href="reference.html#idtrack.results.Candidate.entry_support">entry_support (Candidate attribute)</a>
@@ -473,6 +592,10 @@
       <li><a href="reference.html#idtrack.results.ConversionResult.error">error (ConversionResult attribute)</a>
 </li>
       <li><a href="reference.html#idtrack.results.ErrorInfo">ErrorInfo (class in idtrack.results)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.TheGraph.exception_regions">exception_regions (TheGraph property)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.genes.Exceptions">Exceptions (in module idtrack.graph.genes)</a>
 </li>
       <li><a href="reference.html#idtrack.results.ExplainedPath">ExplainedPath (class in idtrack.results)</a>
 </li>
@@ -487,14 +610,22 @@
       <ul>
         <li><a href="reference.html#idtrack.results.GraphDescription.external_databases">(GraphDescription attribute)</a>
 </li>
+        <li><a href="reference.html#idtrack.graph.GraphRecord.external_databases">(GraphRecord attribute)</a>
+</li>
       </ul></li>
       <li><a href="reference.html#idtrack.api.API.external_databases">external_databases() (API method)</a>
 </li>
       <li><a href="reference.html#idtrack.build.DatabaseManager.external_inst">external_inst (DatabaseManager property)</a>
 </li>
+      <li><a href="reference.html#idtrack.build.database_manager.EXTERNAL_RULES_VERSION">EXTERNAL_RULES_VERSION (in module idtrack.build.database_manager)</a>
+</li>
       <li><a href="reference.html#idtrack.results.Candidate.external_steps">external_steps (Candidate attribute)</a>
 </li>
       <li><a href="reference.html#idtrack.build.ExternalDatabases">ExternalDatabases (class in idtrack.build)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.GraphRecord.externals_fingerprint">externals_fingerprint (GraphRecord attribute)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.GraphRecord.externals_settings">externals_settings (GraphRecord attribute)</a>
 </li>
       <li><a href="reference.html#idtrack.errors.ExternalsError">ExternalsError</a>
 </li>
@@ -506,6 +637,16 @@
 <h2 id="F">F</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#idtrack.graph.genes.facts_by_stable_id">facts_by_stable_id() (in module idtrack.graph.genes)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.genes.facts_of">facts_of() (in module idtrack.graph.genes)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.genes.facts_of_nodes">facts_of_nodes() (in module idtrack.graph.genes)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.genes.facts_of_places">facts_of_places() (in module idtrack.graph.genes)</a>
+</li>
+      <li><a href="reference.html#idtrack.settings.FAMILY_DATABASES">FAMILY_DATABASES (in module idtrack.settings)</a>
+</li>
       <li><a href="reference.html#idtrack.harmonize.HarmonizeFeatures.feature_harmonizer">feature_harmonizer() (HarmonizeFeatures method)</a>
 </li>
       <li><a href="reference.html#idtrack.harmonize.HarmonizeFeatures.feature_names">feature_names (HarmonizeFeatures attribute)</a>
@@ -540,12 +681,16 @@
       </ul></li>
       <li><a href="reference.html#idtrack.results.Candidate.final_path">final_path (Candidate attribute)</a>
 </li>
-      <li><a href="reference.html#idtrack.engine.explain.PathBuilder.final_path">final_path() (PathBuilder method)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="reference.html#idtrack.graph.TheGraph.first_release">first_release (TheGraph property)</a>
+      <li><a href="reference.html#idtrack.engine.explain.PathBuilder.final_path">final_path() (PathBuilder method)</a>
 </li>
+      <li><a href="reference.html#idtrack.graph.GraphRecord.first_release">first_release (GraphRecord attribute)</a>
+
+      <ul>
+        <li><a href="reference.html#idtrack.graph.TheGraph.first_release">(TheGraph property)</a>
+</li>
+      </ul></li>
       <li><a href="reference.html#idtrack.organisms.first_release">first_release() (in module idtrack.organisms)</a>
 </li>
       <li><a href="reference.html#idtrack.ids.FORM_OF_ENSEMBL_TYPE">FORM_OF_ENSEMBL_TYPE (in module idtrack.ids)</a>
@@ -553,7 +698,11 @@
       <li><a href="reference.html#idtrack.results.GraphDescription.format_version">format_version (GraphDescription attribute)</a>
 </li>
       <li><a href="reference.html#idtrack.results.GraphDescription.forms">forms (GraphDescription attribute)</a>
+
+      <ul>
+        <li><a href="reference.html#idtrack.graph.GraphRecord.forms">(GraphRecord attribute)</a>
 </li>
+      </ul></li>
       <li><a href="reference.html#idtrack.ids.FORMS">FORMS (in module idtrack.ids)</a>
 </li>
       <li><a href="reference.html#idtrack.graph.TheGraph.freeze">freeze() (TheGraph method)</a>
@@ -564,6 +713,8 @@
         <li><a href="reference.html#idtrack.results.ConversionResult.from_databases">(ConversionResult attribute)</a>
 </li>
       </ul></li>
+      <li><a href="reference.html#idtrack.graph.GraphRecord.from_json">from_json() (GraphRecord class method)</a>
+</li>
       <li><a href="reference.html#idtrack.graph.ReleaseSet.from_mask">from_mask() (ReleaseSet class method)</a>
 </li>
       <li><a href="reference.html#idtrack.engine.Conversion.from_release">from_release (Conversion attribute)</a>
@@ -598,6 +749,8 @@
         <li><a href="reference.html#idtrack.engine.ranking.Pair.gene">(Pair attribute)</a>
 </li>
       </ul></li>
+      <li><a href="reference.html#idtrack.build.database_manager.GENE_ANNOTATION_COLUMNS">GENE_ANNOTATION_COLUMNS (in module idtrack.build.database_manager)</a>
+</li>
       <li><a href="reference.html#idtrack.harmonize.HarmonizeFeatures.gene_names">gene_names (HarmonizeFeatures attribute)</a>
 </li>
       <li><a href="reference.html#idtrack.api.API.gene_to_database">gene_to_database() (API method)</a>
@@ -606,6 +759,12 @@
         <li><a href="reference.html#idtrack.engine.Track.gene_to_database">(Track method)</a>
 </li>
       </ul></li>
+      <li><a href="reference.html#idtrack.graph.genes.GeneFacts">GeneFacts (class in idtrack.graph.genes)</a>
+</li>
+      <li><a href="reference.html#idtrack.results.GenePlace">GenePlace (class in idtrack.results)</a>
+</li>
+      <li><a href="reference.html#idtrack.results.OtherReading.genes">genes (OtherReading attribute)</a>
+</li>
       <li><a href="reference.html#idtrack.graph.TheGraph.genes_linked_at_once">genes_linked_at_once() (TheGraph method)</a>
 </li>
       <li><a href="reference.html#idtrack.api.API.genes_named">genes_named() (API method)</a>
@@ -630,10 +789,10 @@
 </li>
       <li><a href="reference.html#idtrack.graph.TheGraph.get_intersecting_ranges">get_intersecting_ranges() (TheGraph static method)</a>
 </li>
-      <li><a href="reference.html#idtrack.build.VerifyOrganism.get_latest_release">get_latest_release() (VerifyOrganism method)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#idtrack.build.VerifyOrganism.get_latest_release">get_latest_release() (VerifyOrganism method)</a>
+</li>
       <li><a href="reference.html#idtrack.graph.TheGraph.get_next_edge_releases">get_next_edge_releases() (TheGraph method)</a>
 </li>
       <li><a href="reference.html#idtrack.build.DatabaseManager.get_table">get_table() (DatabaseManager method)</a>
@@ -655,6 +814,8 @@
       <ul>
         <li><a href="reference.html#idtrack.results.ConversionResult.graph_id">(ConversionResult attribute)</a>
 </li>
+        <li><a href="reference.html#idtrack.results.OtherReading.graph_id">(OtherReading attribute)</a>
+</li>
       </ul></li>
       <li><a href="reference.html#idtrack.build.GraphMaker.graph_identity">graph_identity() (GraphMaker method)</a>
 </li>
@@ -674,6 +835,8 @@
 </li>
       <li><a href="reference.html#idtrack.errors.GraphMismatchError">GraphMismatchError</a>
 </li>
+      <li><a href="reference.html#idtrack.graph.GraphRecord">GraphRecord (class in idtrack.graph)</a>
+</li>
       <li><a href="reference.html#idtrack.settings.GraphSettings">GraphSettings (class in idtrack.settings)</a>
 </li>
   </ul></td>
@@ -685,6 +848,8 @@
       <li><a href="reference.html#idtrack.harmonize.HarmonizeFeatures">HarmonizeFeatures (class in idtrack.harmonize)</a>
 </li>
       <li><a href="reference.html#idtrack.graph.TheGraph.has_edge">has_edge() (TheGraph method)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.GraphRecord.history">history (GraphRecord attribute)</a>
 </li>
       <li><a href="reference.html#idtrack.build.GraphMaker.history">history() (GraphMaker method)</a>
 </li>
@@ -734,7 +899,11 @@
         <li><a href="reference.html#idtrack.errors.UnknownVersionError.identifier">(UnknownVersionError attribute)</a>
 </li>
       </ul></li>
+      <li><a href="reference.html#idtrack.results.SourceInference.identifiers">identifiers (SourceInference attribute)</a>
+</li>
       <li><a href="reference.html#idtrack.engine.Track.identify_source">identify_source() (Track method)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.GraphRecord.identity">identity() (GraphRecord method)</a>
 </li>
       <li>
     idtrack.api
@@ -848,6 +1017,13 @@
         <li><a href="reference.html#module-idtrack.graph.files">module</a>
 </li>
       </ul></li>
+      <li>
+    idtrack.graph.genes
+
+      <ul>
+        <li><a href="reference.html#module-idtrack.graph.genes">module</a>
+</li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li>
@@ -872,6 +1048,13 @@
 </li>
       </ul></li>
       <li>
+    idtrack.reading
+
+      <ul>
+        <li><a href="reference.html#module-idtrack.reading">module</a>
+</li>
+      </ul></li>
+      <li>
     idtrack.results
 
       <ul>
@@ -887,10 +1070,16 @@
       </ul></li>
       <li><a href="reference.html#idtrack.errors.IdtrackError">IdtrackError</a>
 </li>
+      <li><a href="reference.html#idtrack.graph.TheGraph.in_pseudoautosomal_y">in_pseudoautosomal_y() (TheGraph method)</a>
+</li>
       <li><a href="reference.html#idtrack.errors.InactiveAtReleaseError">InactiveAtReleaseError</a>
 </li>
       <li><a href="reference.html#idtrack.graph.HistoryEdge.index">index() (HistoryEdge method)</a>
+
+      <ul>
+        <li><a href="reference.html#idtrack.graph.Place.index">(Place method)</a>
 </li>
+      </ul></li>
       <li><a href="reference.html#idtrack.api.API.infer_source">infer_source() (API method)</a>
 </li>
       <li><a href="reference.html#idtrack.results.ErrorInfo.input_error">input_error (ErrorInfo attribute)</a>
@@ -898,6 +1087,8 @@
       <li><a href="reference.html#idtrack.errors.InputError">InputError</a>
 </li>
       <li><a href="reference.html#idtrack.errors.IntegrityError">IntegrityError</a>
+</li>
+      <li><a href="reference.html#idtrack.reading.internal_name">internal_name() (in module idtrack.reading)</a>
 </li>
       <li><a href="reference.html#idtrack.graph.ReleaseSet.intersection">intersection() (ReleaseSet method)</a>
 </li>
@@ -921,6 +1112,8 @@
 </li>
       <li><a href="reference.html#idtrack.checks.GraphChecks.is_id_functions_consistent_external">is_id_functions_consistent_external() (GraphChecks method)</a>
 </li>
+      <li><a href="reference.html#idtrack.reading.is_missing_value">is_missing_value() (in module idtrack.reading)</a>
+</li>
       <li><a href="reference.html#idtrack.checks.GraphChecks.is_node_consistency_robust">is_node_consistency_robust() (GraphChecks method)</a>
 </li>
       <li><a href="reference.html#idtrack.graph.TheGraph.is_non_reference">is_non_reference() (TheGraph method)</a>
@@ -928,6 +1121,8 @@
       <li><a href="reference.html#idtrack.graph.TheGraph.is_point_in_range">is_point_in_range() (TheGraph static method)</a>
 </li>
       <li><a href="reference.html#idtrack.checks.GraphChecks.is_range_functions_robust">is_range_functions_robust() (GraphChecks method)</a>
+</li>
+      <li><a href="reference.html#idtrack.ids.is_synonym_database">is_synonym_database() (in module idtrack.ids)</a>
 </li>
       <li><a href="reference.html#idtrack.ids.is_versioned_name">is_versioned_name() (in module idtrack.ids)</a>
 </li>
@@ -951,6 +1146,8 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack.ids.join_columns">join_columns() (in module idtrack.ids)</a>
 </li>
+      <li><a href="reference.html#idtrack.graph.genes.joins_mitochondrial_and_nuclear">joins_mitochondrial_and_nuclear() (in module idtrack.graph.genes)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -968,9 +1165,13 @@
       <ul>
         <li><a href="reference.html#idtrack.results.PathStep.kind">(PathStep attribute)</a>
 </li>
+        <li><a href="reference.html#idtrack.graph.Place.kind">(Place attribute)</a>
+</li>
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#idtrack.reading.Reading.kinds">kinds (Reading attribute)</a>
+</li>
       <li><a href="reference.html#idtrack.results.ConversionResult.known_versions">known_versions (ConversionResult attribute)</a>
 </li>
       <li><a href="reference.html#idtrack.graph.TheGraph.known_versions">known_versions() (TheGraph method)</a>
@@ -983,7 +1184,29 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack.results.PathNode.label">label (PathNode attribute)</a>
 </li>
+      <li><a href="reference.html#idtrack.graph.TheGraph.label_databases">label_databases (TheGraph property)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.TheGraph.label_families">label_families (TheGraph property)</a>
+</li>
+      <li><a href="reference.html#idtrack.build.database_manager.label_name">label_name() (in module idtrack.build.database_manager)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.GraphRecord.label_names">label_names (GraphRecord attribute)</a>
+
+      <ul>
+        <li><a href="reference.html#idtrack.graph.TheGraph.label_names">(TheGraph property)</a>
+</li>
+      </ul></li>
+      <li><a href="reference.html#idtrack.build.DatabaseManager.label_names">label_names() (DatabaseManager method)</a>
+</li>
+      <li><a href="reference.html#idtrack.build.database_manager.label_names_of_databases">label_names_of_databases() (in module idtrack.build.database_manager)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.genes.lies_on_mitochondrial_genome">lies_on_mitochondrial_genome() (in module idtrack.graph.genes)</a>
+</li>
       <li><a href="reference.html#idtrack.engine.ranking.Pair.lineage">lineage (Pair attribute)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#idtrack.engine.ranking.LINEAGE_CRITERIA">LINEAGE_CRITERIA (in module idtrack.engine.ranking)</a>
 </li>
       <li><a href="reference.html#idtrack.graph.files.list_graph_files">list_graph_files() (in module idtrack.graph.files)</a>
 </li>
@@ -995,8 +1218,6 @@
         <li><a href="reference.html#idtrack.graph.TheGraph.load">(TheGraph class method)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack.build.externals.load_externals_yaml">load_externals_yaml() (in module idtrack.build.externals)</a>
 </li>
       <li><a href="reference.html#idtrack.build.GraphMaker.load_graph">load_graph() (GraphMaker static method)</a>
@@ -1004,6 +1225,8 @@
       <li><a href="reference.html#idtrack.build.ExternalDatabases.load_modified_yaml">load_modified_yaml() (ExternalDatabases method)</a>
 </li>
       <li><a href="reference.html#idtrack.build.tables.load_table">load_table() (in module idtrack.build.tables)</a>
+</li>
+      <li><a href="reference.html#idtrack.ids.LRG_ID">LRG_ID (in module idtrack.ids)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -1013,23 +1236,51 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack.engine.ranking.make_pair">make_pair() (in module idtrack.engine.ranking)</a>
 </li>
-      <li><a href="reference.html#idtrack.graph.TheGraph.manifest">manifest (TheGraph property)</a>
+      <li><a href="reference.html#idtrack.results.SourceInference.margin">margin (SourceInference attribute)</a>
 </li>
       <li><a href="reference.html#idtrack.build.ensembl_access.PortReachability.mark_unreachable">mark_unreachable() (PortReachability method)</a>
 </li>
       <li><a href="reference.html#idtrack.results.ConversionResult.match">match (ConversionResult attribute)</a>
+
+      <ul>
+        <li><a href="reference.html#idtrack.results.OtherReading.match">(OtherReading attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="reference.html#idtrack.results.MATCH_PREFIXES">MATCH_PREFIXES (in module idtrack.results)</a>
+</li>
+      <li><a href="reference.html#idtrack.results.MATCH_STEPS">MATCH_STEPS (in module idtrack.results)</a>
 </li>
       <li><a href="reference.html#idtrack.harmonize.HarmonizeFeatures.matchings">matchings (HarmonizeFeatures attribute)</a>
 </li>
+      <li><a href="reference.html#idtrack.reading.MAX_ENSEMBL_VERSION">MAX_ENSEMBL_VERSION (in module idtrack.reading)</a>
+</li>
+      <li><a href="reference.html#idtrack.reading.MAX_IDENTIFIER_LENGTH">MAX_IDENTIFIER_LENGTH (in module idtrack.reading)</a>
+</li>
       <li><a href="reference.html#idtrack.build.ensembl_access.PortReachability.max_retry_after_seconds">max_retry_after_seconds (PortReachability attribute)</a>
+</li>
+      <li><a href="reference.html#idtrack.reading.MAX_VERSION_DIGITS">MAX_VERSION_DIGITS (in module idtrack.reading)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.genes.merged">merged() (in module idtrack.graph.genes)</a>
 </li>
       <li><a href="reference.html#idtrack.results.PathStep.merges">merges (PathStep attribute)</a>
 </li>
       <li><a href="reference.html#idtrack.results.ErrorInfo.message">message (ErrorInfo attribute)</a>
 </li>
+      <li><a href="reference.html#idtrack.graph.GraphRecord.misplaced_external_entries">misplaced_external_entries (GraphRecord attribute)</a>
+
+      <ul>
+        <li><a href="reference.html#idtrack.graph.TheGraph.misplaced_external_entries">(TheGraph property)</a>
+</li>
+      </ul></li>
       <li><a href="reference.html#idtrack.errors.EnsemblSchemaError.missing_columns">missing_columns (EnsemblSchemaError attribute)</a>
 </li>
+      <li><a href="reference.html#idtrack.reading.MISSING_VALUES">MISSING_VALUES (in module idtrack.reading)</a>
+</li>
       <li><a href="reference.html#idtrack.errors.MissingValueError">MissingValueError</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.genes.MITOCHONDRIAL">MITOCHONDRIAL (in module idtrack.graph.genes)</a>
+</li>
+      <li><a href="reference.html#idtrack.results.SourceInference.mode">mode (SourceInference attribute)</a>
 </li>
       <li>
     module
@@ -1067,11 +1318,15 @@
 </li>
         <li><a href="reference.html#module-idtrack.graph.files">idtrack.graph.files</a>
 </li>
+        <li><a href="reference.html#module-idtrack.graph.genes">idtrack.graph.genes</a>
+</li>
         <li><a href="reference.html#module-idtrack.harmonize">idtrack.harmonize</a>
 </li>
         <li><a href="reference.html#module-idtrack.ids">idtrack.ids</a>
 </li>
         <li><a href="reference.html#module-idtrack.organisms">idtrack.organisms</a>
+</li>
+        <li><a href="reference.html#module-idtrack.reading">idtrack.reading</a>
 </li>
         <li><a href="reference.html#module-idtrack.results">idtrack.results</a>
 </li>
@@ -1110,6 +1365,8 @@
         <li><a href="reference.html#idtrack.results.NameMatch.name">(NameMatch attribute)</a>
 </li>
       </ul></li>
+      <li><a href="reference.html#idtrack.graph.TheGraph.name_candidates">name_candidates() (TheGraph method)</a>
+</li>
       <li><a href="reference.html#idtrack.build.VerifyOrganism.name_synonyms_dataframe">name_synonyms_dataframe (VerifyOrganism property)</a>
 </li>
       <li><a href="reference.html#idtrack.results.NameMatch">NameMatch (class in idtrack.results)</a>
@@ -1120,6 +1377,10 @@
         <li><a href="reference.html#idtrack.graph.TheGraph.names_of">(TheGraph method)</a>
 </li>
       </ul></li>
+      <li><a href="reference.html#idtrack.build.default_externals.NCBI_GENE">NCBI_GENE (in module idtrack.build.default_externals)</a>
+</li>
+      <li><a href="reference.html#idtrack.organisms.NCBI_GENE_DATABASE">NCBI_GENE_DATABASE (in module idtrack.organisms)</a>
+</li>
       <li><a href="reference.html#idtrack.graph.TheGraph.new_edge_key">new_edge_key() (TheGraph method)</a>
 </li>
       <li><a href="reference.html#idtrack.graph.HistoryEdge.new_release">new_release (HistoryEdge attribute)</a>
@@ -1128,20 +1389,22 @@
         <li><a href="reference.html#idtrack.results.PathStep.new_release">(PathStep attribute)</a>
 </li>
       </ul></li>
+      <li><a href="reference.html#idtrack.graph.genes.NO_FACTS">NO_FACTS (in module idtrack.graph.genes)</a>
+</li>
       <li><a href="reference.html#idtrack.engine.Conversion.no_target">no_target (Conversion attribute)</a>
 
       <ul>
         <li><a href="reference.html#idtrack.results.ConversionResult.no_target">(ConversionResult attribute)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack.engine.Conversion.no_target_genes">no_target_genes (Conversion attribute)</a>
 
       <ul>
         <li><a href="reference.html#idtrack.results.ConversionResult.no_target_genes">(ConversionResult attribute)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack.graph.HistoryEdge.node">node (HistoryEdge attribute)</a>
 </li>
       <li><a href="reference.html#idtrack.graph.TheGraph.node_type">node_type() (TheGraph method)</a>
@@ -1160,9 +1423,15 @@
 </li>
       <li><a href="reference.html#idtrack.graph.TheGraph.non_reference_releases">non_reference_releases() (TheGraph method)</a>
 </li>
+      <li><a href="reference.html#idtrack.reading.normalise_unicode">normalise_unicode() (in module idtrack.reading)</a>
+</li>
       <li><a href="reference.html#idtrack.build.VerifyOrganism.normalize">normalize() (VerifyOrganism static method)</a>
 </li>
+      <li><a href="reference.html#idtrack.results.SourceInference.not_found">not_found (SourceInference attribute)</a>
+</li>
       <li><a href="reference.html#idtrack.graph.TheGraph.number_of_edges">number_of_edges() (TheGraph method)</a>
+</li>
+      <li><a href="reference.html#idtrack.ids.NUMBERED_SUFFIX">NUMBERED_SUFFIX (in module idtrack.ids)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -1186,11 +1455,29 @@
         <li><a href="reference.html#idtrack.results.PathStep.old_release">(PathStep attribute)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#idtrack.graph.genes.on_other_sequences">on_other_sequences() (in module idtrack.graph.genes)</a>
+</li>
+      <li><a href="reference.html#idtrack.build.database_manager.ONE_GENE_ONLY">ONE_GENE_ONLY (in module idtrack.build.database_manager)</a>
+</li>
+      <li><a href="reference.html#idtrack.build.DatabaseManager.one_gene_only_names">one_gene_only_names() (DatabaseManager method)</a>
+</li>
       <li><a href="reference.html#idtrack.engine.ranking.Pair.order">order (Pair attribute)</a>
 </li>
       <li><a href="reference.html#idtrack.results.GraphDescription.organism">organism (GraphDescription attribute)</a>
+
+      <ul>
+        <li><a href="reference.html#idtrack.graph.GraphRecord.organism">(GraphRecord attribute)</a>
+</li>
+        <li><a href="reference.html#idtrack.graph.TheGraph.organism">(TheGraph property)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#idtrack.graph.GraphRecord.organism_table_fingerprint">organism_table_fingerprint (GraphRecord attribute)</a>
+</li>
+      <li><a href="reference.html#idtrack.results.ConversionResult.other_readings">other_readings (ConversionResult attribute)</a>
+</li>
+      <li><a href="reference.html#idtrack.results.OtherReading">OtherReading (class in idtrack.results)</a>
 </li>
       <li><a href="reference.html#idtrack.harmonize.HarmonizeFeatures.output_plan">output_plan() (HarmonizeFeatures method)</a>
 
@@ -1198,6 +1485,12 @@
         <li><a href="reference.html#idtrack.harmonize.output_plan">(in module idtrack.harmonize)</a>
 </li>
       </ul></li>
+      <li><a href="reference.html#idtrack.graph.genes.GeneFacts.outside">outside (GeneFacts attribute)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.genes.GeneFacts.outside_at">outside_at (GeneFacts attribute)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.genes.overlap">overlap() (in module idtrack.graph.genes)</a>
+</li>
       <li><a href="reference.html#idtrack.results.Candidate.own_version">own_version (Candidate attribute)</a>
 </li>
   </ul></td>
@@ -1207,10 +1500,20 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack.results.GraphDescription.package_commit">package_commit (GraphDescription attribute)</a>
+
+      <ul>
+        <li><a href="reference.html#idtrack.graph.GraphRecord.package_commit">(GraphRecord attribute)</a>
 </li>
+      </ul></li>
       <li><a href="reference.html#idtrack.results.GraphDescription.package_version">package_version (GraphDescription attribute)</a>
+
+      <ul>
+        <li><a href="reference.html#idtrack.graph.GraphRecord.package_version">(GraphRecord attribute)</a>
 </li>
+      </ul></li>
       <li><a href="reference.html#idtrack.engine.ranking.Pair">Pair (class in idtrack.engine.ranking)</a>
+</li>
+      <li><a href="reference.html#idtrack.reading.PANDAS_MISSING_VALUES">PANDAS_MISSING_VALUES (in module idtrack.reading)</a>
 </li>
       <li><a href="reference.html#idtrack.results.Candidate.path">path (Candidate attribute)</a>
 
@@ -1222,19 +1525,53 @@
         <li><a href="reference.html#idtrack.errors.GraphFileError.path">(GraphFileError attribute)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack.engine.explain.PathBuilder">PathBuilder (class in idtrack.engine.explain)</a>
 </li>
       <li><a href="reference.html#idtrack.results.PathNode">PathNode (class in idtrack.results)</a>
 </li>
       <li><a href="reference.html#idtrack.results.PathStep">PathStep (class in idtrack.results)</a>
 </li>
+      <li><a href="reference.html#idtrack.graph.Place">Place (class in idtrack.graph)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.genes.PLACE_KINDS">PLACE_KINDS (in module idtrack.graph.genes)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#idtrack.graph.genes.place_kinds">place_kinds() (in module idtrack.graph.genes)</a>
+</li>
+      <li><a href="reference.html#idtrack.results.PLACE_RELATIONS">PLACE_RELATIONS (in module idtrack.results)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.genes.GeneFacts.placed">placed (GeneFacts attribute)</a>
+</li>
+      <li><a href="reference.html#idtrack.results.BridgeCheck.places">places (BridgeCheck attribute)</a>
+
+      <ul>
+        <li><a href="reference.html#idtrack.results.PathNode.places">(PathNode attribute)</a>
+</li>
+        <li><a href="reference.html#idtrack.results.PathStep.places">(PathStep attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="reference.html#idtrack.graph.TheGraph.places">places() (TheGraph method)</a>
+</li>
       <li><a href="reference.html#idtrack.build.ensembl_access.PortReachability">PortReachability (class in idtrack.build.ensembl_access)</a>
 </li>
-      <li><a href="reference.html#idtrack.results.GraphDescription.primary_assembly">primary_assembly (GraphDescription attribute)</a>
+      <li><a href="reference.html#idtrack.reading.Reading.prefix">prefix (Reading property)</a>
 </li>
+      <li><a href="reference.html#idtrack.results.GraphDescription.primary_assembly">primary_assembly (GraphDescription attribute)</a>
+
+      <ul>
+        <li><a href="reference.html#idtrack.graph.GraphRecord.primary_assembly">(GraphRecord attribute)</a>
+</li>
+        <li><a href="reference.html#idtrack.graph.TheGraph.primary_assembly">(TheGraph property)</a>
+</li>
+      </ul></li>
       <li><a href="reference.html#idtrack.organisms.primary_assembly">primary_assembly() (in module idtrack.organisms)</a>
+</li>
+      <li><a href="reference.html#idtrack.organisms.PSEUDOAUTOSOMAL_REGIONS">PSEUDOAUTOSOMAL_REGIONS (in module idtrack.organisms)</a>
+</li>
+      <li><a href="reference.html#idtrack.organisms.pseudoautosomal_repeats">pseudoautosomal_repeats() (in module idtrack.organisms)</a>
+</li>
+      <li><a href="reference.html#idtrack.ids.public_name">public_name() (in module idtrack.ids)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -1254,6 +1591,8 @@
 </li>
       <li><a href="reference.html#idtrack.checks.GraphChecks.random_draw_attempts">random_draw_attempts (GraphChecks attribute)</a>
 </li>
+      <li><a href="reference.html#idtrack.graph.ReleaseSet.ranges">ranges() (ReleaseSet method)</a>
+</li>
       <li><a href="reference.html#idtrack.graph.TheGraph.ranges_to_list">ranges_to_list() (TheGraph method)</a>
 </li>
       <li><a href="reference.html#idtrack.engine.ranking.ranked">ranked() (in module idtrack.engine.ranking)</a>
@@ -1261,6 +1600,8 @@
       <li><a href="reference.html#idtrack.build.ensembl_access.reachability">reachability (in module idtrack.build.ensembl_access)</a>
 </li>
       <li><a href="reference.html#idtrack.build.mysql_dump.MySQLDumpCSVStream.read">read() (MySQLDumpCSVStream method)</a>
+</li>
+      <li><a href="reference.html#idtrack.reading.read_identifier">read_identifier() (in module idtrack.reading)</a>
 </li>
       <li><a href="reference.html#idtrack.build.ExternalDatabases.read_modified_yaml">read_modified_yaml() (ExternalDatabases method)</a>
 </li>
@@ -1272,22 +1613,64 @@
 </li>
       <li><a href="reference.html#idtrack.build.mysql_dump.MySQLDumpCSVStream.readable">readable() (MySQLDumpCSVStream method)</a>
 </li>
+      <li><a href="reference.html#idtrack.reading.Reading">Reading (class in idtrack.reading)</a>
+</li>
+      <li><a href="reference.html#idtrack.results.READING_REASONS">READING_REASONS (in module idtrack.results)</a>
+</li>
       <li><a href="reference.html#idtrack.settings.EnsemblSettings.reading_timeout">reading_timeout (EnsemblSettings attribute)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.TheGraph.reading_version">reading_version() (TheGraph method)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.TheGraph.readings">readings() (TheGraph method)</a>
+</li>
+      <li><a href="reference.html#idtrack.engine.Track.reads_at">reads_at() (Track method)</a>
 </li>
       <li><a href="reference.html#idtrack.engine.Conversion.reason">reason (Conversion attribute)</a>
 
       <ul>
         <li><a href="reference.html#idtrack.results.ConversionResult.reason">(ConversionResult attribute)</a>
 </li>
+        <li><a href="reference.html#idtrack.results.OtherReading.reason">(OtherReading attribute)</a>
+</li>
         <li><a href="reference.html#idtrack.results.PathStep.reason">(PathStep attribute)</a>
 </li>
       </ul></li>
       <li><a href="reference.html#idtrack.api.API.reason_text">reason_text() (API static method)</a>
 </li>
+      <li><a href="reference.html#idtrack.results.ConversionResult.reasons">reasons (ConversionResult attribute)</a>
+</li>
       <li><a href="reference.html#idtrack.results.REASONS">REASONS (in module idtrack.results)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.TheGraph.record">record (TheGraph property)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.genes.GeneFacts.reference">reference (GeneFacts attribute)</a>
+
+      <ul>
+        <li><a href="reference.html#idtrack.results.GenePlace.reference">(GenePlace attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="reference.html#idtrack.results.ExplainedPath.refused">refused (ExplainedPath attribute)</a>
+</li>
+      <li><a href="reference.html#idtrack.engine.explain.PathBuilder.refused">refused() (PathBuilder method)</a>
+</li>
+      <li><a href="reference.html#idtrack.results.GenePlace.region">region (GenePlace attribute)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.genes.Region">Region (in module idtrack.graph.genes)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.Place.region">region (Place attribute)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.TheGraph.region_at">region_at() (TheGraph method)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.genes.GeneFacts.region_sequences">region_sequences (GeneFacts attribute)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.genes.GeneFacts.regions">regions (GeneFacts attribute)</a>
 </li>
       <li><a href="reference.html#idtrack.organisms.register_organism">register_organism() (in module idtrack.organisms)</a>
 </li>
+      <li><a href="reference.html#idtrack.graph.genes.relation">relation() (in module idtrack.graph.genes)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack.errors.InactiveAtReleaseError.release">release (InactiveAtReleaseError attribute)</a>
 
       <ul>
@@ -1301,16 +1684,24 @@
       <ul>
         <li><a href="reference.html#idtrack.graph.Connection.releases">(Connection attribute)</a>
 </li>
+        <li><a href="reference.html#idtrack.results.GenePlace.releases">(GenePlace attribute)</a>
+</li>
         <li><a href="reference.html#idtrack.results.GraphDescription.releases">(GraphDescription attribute)</a>
 </li>
+        <li><a href="reference.html#idtrack.graph.GraphRecord.releases">(GraphRecord attribute)</a>
+</li>
         <li><a href="reference.html#idtrack.results.NameMatch.releases">(NameMatch attribute)</a>
+</li>
+        <li><a href="reference.html#idtrack.results.OtherReading.releases">(OtherReading attribute)</a>
+</li>
+        <li><a href="reference.html#idtrack.graph.Place.releases">(Place attribute)</a>
 </li>
         <li><a href="reference.html#idtrack.graph.TheGraph.releases">(TheGraph property)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack.api.API.releases">releases() (API method)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.GraphRecord.releases_per_assembly">releases_per_assembly (GraphRecord attribute)</a>
 </li>
       <li><a href="reference.html#idtrack.graph.ReleaseSet">ReleaseSet (class in idtrack.graph)</a>
 </li>
@@ -1322,11 +1713,25 @@
 </li>
       <li><a href="reference.html#idtrack.graph.TheGraph.remove_nodes_from">remove_nodes_from() (TheGraph method)</a>
 </li>
+      <li><a href="reference.html#idtrack.graph.GraphRecord.renamed_databases">renamed_databases (GraphRecord attribute)</a>
+
+      <ul>
+        <li><a href="reference.html#idtrack.graph.TheGraph.renamed_databases">(TheGraph property)</a>
+</li>
+      </ul></li>
+      <li><a href="reference.html#idtrack.build.DatabaseManager.renamed_label_names">renamed_label_names() (DatabaseManager method)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.TheGraph.repeated_regions">repeated_regions (TheGraph property)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.genes.Repeats">Repeats (in module idtrack.graph.genes)</a>
+</li>
       <li><a href="reference.html#idtrack.settings.SearchSettings.replace">replace() (SearchSettings method)</a>
 </li>
       <li><a href="reference.html#idtrack.graph.TheGraph.resolve_name">resolve_name() (TheGraph method)</a>
 </li>
       <li><a href="reference.html#idtrack.organisms.resolve_organism">resolve_organism() (in module idtrack.organisms)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.TheGraph.respelled">respelled() (TheGraph method)</a>
 </li>
       <li><a href="reference.html#idtrack.settings.EnsemblSettings.rest_attempts">rest_attempts (EnsemblSettings attribute)</a>
 </li>
@@ -1348,6 +1753,8 @@
 </li>
       <li><a href="reference.html#idtrack.graph.TheGraph.rev">rev (TheGraph property)</a>
 </li>
+      <li><a href="reference.html#idtrack.build.database_manager.rules_database">rules_database() (in module idtrack.build.database_manager)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -1356,7 +1763,11 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack.results.Candidate.same_as_query">same_as_query (Candidate attribute)</a>
 </li>
+      <li><a href="reference.html#idtrack.graph.genes.same_place">same_place() (in module idtrack.graph.genes)</a>
+</li>
       <li><a href="reference.html#idtrack.graph.TheGraph.save">save() (TheGraph method)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.genes.SCAFFOLD">SCAFFOLD (in module idtrack.graph.genes)</a>
 </li>
       <li><a href="reference.html#idtrack.results.Candidate.score">score (Candidate attribute)</a>
 </li>
@@ -1374,11 +1785,21 @@
 </li>
       <li><a href="reference.html#idtrack.errors.SearchBudgetExceededError.seconds">seconds (SearchBudgetExceededError attribute)</a>
 </li>
+      <li><a href="reference.html#idtrack.graph.genes.Segment">Segment (in module idtrack.graph.genes)</a>
+</li>
       <li><a href="reference.html#idtrack.engine.ranking.select_best">select_best() (in module idtrack.engine.ranking)</a>
+</li>
+      <li><a href="reference.html#idtrack.build.ExternalDatabases.selected_names">selected_names() (ExternalDatabases method)</a>
+</li>
+      <li><a href="reference.html#idtrack.build.ExternalDatabases.selected_units">selected_units() (ExternalDatabases method)</a>
 </li>
       <li><a href="reference.html#idtrack.graph.files.selection_fingerprint">selection_fingerprint() (in module idtrack.graph.files)</a>
 </li>
       <li><a href="reference.html#idtrack.ids.SENTINEL_VERSIONS">SENTINEL_VERSIONS (in module idtrack.ids)</a>
+</li>
+      <li><a href="reference.html#idtrack.ids.SEPARATORS">SEPARATORS (in module idtrack.ids)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.genes.GeneFacts.sequences">sequences (GeneFacts attribute)</a>
 </li>
       <li><a href="reference.html#idtrack.graph.served_mask">served_mask() (in module idtrack.graph)</a>
 </li>
@@ -1387,6 +1808,8 @@
       <li><a href="reference.html#idtrack.results.GraphDescription.serving_assembly">serving_assembly (GraphDescription attribute)</a>
 
       <ul>
+        <li><a href="reference.html#idtrack.graph.GraphRecord.serving_assembly">(GraphRecord attribute)</a>
+</li>
         <li><a href="reference.html#idtrack.graph.TheGraph.serving_assembly">(TheGraph property)</a>
 </li>
       </ul></li>
@@ -1394,28 +1817,62 @@
 </li>
       <li><a href="reference.html#idtrack.graph.serving_line">serving_line() (in module idtrack.graph)</a>
 </li>
+      <li><a href="reference.html#idtrack.graph.GraphRecord.session_details">session_details (GraphRecord attribute)</a>
+</li>
+      <li><a href="reference.html#idtrack.build.ExternalDatabases.settings_release">settings_release() (ExternalDatabases method)</a>
+</li>
+      <li><a href="reference.html#idtrack.build.externals.settings_release_of">settings_release_of() (in module idtrack.build.externals)</a>
+</li>
       <li><a href="reference.html#idtrack.graph.TheGraph.shared_external_ids">shared_external_ids (TheGraph property)</a>
 </li>
       <li><a href="reference.html#idtrack.results.GraphDescription.snapshot_release">snapshot_release (GraphDescription attribute)</a>
 
       <ul>
+        <li><a href="reference.html#idtrack.graph.GraphRecord.snapshot_release">(GraphRecord attribute)</a>
+</li>
         <li><a href="reference.html#idtrack.graph.TheGraph.snapshot_release">(TheGraph property)</a>
 </li>
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="reference.html#idtrack.results.PathStep.source">source (PathStep attribute)</a>
+      <li><a href="reference.html#idtrack.results.BridgeCheck.source">source (BridgeCheck attribute)</a>
+
+      <ul>
+        <li><a href="reference.html#idtrack.results.PathStep.source">(PathStep attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="reference.html#idtrack.api.API.source_inference">source_inference() (API method)</a>
+</li>
+      <li><a href="reference.html#idtrack.api.SOURCE_SIGNIFICANCE">SOURCE_SIGNIFICANCE (in module idtrack.api)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.GraphRecord.source_tables">source_tables (GraphRecord attribute)</a>
+</li>
+      <li><a href="reference.html#idtrack.results.SourceInference">SourceInference (class in idtrack.results)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.genes.GeneFacts.spans">spans (GeneFacts attribute)</a>
 </li>
       <li><a href="reference.html#idtrack.build.species.SPECIES_PATH">SPECIES_PATH (in module idtrack.build.species)</a>
 </li>
       <li><a href="reference.html#idtrack.graph.TheGraph.spelling">spelling() (TheGraph method)</a>
 </li>
+      <li><a href="reference.html#idtrack.graph.TheGraph.spelt_releases">spelt_releases() (TheGraph method)</a>
+</li>
       <li><a href="reference.html#idtrack.ids.split">split() (in module idtrack.ids)</a>
 </li>
       <li><a href="reference.html#idtrack.results.PathStep.splits">splits (PathStep attribute)</a>
 </li>
+      <li><a href="reference.html#idtrack.ids.STABLE_ID">STABLE_ID (in module idtrack.ids)</a>
+</li>
+      <li><a href="reference.html#idtrack.ids.STABLE_ID_FORM">STABLE_ID_FORM (in module idtrack.ids)</a>
+</li>
       <li><a href="reference.html#idtrack.ids.stable_id_of">stable_id_of() (in module idtrack.ids)</a>
 </li>
+      <li><a href="reference.html#idtrack.results.GenePlace.start">start (GenePlace attribute)</a>
+
+      <ul>
+        <li><a href="reference.html#idtrack.graph.Place.start">(Place attribute)</a>
+</li>
+      </ul></li>
       <li><a href="reference.html#idtrack.errors.SearchBudgetExceededError.states">states (SearchBudgetExceededError attribute)</a>
 </li>
       <li><a href="reference.html#idtrack.results.ConversionResult.status">status (ConversionResult attribute)</a>
@@ -1426,9 +1883,19 @@
 </li>
       <li><a href="reference.html#idtrack.results.ExplainedPath.steps">steps (ExplainedPath attribute)</a>
 </li>
+      <li><a href="reference.html#idtrack.results.GenePlace.strand">strand (GenePlace attribute)</a>
+
+      <ul>
+        <li><a href="reference.html#idtrack.graph.Place.strand">(Place attribute)</a>
+</li>
+      </ul></li>
       <li><a href="reference.html#idtrack.results.STRATEGIES">STRATEGIES (in module idtrack.results)</a>
 </li>
+      <li><a href="reference.html#idtrack.reading.strip_punctuation">strip_punctuation() (in module idtrack.reading)</a>
+</li>
       <li><a href="reference.html#idtrack.organisms.supported_organisms">supported_organisms() (in module idtrack.organisms)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.TheGraph.symbol_case">symbol_case() (TheGraph method)</a>
 </li>
       <li><a href="reference.html#idtrack.organisms.SYMBOL_DATABASES">SYMBOL_DATABASES (in module idtrack.organisms)</a>
 </li>
@@ -1464,11 +1931,17 @@
 </li>
       <li><a href="reference.html#idtrack.errors.TableFormatError">TableFormatError</a>
 </li>
+      <li><a href="reference.html#idtrack.graph.GraphRecord.tables">tables (GraphRecord attribute)</a>
+</li>
       <li><a href="reference.html#idtrack.build.DatabaseManager.tables_directory">tables_directory (DatabaseManager property)</a>
 </li>
-      <li><a href="reference.html#idtrack.results.Candidate.target">target (Candidate attribute)</a>
+      <li><a href="reference.html#idtrack.results.BridgeCheck.taken">taken (BridgeCheck attribute)</a>
+</li>
+      <li><a href="reference.html#idtrack.results.BridgeCheck.target">target (BridgeCheck attribute)</a>
 
       <ul>
+        <li><a href="reference.html#idtrack.results.Candidate.target">(Candidate attribute)</a>
+</li>
         <li><a href="reference.html#idtrack.engine.ranking.Pair.target">(Pair attribute)</a>
 </li>
         <li><a href="reference.html#idtrack.results.PathStep.target">(PathStep attribute)</a>
@@ -1478,7 +1951,11 @@
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#idtrack.reading.Reading.text">text (Reading attribute)</a>
+</li>
       <li><a href="reference.html#idtrack.graph.TheGraph">TheGraph (class in idtrack.graph)</a>
+</li>
+      <li><a href="reference.html#idtrack.results.BridgeCheck.through">through (BridgeCheck attribute)</a>
 </li>
       <li><a href="reference.html#idtrack.engine.Conversion.tie">tie (Conversion attribute)</a>
 
@@ -1489,6 +1966,8 @@
       <li><a href="reference.html#idtrack.graph.TheGraph.to_directed">to_directed() (TheGraph method)</a>
 </li>
       <li><a href="reference.html#idtrack.graph.TheGraph.to_directed_class">to_directed_class() (TheGraph method)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.GraphRecord.to_json">to_json() (GraphRecord method)</a>
 </li>
       <li><a href="reference.html#idtrack.engine.Conversion.to_release">to_release (Conversion attribute)</a>
 
@@ -1530,6 +2009,8 @@
 </li>
       <li><a href="reference.html#idtrack.errors.UnknownVersionError">UnknownVersionError</a>
 </li>
+      <li><a href="reference.html#idtrack.results.Candidate.unscored_steps">unscored_steps (Candidate attribute)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -1546,9 +2027,17 @@
 </li>
       <li><a href="reference.html#idtrack.build.VerifyOrganism">VerifyOrganism (class in idtrack.build)</a>
 </li>
+      <li><a href="reference.html#idtrack.graph.TheGraph.version">version() (TheGraph method)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.TheGraph.version_change_shares">version_change_shares() (TheGraph method)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="reference.html#idtrack.graph.TheGraph.version">version() (TheGraph method)</a>
+      <li><a href="reference.html#idtrack.reading.version_digits_refused">version_digits_refused() (in module idtrack.reading)</a>
+</li>
+      <li><a href="reference.html#idtrack.settings.VERSION_EDIT_COUNTER_SHARE">VERSION_EDIT_COUNTER_SHARE (in module idtrack.settings)</a>
+</li>
+      <li><a href="reference.html#idtrack.graph.TheGraph.version_releases">version_releases() (TheGraph method)</a>
 </li>
       <li><a href="reference.html#idtrack.errors.UnknownVersionError.versions">versions (UnknownVersionError attribute)</a>
 </li>
@@ -1572,8 +2061,12 @@
         <li><a href="reference.html#idtrack.results.PathStep.weight">(PathStep attribute)</a>
 </li>
       </ul></li>
+      <li><a href="reference.html#idtrack.graph.genes.WHOLE_SEQUENCES">WHOLE_SEQUENCES (in module idtrack.graph.genes)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#idtrack.graph.GraphRecord.window_end">window_end (GraphRecord attribute)</a>
+</li>
       <li><a href="reference.html#idtrack.engine.ranking.Pair.within">within (Pair attribute)</a>
 </li>
       <li><a href="reference.html#idtrack.build.externals.write_externals_yaml">write_externals_yaml() (in module idtrack.build.externals)</a>
@@ -1586,7 +2079,19 @@
 <h2 id="X">X</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#idtrack.build.database_manager.XREF_COLUMNS">XREF_COLUMNS (in module idtrack.build.database_manager)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack.graph.TheGraph.xref_edges">xref_edges() (TheGraph method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="Y">Y</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#idtrack.graph.TheGraph.y_copies">y_copies() (TheGraph method)</a>
 </li>
   </ul></td>
 </tr></table>

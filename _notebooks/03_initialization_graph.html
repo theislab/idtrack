@@ -343,7 +343,7 @@ OK                                                      sus_scrofa_externals_mod
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2026-11-18 05:10:54 INFO:idtrack.build.species: Ensembl Rest API query to get the organism names and associated releases.
+2026-11-18 08:44:00 INFO:idtrack.build.species: Ensembl Rest API query to get the organism names and associated releases.
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -400,9 +400,9 @@ api = API.build(organism, SNAPSHOT_RELEASE, str(LOCAL_REPOSITORY))
 <span class="nb">print</span><span class="p">(</span><span class="s1">'External DBs (first 20):'</span><span class="p">,</span> <span class="n">aed</span><span class="p">[:</span><span class="mi">20</span><span class="p">])</span>
 
 <span class="c1"># What the graph file records about itself (checked when it is loaded)</span>
-<span class="n">manifest</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">manifest</span>
+<span class="n">record</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">record</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">'Graph format version:'</span><span class="p">,</span> <span class="n">described</span><span class="o">.</span><span class="n">format_version</span><span class="p">,</span> <span class="s1">'| built by idtrack'</span><span class="p">,</span> <span class="n">described</span><span class="o">.</span><span class="n">package_version</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">'History corrections made while building:'</span><span class="p">,</span> <span class="n">manifest</span><span class="p">[</span><span class="s1">'history'</span><span class="p">][</span><span class="s1">'corrections'</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'History corrections made while building:'</span><span class="p">,</span> <span class="n">record</span><span class="o">.</span><span class="n">history</span><span class="p">[</span><span class="s1">'corrections'</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
@@ -411,7 +411,7 @@ api = API.build(organism, SNAPSHOT_RELEASE, str(LOCAL_REPOSITORY))
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2026-11-18 05:11:00 INFO:idtrack.graph.graph: Graph-wide table being calculated: assembly_releases
+2026-11-18 08:44:07 INFO:idtrack.graph.graph: Graph-wide table being calculated: assembly_releases
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -423,11 +423,11 @@ Organism: homo_sapiens
 Snapshot release: 115
 Primary assembly: 38
 Assemblies in this graph: [36, 37, 38]
-Nodes: 3682041
-Edges: 8630251
-External DBs enabled (count): 27
-External DBs (first 20): [&#39;CCDS&#39;, &#39;Clone_based_ensembl_gene&#39;, &#39;Clone_based_vega_gene&#39;, &#39;EntrezGene&#39;, &#39;HGNC Symbol&#39;, &#39;Havana gene&#39;, &#39;Havana transcript&#39;, &#39;Havana translation&#39;, &#39;NCBI gene&#39;, &#39;NCBI gene (formerly Entrezgene)&#39;, &#39;RFAM&#39;, &#39;RefSeq_mRNA&#39;, &#39;RefSeq_mRNA_predicted&#39;, &#39;RefSeq_ncRNA&#39;, &#39;RefSeq_ncRNA_predicted&#39;, &#39;RefSeq_peptide&#39;, &#39;RefSeq_peptide_predicted&#39;, &#39;UniProtKB Gene Name&#39;, &#39;Uniprot/SPTREMBL&#39;, &#39;Uniprot/SWISSPROT&#39;]
-Graph format version: 2 | built by idtrack 0.0.5
+Nodes: 3685757
+Edges: 8635486
+External DBs enabled (count): 28
+External DBs (first 20): [&#39;CCDS&#39;, &#39;CCDS label&#39;, &#39;Clone_based_ensembl_gene&#39;, &#39;Clone_based_vega_gene&#39;, &#39;EntrezGene&#39;, &#39;HGNC Symbol&#39;, &#39;Havana gene&#39;, &#39;Havana transcript&#39;, &#39;Havana translation&#39;, &#39;NCBI gene (formerly Entrezgene)&#39;, &#39;RFAM&#39;, &#39;RFAM label&#39;, &#39;RefSeq_mRNA&#39;, &#39;RefSeq_mRNA_predicted&#39;, &#39;RefSeq_ncRNA&#39;, &#39;RefSeq_ncRNA_predicted&#39;, &#39;RefSeq_peptide&#39;, &#39;RefSeq_peptide_predicted&#39;, &#39;UniProtKB Gene Name&#39;, &#39;Uniprot/SPTREMBL&#39;]
+Graph format version: 3 | built by idtrack unknown
 History corrections made while building: [{&#39;edges&#39;: 7, &#39;events&#39;: 7, &#39;recorded&#39;: [114, 114], &#39;used&#39;: [114, 115]}]
 </pre></div></div>
 </div>
@@ -446,7 +446,7 @@ History corrections made while building: [{&#39;edges&#39;: 7, &#39;events&#39;:
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-[PosixPath(&#39;idtrack_cache/graph_homo_sapiens_assembly38_min48_max115_narrow.npz&#39;)]
+[PosixPath(&#39;idtrack_cache/graph_homo_sapiens_assembly38_min48_max115.npz&#39;)]
 </pre></div></div>
 </div>
 </section>
@@ -528,7 +528,7 @@ else:
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2026-11-18 05:11:03 INFO:idtrack.graph.graph: Graph-wide table being calculated: assembly_releases
+2026-11-18 08:44:11 INFO:idtrack.graph.graph: Graph-wide table being calculated: assembly_releases
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -540,10 +540,10 @@ Organism: mus_musculus
 Snapshot release: 115
 Primary assembly: 39
 Assemblies in this graph: [37, 38, 39]
-Nodes: 2476278
-Edges: 5367306
-External DBs enabled (count): 27
-External DBs (first 20): [&#39;CCDS&#39;, &#39;Clone_based_ensembl_gene&#39;, &#39;Clone_based_vega_gene&#39;, &#39;EntrezGene&#39;, &#39;Havana gene&#39;, &#39;Havana transcript&#39;, &#39;Havana translation&#39;, &#39;MGI Symbol&#39;, &#39;NCBI gene&#39;, &#39;NCBI gene (formerly Entrezgene)&#39;, &#39;RFAM&#39;, &#39;RefSeq_mRNA&#39;, &#39;RefSeq_mRNA_predicted&#39;, &#39;RefSeq_ncRNA&#39;, &#39;RefSeq_ncRNA_predicted&#39;, &#39;RefSeq_peptide&#39;, &#39;RefSeq_peptide_predicted&#39;, &#39;UniProtKB Gene Name&#39;, &#39;Uniprot/SPTREMBL&#39;, &#39;Uniprot/SWISSPROT&#39;]
+Nodes: 2477840
+Edges: 5370336
+External DBs enabled (count): 28
+External DBs (first 20): [&#39;CCDS&#39;, &#39;CCDS label&#39;, &#39;Clone_based_ensembl_gene&#39;, &#39;Clone_based_vega_gene&#39;, &#39;EntrezGene&#39;, &#39;Havana gene&#39;, &#39;Havana transcript&#39;, &#39;Havana translation&#39;, &#39;MGI Symbol&#39;, &#39;NCBI gene (formerly Entrezgene)&#39;, &#39;RFAM&#39;, &#39;RFAM label&#39;, &#39;RefSeq_mRNA&#39;, &#39;RefSeq_mRNA_predicted&#39;, &#39;RefSeq_ncRNA&#39;, &#39;RefSeq_ncRNA_predicted&#39;, &#39;RefSeq_peptide&#39;, &#39;RefSeq_peptide_predicted&#39;, &#39;UniProtKB Gene Name&#39;, &#39;Uniprot/SPTREMBL&#39;]
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -560,7 +560,7 @@ External DBs (first 20): [&#39;CCDS&#39;, &#39;Clone_based_ensembl_gene&#39;, &#
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-[PosixPath(&#39;idtrack_cache/graph_mus_musculus_assembly39_min48_max115_narrow.npz&#39;)]
+[PosixPath(&#39;idtrack_cache/graph_mus_musculus_assembly39_min48_max115.npz&#39;)]
 </pre></div></div>
 </div>
 </section>
@@ -642,7 +642,7 @@ else:
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2026-11-18 05:11:05 INFO:idtrack.graph.graph: Graph-wide table being calculated: assembly_releases
+2026-11-18 08:44:12 INFO:idtrack.graph.graph: Graph-wide table being calculated: assembly_releases
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -654,10 +654,10 @@ Organism: sus_scrofa
 Snapshot release: 115
 Primary assembly: 111
 Assemblies in this graph: [9, 102, 111]
-Nodes: 1073214
-Edges: 1757774
+Nodes: 1073987
+Edges: 1759185
 External DBs enabled (count): 24
-External DBs (first 20): [&#39;Clone_based_ensembl_gene&#39;, &#39;Clone_based_vega_gene&#39;, &#39;EntrezGene&#39;, &#39;HGNC Symbol&#39;, &#39;Havana gene&#39;, &#39;Havana transcript&#39;, &#39;NCBI gene&#39;, &#39;NCBI gene (formerly Entrezgene)&#39;, &#39;RFAM&#39;, &#39;RefSeq_mRNA&#39;, &#39;RefSeq_mRNA_predicted&#39;, &#39;RefSeq_ncRNA&#39;, &#39;RefSeq_ncRNA_predicted&#39;, &#39;RefSeq_peptide&#39;, &#39;RefSeq_peptide_predicted&#39;, &#39;UniProtKB Gene Name&#39;, &#39;Uniprot/SPTREMBL&#39;, &#39;Uniprot/SWISSPROT&#39;, &#39;VGNC Symbol&#39;, &#39;synonym_id::EntrezGene&#39;]
+External DBs (first 20): [&#39;Clone_based_ensembl_gene&#39;, &#39;Clone_based_vega_gene&#39;, &#39;EntrezGene&#39;, &#39;HGNC Symbol&#39;, &#39;Havana gene&#39;, &#39;Havana transcript&#39;, &#39;NCBI gene (formerly Entrezgene)&#39;, &#39;RFAM&#39;, &#39;RFAM label&#39;, &#39;RefSeq_mRNA&#39;, &#39;RefSeq_mRNA_predicted&#39;, &#39;RefSeq_ncRNA&#39;, &#39;RefSeq_ncRNA_predicted&#39;, &#39;RefSeq_peptide&#39;, &#39;RefSeq_peptide_predicted&#39;, &#39;UniProtKB Gene Name&#39;, &#39;Uniprot/SPTREMBL&#39;, &#39;Uniprot/SWISSPROT&#39;, &#39;VGNC Symbol&#39;, &#39;miRBase&#39;]
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -674,7 +674,7 @@ External DBs (first 20): [&#39;Clone_based_ensembl_gene&#39;, &#39;Clone_based_v
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-[PosixPath(&#39;idtrack_cache/graph_sus_scrofa_assembly111_min56_max115_narrow.npz&#39;)]
+[PosixPath(&#39;idtrack_cache/graph_sus_scrofa_assembly111_min56_max115.npz&#39;)]
 </pre></div></div>
 </div>
 </section>
@@ -736,7 +736,7 @@ else:
 <div class="output_area rendered_html docutils container">
 <details class="idtrack-collapse">
 <summary>Click to show build logs</summary>
-<pre class="idtrack-collapse-content">2026-11-18 05:11:07 INFO:idtrack.graph.graph: Graph-wide table being calculated: assembly_releases
+<pre class="idtrack-collapse-content">2026-11-18 08:44:14 INFO:idtrack.graph.graph: Graph-wide table being calculated: assembly_releases
 Assemblies in this graph: [1, 10, 801]</pre>
 </details></div>
 </div>
@@ -769,7 +769,7 @@ else:
 <div class="output_area rendered_html docutils container">
 <details class="idtrack-collapse">
 <summary>Click to show build logs</summary>
-<pre class="idtrack-collapse-content">2026-11-18 05:11:07 INFO:idtrack.graph.graph: Graph-wide table being calculated: assembly_releases
+<pre class="idtrack-collapse-content">2026-11-18 08:44:15 INFO:idtrack.graph.graph: Graph-wide table being calculated: assembly_releases
 Assemblies in this graph: [5, 6]</pre>
 </details></div>
 </div>
@@ -792,9 +792,9 @@ Assemblies in this graph: [5, 6]</pre>
 <section id="What-a-graph-file-is">
 <h3>What a graph file is<a class="headerlink" href="#What-a-graph-file-is" title="Link to this heading"></a></h3>
 <ul class="simple">
-<li><p>One <code class="docutils literal notranslate"><span class="pre">.npz</span></code> file per graph, <code class="docutils literal notranslate"><span class="pre">graph_&lt;organism&gt;_assembly&lt;primary</span> <span class="pre">assembly&gt;_min&lt;first</span> <span class="pre">release&gt;_max&lt;snapshot&gt;_narrow.npz</span></code>: graphs of different organisms, snapshots and primary assemblies sit side by side in one local repository.</p></li>
-<li><p>The file records what it was built from: the selection of external databases that takes effect (from your external YAML), the organism table, the graph format and the package version, the tables, and the corrections made to Ensembl’s id history (<code class="docutils literal notranslate"><span class="pre">api.describe()</span></code>, and the whole record in <code class="docutils literal notranslate"><span class="pre">api.graph.manifest</span></code>). Loading a file under the expected name that was built from something else (another YAML selection, another organism table, an older graph format) raises
-<code class="docutils literal notranslate"><span class="pre">idtrack.GraphMismatchError</span></code>, which names the differences: IDTrack never answers from another graph and never starts a build of hours on its own. To build it again, move the file away and call <code class="docutils literal notranslate"><span class="pre">API.build(...,</span> <span class="pre">rebuild=True)</span></code>.</p></li>
+<li><p>One <code class="docutils literal notranslate"><span class="pre">.npz</span></code> file per graph, <code class="docutils literal notranslate"><span class="pre">graph_&lt;organism&gt;_assembly&lt;primary</span> <span class="pre">assembly&gt;_min&lt;first</span> <span class="pre">release&gt;_max&lt;snapshot&gt;.npz</span></code>: graphs of different organisms, snapshots and primary assemblies sit side by side in one local repository.</p></li>
+<li><p>The file records what it was built from: the selection of external databases that takes effect (from your external YAML), the organism table, the graph format and the package version, the tables, and the corrections made to Ensembl’s id history (<code class="docutils literal notranslate"><span class="pre">api.describe()</span></code>, and the whole record in <code class="docutils literal notranslate"><span class="pre">api.graph.record</span></code>). Loading a file under the expected name that was built from something else (another YAML selection, another organism table, an older graph format) raises <code class="docutils literal notranslate"><span class="pre">idtrack.GraphMismatchError</span></code>,
+which names the differences: IDTrack never answers from another graph and never starts a build of hours on its own. To build it again, move the file away and call <code class="docutils literal notranslate"><span class="pre">API.build(...,</span> <span class="pre">rebuild=True)</span></code>.</p></li>
 <li><p>Graph files of IDTrack 0.0.5 (<code class="docutils literal notranslate"><span class="pre">graph_*.pickle</span></code>) and its table cache (<code class="docutils literal notranslate"><span class="pre">&lt;organism&gt;_assembly-&lt;key&gt;.h5</span></code>) are not read; build the graphs again with this version.</p></li>
 </ul>
 </section>
@@ -867,11 +867,11 @@ Assemblies in this graph: [5, 6]</pre>
 Local repository: idtrack_cache
 
 graph_*.npz (5):
-   graph_homo_sapiens_assembly38_min48_max115_narrow.npz
-   graph_macaca_fascicularis_assembly6_min91_max115_narrow.npz
-   graph_macaca_mulatta_assembly10_min48_max115_narrow.npz
-   graph_mus_musculus_assembly39_min48_max115_narrow.npz
-   graph_sus_scrofa_assembly111_min56_max115_narrow.npz
+   graph_homo_sapiens_assembly38_min48_max115.npz
+   graph_macaca_fascicularis_assembly6_min91_max115.npz
+   graph_macaca_mulatta_assembly10_min48_max115.npz
+   graph_mus_musculus_assembly39_min48_max115.npz
+   graph_sus_scrofa_assembly111_min56_max115.npz
 
 idtrack_tables/* (0):
 

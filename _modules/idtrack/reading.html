@@ -1,0 +1,454 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>idtrack.reading &mdash; idtrack 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=6a604523" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="../../_static/tutorials.css?v=0e72a3a5" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../_static/design-tabs.js?v=fcb327ea"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />  
+<!-- Google tag (gtag.js) -->
+<script
+    async
+    src="https://www.googletagmanager.com/gtag/js?id=G-FYKLWNJBVK"
+></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() {
+        dataLayer.push(arguments);
+    }
+    gtag("js", new Date());
+
+    gtag("config", "G-FYKLWNJBVK");
+</script>
+
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            idtrack
+              <img src="../../_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../changes.html">Changes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_of_conduct.html">Code of Conduct</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">idtrack</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">idtrack.reading</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for idtrack.reading</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""How an identifier a user typed or pasted is read before it is looked up in a graph.</span>
+
+<span class="sd">What people paste carries more than the identifier: white space, invisible characters (a byte-order mark at the start</span>
+<span class="sd">of a file, zero-width spaces, bidirectional marks, soft hyphens, control characters), full-width letters and Unicode</span>
+<span class="sd">dashes, quotation marks and the punctuation that ends a sentence or an item of a list (``A1BG;``, ``CCDC39.``), the</span>
+<span class="sd">placeholder of a missing value (``nan``, ``NA``), and sometimes the form GENCODE gives the Y copies of the genes and</span>
+<span class="sd">transcripts of the pseudoautosomal regions (``ENSG00000182378.14_PAR_Y``).</span>
+
+<span class="sd">Characters are classed by the Unicode standard (:py:mod:`unicodedata`): by their general category where one says what</span>
+<span class="sd">they are, and, where the standard defines the class by a property that :py:mod:`unicodedata` does not expose, by the</span>
+<span class="sd">few members of that property that remain after NFKC (each such constant below says so).</span>
+<span class="sd">:py:func:`read_identifier` is the one place that turns such a string into the text that is looked up, and says what it</span>
+<span class="sd">changed, so that a conversion reports it (:py:attr:`idtrack.results.ConversionResult.match`, whose prefixes</span>
+<span class="sd">``unicode``, ``punctuation`` and ``par_y`` :py:data:`idtrack.results.MATCH_PREFIXES` describes).</span>
+
+<span class="sd">Every rule here is a rule of the string alone, the same in every graph. This module imports nothing of idtrack except</span>
+<span class="sd">:py:mod:`idtrack.errors` and :py:mod:`idtrack.ids`.</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">unicodedata</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack</span><span class="w"> </span><span class="kn">import</span> <span class="n">ids</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">ArgumentTypeError</span><span class="p">,</span> <span class="n">InvalidArgumentError</span><span class="p">,</span> <span class="n">MissingValueError</span>
+
+<span class="c1">#: The longest identifier that is read (after surrounding white space is removed). A bound on the work a string can</span>
+<span class="c1">#: cause, not a rule of identifiers: it is set where it is read, before any graph is consulted, so that one string</span>
+<span class="c1">#: gets one answer in every graph; the longest name in the graphs of the five organisms of idtrack's table has about</span>
+<span class="c1">#: a hundred characters, and every bound above that gives the same answers.</span>
+<span class="n">MAX_IDENTIFIER_LENGTH</span> <span class="o">=</span> <span class="mi">1000</span>
+
+<span class="c1">#: The largest version of an Ensembl id: Ensembl's core schema stores a version as ``SMALLINT UNSIGNED`` (16 bits).</span>
+<span class="n">MAX_ENSEMBL_VERSION</span> <span class="o">=</span> <span class="mi">2</span><span class="o">**</span><span class="mi">16</span> <span class="o">-</span> <span class="mi">1</span>
+<span class="c1">#: The most digits a version of an Ensembl id can have (:py:data:`MAX_ENSEMBL_VERSION`).</span>
+<span class="n">MAX_VERSION_DIGITS</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">MAX_ENSEMBL_VERSION</span><span class="p">))</span>
+
+<span class="c1">#: The strings that pandas reads as a missing value by default (``pandas._libs.parsers.STR_NA_VALUES`` of pandas 3.1):</span>
+<span class="c1">#: the lists and tables people paste are mostly written by pandas or read with it (decision 52). Copied here, not read,</span>
+<span class="c1">#: because the query path imports no pandas (it needs numpy and networkx only); a unit test compares the copy with</span>
+<span class="c1">#: pandas' own list, so that a change of the source fails a test instead of drifting.</span>
+<span class="n">PANDAS_MISSING_VALUES</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span>
+    <span class="p">{</span>
+        <span class="s2">""</span><span class="p">,</span>
+        <span class="s2">"#N/A"</span><span class="p">,</span>
+        <span class="s2">"#N/A N/A"</span><span class="p">,</span>
+        <span class="s2">"#NA"</span><span class="p">,</span>
+        <span class="s2">"-1.#IND"</span><span class="p">,</span>
+        <span class="s2">"-1.#QNAN"</span><span class="p">,</span>
+        <span class="s2">"-NaN"</span><span class="p">,</span>
+        <span class="s2">"-nan"</span><span class="p">,</span>
+        <span class="s2">"1.#IND"</span><span class="p">,</span>
+        <span class="s2">"1.#QNAN"</span><span class="p">,</span>
+        <span class="s2">"&lt;NA&gt;"</span><span class="p">,</span>
+        <span class="s2">"N/A"</span><span class="p">,</span>
+        <span class="s2">"NA"</span><span class="p">,</span>
+        <span class="s2">"NULL"</span><span class="p">,</span>
+        <span class="s2">"NaN"</span><span class="p">,</span>
+        <span class="s2">"None"</span><span class="p">,</span>
+        <span class="s2">"n/a"</span><span class="p">,</span>
+        <span class="s2">"nan"</span><span class="p">,</span>
+        <span class="s2">"null"</span><span class="p">,</span>
+    <span class="p">}</span>
+<span class="p">)</span>
+<span class="c1">#: The spellings of a missing value, compared without letter case after the reading below: pandas' missing values</span>
+<span class="c1">#: (:py:data:`PANDAS_MISSING_VALUES`) and the two that decision 81 adds, pandas' text of a missing date or time</span>
+<span class="c1">#: (``NaT``) and UniProt's placeholder name (``unknown``). They stand for nothing far more often than for a gene</span>
+<span class="c1">#: (``NaN`` is an old alias of SCN11A, ``NA`` a synonym of a few genes); a caller who names the source database</span>
+<span class="c1">#: (``from_database``) has them looked up as identifiers of that database.</span>
+<span class="n">MISSING_VALUES</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="n">value</span><span class="o">.</span><span class="n">casefold</span><span class="p">()</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">PANDAS_MISSING_VALUES</span> <span class="k">if</span> <span class="n">value</span><span class="p">})</span> <span class="o">|</span> <span class="p">{</span>
+    <span class="s2">"nat"</span><span class="p">,</span>
+    <span class="s2">"unknown"</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="c1"># Removed before matching (:py:func:`_visible`): every format character (Unicode category Cf: zero-width space,</span>
+<span class="c1"># joiners, word joiner, byte-order mark, bidirectional marks and isolates, soft hyphen, ...) and every control</span>
+<span class="c1"># character (Cc) that is not white space (white space is stripped at the ends; inside, it is no part of an identifier).</span>
+<span class="n">_REMOVED_CATEGORIES</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"Cf"</span><span class="p">,</span> <span class="s2">"Cc"</span><span class="p">)</span>
+<span class="c1"># Read as the hyphen-minus after NFKC: the dashes (Unicode category Pd: hyphen, non-breaking hyphen, en and em dash,</span>
+<span class="c1"># ...), and the minus sign U+2212, which Unicode's property Dash counts among the dashes while its category is that of</span>
+<span class="c1"># mathematical symbols (Sm); :py:mod:`unicodedata` exposes categories, not that property, and NFKC turns the superscript</span>
+<span class="c1"># and subscript minus into this one sign.</span>
+<span class="n">_DASH_CATEGORY</span> <span class="o">=</span> <span class="s2">"Pd"</span>
+<span class="n">_MINUS_SIGN</span> <span class="o">=</span> <span class="s2">"</span><span class="se">\u2212</span><span class="s2">"</span>
+<span class="c1"># Quotation marks (Unicode's property Quotation_Mark): the typographic ones are the categories of initial and final</span>
+<span class="c1"># quotes (Pi, Pf: ``‘ ’ “ ” « »``); the two of ASCII, apostrophe and quotation mark, belong to category Po with all other</span>
+<span class="c1"># ASCII punctuation, so they are named (NFKC turns their full-width forms into them). The low-9 marks (category Ps,</span>
+<span class="c1"># with the opening brackets) are not read as quotes.</span>
+<span class="n">_QUOTE_CATEGORIES</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"Pi"</span><span class="p">,</span> <span class="s2">"Pf"</span><span class="p">)</span>
+<span class="n">_ASCII_QUOTES</span> <span class="o">=</span> <span class="s2">"'</span><span class="se">\"</span><span class="s2">"</span>
+<span class="c1"># The punctuation that ends a sentence, a clause or an item of a list (Unicode's property Terminal_Punctuation): its</span>
+<span class="c1"># members of ASCII, which NFKC gives for their full-width forms; the property is not exposed by :py:mod:`unicodedata`.</span>
+<span class="c1"># No identifier of the graphs ends with ``!`` or ``:``; those that end with ``;``, ``,``, ``.`` or ``?`` are names that</span>
+<span class="c1"># databases wrote with the punctuation of the text they came from (``A1BG;``, ``14-3-3?``).</span>
+<span class="n">_TERMINAL_PUNCTUATION</span> <span class="o">=</span> <span class="s2">"!,.:;?"</span>
+<span class="c1"># The graph's marks of a gene id's birth and retirement after an Ensembl or LRG id, with any separator (decision 56).</span>
+<span class="n">_SENTINEL</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
+    <span class="sa">rf</span><span class="s2">"(?i)^(</span><span class="si">{</span><span class="n">ids</span><span class="o">.</span><span class="n">STABLE_ID_FORM</span><span class="si">}</span><span class="s2">)[</span><span class="si">{</span><span class="n">re</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">ids</span><span class="o">.</span><span class="n">SEPARATORS</span><span class="p">)</span><span class="si">}</span><span class="s2">](?:</span><span class="si">{</span><span class="s1">'|'</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">ids</span><span class="o">.</span><span class="n">SENTINEL_VERSIONS</span><span class="p">))</span><span class="si">}</span><span class="s2">)$"</span>
+<span class="p">)</span>
+<span class="c1"># GENCODE's Y copy of a gene or transcript of a pseudoautosomal region: &lt;Ensembl id&gt;[.&lt;version&gt;]_PAR_Y.</span>
+<span class="n">_PAR_Y</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">rf</span><span class="s2">"(?i)^(</span><span class="si">{</span><span class="n">ids</span><span class="o">.</span><span class="n">STABLE_ID_FORM</span><span class="si">}</span><span class="s2">(?:\.\d+)?)_PAR_Y$"</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="Reading">
+<a class="viewcode-back" href="../../reference.html#idtrack.reading.Reading">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Reading</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""A string as idtrack reads it.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        text (str): The text that is looked up.</span>
+<span class="sd">        kinds (tuple[str, ...]): What the reading changed, keys of :py:data:`idtrack.results.MATCH_PREFIXES` in the order</span>
+<span class="sd">            applied (``unicode``, ``punctuation``, ``par_y``); empty when the string was used as given (but for</span>
+<span class="sd">            surrounding white space).</span>
+<span class="sd">    """</span>
+
+    <span class="n">text</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">kinds</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">prefix</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""The prefix of the match kind that says what the reading changed (``"unicode:punctuation:"``, or ``""``)."""</span>
+        <span class="k">return</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">kind</span><span class="si">}</span><span class="s2">:"</span> <span class="k">for</span> <span class="n">kind</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">kinds</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="normalise_unicode">
+<a class="viewcode-back" href="../../reference.html#idtrack.reading.normalise_unicode">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">normalise_unicode</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return a string with invisible and control characters removed, NFKC applied and Unicode dashes as ``-``.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        text: The string.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: The string as it is matched; the string itself when nothing changes.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">text</span><span class="o">.</span><span class="n">isascii</span><span class="p">()</span> <span class="ow">and</span> <span class="n">text</span><span class="o">.</span><span class="n">isprintable</span><span class="p">():</span>
+        <span class="k">return</span> <span class="n">text</span>
+    <span class="n">normal</span> <span class="o">=</span> <span class="n">unicodedata</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="s2">"NFKC"</span><span class="p">,</span> <span class="n">_visible</span><span class="p">(</span><span class="n">text</span><span class="p">))</span>
+    <span class="k">return</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s2">"-"</span> <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="n">_MINUS_SIGN</span> <span class="ow">or</span> <span class="n">unicodedata</span><span class="o">.</span><span class="n">category</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="o">==</span> <span class="n">_DASH_CATEGORY</span> <span class="k">else</span> <span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">normal</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_visible</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return a string without its format characters and its control characters that are not white space."""</span>
+    <span class="k">return</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">text</span> <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">isspace</span><span class="p">()</span> <span class="ow">or</span> <span class="n">unicodedata</span><span class="o">.</span><span class="n">category</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_REMOVED_CATEGORIES</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_is_quote</span><span class="p">(</span><span class="n">character</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Tell whether a character is a quotation mark (:py:data:`_QUOTE_CATEGORIES`, :py:data:`_ASCII_QUOTES`)."""</span>
+    <span class="k">return</span> <span class="n">character</span> <span class="ow">in</span> <span class="n">_ASCII_QUOTES</span> <span class="ow">or</span> <span class="n">unicodedata</span><span class="o">.</span><span class="n">category</span><span class="p">(</span><span class="n">character</span><span class="p">)</span> <span class="ow">in</span> <span class="n">_QUOTE_CATEGORIES</span>
+
+
+<div class="viewcode-block" id="strip_punctuation">
+<a class="viewcode-back" href="../../reference.html#idtrack.reading.strip_punctuation">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">strip_punctuation</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return a string without the quotation marks around it and the punctuation that ends a sentence at its end.</span>
+
+<span class="sd">    Repeatedly: the characters of Unicode's Terminal_Punctuation at the end (``;``, ``,``, ``.``, ``:``, ``!``,</span>
+<span class="sd">    ``?``), and a pair of quotation marks that encloses the string (``'AGT'``, ``“TP53”``). A quotation mark at one end</span>
+<span class="sd">    only stays (``HSP70B'`` is a name), as does punctuation inside a string.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        text: The string.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: The string as it is matched; the string itself when nothing changes (or nothing would be left).</span>
+<span class="sd">    """</span>
+    <span class="n">current</span> <span class="o">=</span> <span class="n">text</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">before</span> <span class="o">=</span> <span class="n">current</span>
+        <span class="n">current</span> <span class="o">=</span> <span class="n">current</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="n">_TERMINAL_PUNCTUATION</span><span class="p">)</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">current</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">_is_quote</span><span class="p">(</span><span class="n">current</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="ow">and</span> <span class="n">_is_quote</span><span class="p">(</span><span class="n">current</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span>
+            <span class="n">current</span> <span class="o">=</span> <span class="n">current</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">current</span> <span class="o">==</span> <span class="n">before</span><span class="p">:</span>
+            <span class="k">break</span>
+    <span class="k">return</span> <span class="n">current</span> <span class="k">if</span> <span class="n">current</span> <span class="k">else</span> <span class="n">text</span></div>
+
+
+
+<div class="viewcode-block" id="is_missing_value">
+<a class="viewcode-back" href="../../reference.html#idtrack.reading.is_missing_value">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">is_missing_value</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Tell whether a string (as read) is a spelling of a missing value (:py:data:`MISSING_VALUES`, or empty).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        text: The string.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        bool: Whether it stands for nothing.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="ow">not</span> <span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="ow">or</span> <span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">casefold</span><span class="p">()</span> <span class="ow">in</span> <span class="n">MISSING_VALUES</span></div>
+
+
+
+<div class="viewcode-block" id="internal_name">
+<a class="viewcode-back" href="../../reference.html#idtrack.reading.internal_name">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">internal_name</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return why a string is one of the graph's internal names, or ``None`` when it is not one.</span>
+
+<span class="sd">    The graph keeps synonyms under the prefix ``synonym_id::`` and marks the birth and retirement of a gene id with the</span>
+<span class="sd">    versions ``Void`` and ``Retired`` (``ENSG00000141510.Void``); these are its bookkeeping, never identifiers.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        text: The string (as read).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str | None: The reason, for the error message.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">text</span><span class="o">.</span><span class="n">casefold</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">ids</span><span class="o">.</span><span class="n">SYNONYM_PREFIX</span><span class="o">.</span><span class="n">casefold</span><span class="p">()):</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">"it begins with the graph's internal prefix </span><span class="si">{</span><span class="n">ids</span><span class="o">.</span><span class="n">SYNONYM_PREFIX</span><span class="si">!r}</span><span class="s2">, which no identifier has"</span>
+    <span class="k">if</span> <span class="n">_SENTINEL</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">"`Void` and `Retired` are the graph's marks of a gene id's birth and retirement, not versions"</span>
+    <span class="k">return</span> <span class="kc">None</span></div>
+
+
+
+<div class="viewcode-block" id="read_identifier">
+<a class="viewcode-back" href="../../reference.html#idtrack.reading.read_identifier">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">read_identifier</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">argument</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"identifier"</span><span class="p">,</span> <span class="n">from_database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Reading</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Read an identifier as idtrack looks it up, or refuse it.</span>
+
+<span class="sd">    In this order: surrounding white space is removed; the string is refused when it is empty, longer than</span>
+<span class="sd">    :py:data:`MAX_IDENTIFIER_LENGTH`, a spelling of a missing value (unless ``from_database`` is named) or one of the</span>
+<span class="sd">    graph's internal names; Unicode is normalised (:py:func:`normalise_unicode`, kind ``"unicode"``); quotes around it</span>
+<span class="sd">    and stray punctuation at its end are removed (:py:func:`strip_punctuation`, kind ``"punctuation"``); GENCODE's</span>
+<span class="sd">    ``&lt;id&gt;_PAR_Y`` is read as ``&lt;id&gt;`` (kind ``"par_y"``). The checks of a missing value and of an internal name see</span>
+<span class="sd">    the string after the Unicode and punctuation readings too (``'NA'`` in quotes is ``NA``).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        value: The identifier given.</span>
+<span class="sd">        argument: The name of the argument, for the error message.</span>
+<span class="sd">        from_database: The database the caller names as the identifier's source (``None``: none).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Reading: The text to look up and what the reading changed.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ArgumentTypeError: If the value is not a string.</span>
+<span class="sd">        MissingValueError: If it is empty or a spelling of a missing value (and no source database is named).</span>
+<span class="sd">        InvalidArgumentError: If it is longer than any identifier, or one of the graph's internal names.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">ArgumentTypeError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"`</span><span class="si">{</span><span class="n">argument</span><span class="si">}</span><span class="s2">` must be a string, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">."</span><span class="p">,</span> <span class="n">argument</span><span class="o">=</span><span class="n">argument</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">value</span>
+        <span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">text</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">MissingValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"`</span><span class="si">{</span><span class="n">argument</span><span class="si">}</span><span class="s2">` is empty: </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">."</span><span class="p">,</span> <span class="n">argument</span><span class="o">=</span><span class="n">argument</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">MAX_IDENTIFIER_LENGTH</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidArgumentError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"`</span><span class="si">{</span><span class="n">argument</span><span class="si">}</span><span class="s2">` has </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span><span class="si">}</span><span class="s2"> characters, more than any identifier (</span><span class="si">{</span><span class="n">MAX_IDENTIFIER_LENGTH</span><span class="si">}</span><span class="s2"> at most): "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">text</span><span class="p">[:</span><span class="mi">40</span><span class="p">]</span><span class="si">!r}</span><span class="s2">..."</span><span class="p">,</span>
+            <span class="n">argument</span><span class="o">=</span><span class="n">argument</span><span class="p">,</span>
+            <span class="n">value</span><span class="o">=</span><span class="n">text</span><span class="p">[:</span><span class="n">MAX_IDENTIFIER_LENGTH</span><span class="p">],</span>
+        <span class="p">)</span>
+    <span class="n">kinds</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">normal</span> <span class="o">=</span> <span class="n">normalise_unicode</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">normal</span> <span class="o">!=</span> <span class="n">text</span> <span class="ow">and</span> <span class="n">normal</span><span class="p">:</span>
+        <span class="n">kinds</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"unicode"</span><span class="p">)</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">normal</span>
+    <span class="n">bare</span> <span class="o">=</span> <span class="n">strip_punctuation</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">bare</span> <span class="o">!=</span> <span class="n">text</span><span class="p">:</span>
+        <span class="n">kinds</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"punctuation"</span><span class="p">)</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">bare</span>
+    <span class="k">if</span> <span class="n">from_database</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">is_missing_value</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">MissingValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"`</span><span class="si">{</span><span class="n">argument</span><span class="si">}</span><span class="s2">`=</span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2"> stands for a missing value, not an identifier; name its source database "</span>
+            <span class="s2">"(`from_database`) to look it up as an identifier of that database."</span><span class="p">,</span>
+            <span class="n">argument</span><span class="o">=</span><span class="n">argument</span><span class="p">,</span>
+            <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="n">why</span> <span class="o">=</span> <span class="n">internal_name</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">why</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidArgumentError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"`</span><span class="si">{</span><span class="n">argument</span><span class="si">}</span><span class="s2">`=</span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2"> is not an identifier: </span><span class="si">{</span><span class="n">why</span><span class="si">}</span><span class="s2">."</span><span class="p">,</span> <span class="n">argument</span><span class="o">=</span><span class="n">argument</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">value</span>
+        <span class="p">)</span>
+    <span class="n">par_y</span> <span class="o">=</span> <span class="n">_PAR_Y</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">par_y</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">kinds</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"par_y"</span><span class="p">)</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">par_y</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">Reading</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">kinds</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="version_digits_refused">
+<a class="viewcode-back" href="../../reference.html#idtrack.reading.version_digits_refused">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">version_digits_refused</span><span class="p">(</span><span class="n">identifier</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">digits</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Refuse a version with more digits than any Ensembl version (:py:data:`MAX_VERSION_DIGITS`).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        identifier: The identifier, for the message.</span>
+<span class="sd">        digits: The digits of its version.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        InvalidArgumentError: If the version is longer.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">digits</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">MAX_VERSION_DIGITS</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidArgumentError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"`identifier`=</span><span class="si">{</span><span class="n">identifier</span><span class="p">[:</span><span class="mi">60</span><span class="p">]</span><span class="si">!r}</span><span class="s2">... has a version of </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">digits</span><span class="p">)</span><span class="si">}</span><span class="s2"> digits; an Ensembl version has at "</span>
+            <span class="sa">f</span><span class="s2">"most </span><span class="si">{</span><span class="n">MAX_VERSION_DIGITS</span><span class="si">}</span><span class="s2">."</span><span class="p">,</span>
+            <span class="n">argument</span><span class="o">=</span><span class="s2">"identifier"</span><span class="p">,</span>
+            <span class="n">value</span><span class="o">=</span><span class="n">identifier</span><span class="p">[:</span><span class="n">MAX_IDENTIFIER_LENGTH</span><span class="p">],</span>
+        <span class="p">)</span></div>
+
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">"MAX_ENSEMBL_VERSION"</span><span class="p">,</span>
+    <span class="s2">"MAX_IDENTIFIER_LENGTH"</span><span class="p">,</span>
+    <span class="s2">"MAX_VERSION_DIGITS"</span><span class="p">,</span>
+    <span class="s2">"MISSING_VALUES"</span><span class="p">,</span>
+    <span class="s2">"PANDAS_MISSING_VALUES"</span><span class="p">,</span>
+    <span class="s2">"Reading"</span><span class="p">,</span>
+    <span class="s2">"internal_name"</span><span class="p">,</span>
+    <span class="s2">"is_missing_value"</span><span class="p">,</span>
+    <span class="s2">"normalise_unicode"</span><span class="p">,</span>
+    <span class="s2">"read_identifier"</span><span class="p">,</span>
+    <span class="s2">"strip_punctuation"</span><span class="p">,</span>
+    <span class="s2">"version_digits_refused"</span><span class="p">,</span>
+<span class="p">]</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Kemal Inecik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

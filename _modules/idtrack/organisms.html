@@ -220,6 +220,28 @@
     <span class="s2">"macaca_fascicularis"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"VGNC Symbol"</span><span class="p">,</span> <span class="s2">"HGNC Symbol"</span><span class="p">),</span>
 <span class="p">}</span>
 
+<span class="c1">#: Ensembl's name of NCBI Gene's database (``external_db.db_name``, the same at every release). Its accessions are the</span>
+<span class="c1">#: NCBI gene numbers, its label rows NCBI's official symbols, which a graph names by the rule of decision 53 (the name</span>
+<span class="c1">#: Ensembl's tables give them: :py:attr:`idtrack.TheGraph.label_names`); NCBI's symbols are the symbols of a name</span>
+<span class="c1">#: authority beside :py:data:`SYMBOL_DATABASES` (:py:attr:`idtrack.TheGraph.authority_databases`, decision 94).</span>
+<span class="n">NCBI_GENE_DATABASE</span> <span class="o">=</span> <span class="s2">"EntrezGene"</span>
+
+<span class="c1">#: The pseudoautosomal regions of an assembly, by Ensembl's name of the assembly: pairs of a region of Y and the region</span>
+<span class="c1">#: of X that it repeats, ``((region, first base, last base), (region, first base, last base))`` (the Genome Reference</span>
+<span class="c1">#: Consortium's PAR1 and PAR2 of GRCh38). From release 110 Ensembl gives the Y copies of the genes of these regions ids</span>
+<span class="c1">#: of their own (decisions 93 and 95). Ensembl records the same regions in its core databases as assembly exceptions of</span>
+<span class="c1">#: the type ``PAR`` (table ``assembly_exception``), which a built graph holds since the builder reads the exceptions</span>
+<span class="c1">#: for the copies on patches and haplotypes (:py:attr:`idtrack.TheGraph.assembly_exceptions`; GRCh38's two ``PAR``</span>
+<span class="c1">#: rows equal this table); the rule of the Y copies still reads this table, which also serves graphs made in memory.</span>
+<span class="c1">#: It holds only the assembly whose Y copies have ids of their own.</span>
+<span class="n">PSEUDOAUTOSOMAL_REGIONS</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]],</span> <span class="o">...</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"GRCh38"</span><span class="p">:</span> <span class="p">(</span>
+        <span class="p">((</span><span class="s2">"Y"</span><span class="p">,</span> <span class="mi">10_001</span><span class="p">,</span> <span class="mi">2_781_479</span><span class="p">),</span> <span class="p">(</span><span class="s2">"X"</span><span class="p">,</span> <span class="mi">10_001</span><span class="p">,</span> <span class="mi">2_781_479</span><span class="p">)),</span>
+        <span class="p">((</span><span class="s2">"Y"</span><span class="p">,</span> <span class="mi">56_887_903</span><span class="p">,</span> <span class="mi">57_217_415</span><span class="p">),</span> <span class="p">(</span><span class="s2">"X"</span><span class="p">,</span> <span class="mi">155_701_383</span><span class="p">,</span> <span class="mi">156_030_895</span><span class="p">)),</span>
+    <span class="p">),</span>
+<span class="p">}</span>
+
+
 <span class="c1">#: Short names of the organisms. A declared alias names its organism wherever an organism is asked for, without the</span>
 <span class="c1">#: network, and wins over what Ensembl lists under the same word (``"pig"`` is the common name of every pig breed</span>
 <span class="c1">#: there). Lower case, unique across organisms.</span>
@@ -231,9 +253,11 @@
     <span class="s2">"macaca_fascicularis"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"cynomolgus"</span><span class="p">,),</span>
 <span class="p">}</span>
 
-<span class="c1">#: Node type of each form of each assembly key, ``{assembly: {form: "assembly_&lt;key&gt;_ensembl_&lt;form&gt;"}}`` (derived from</span>
-<span class="c1">#: the table; updated in place by :py:func:`register_organism`).</span>
-<span class="n">ASSEMBLY_NODE_TYPES</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="c1">#: The label under which a graph reports the Ensembl ids of each form on each assembly key,</span>
+<span class="c1">#: ``{assembly: {form: "assembly_&lt;key&gt;_ensembl_&lt;form&gt;"}}``: the source of an Ensembl id on an assembly in</span>
+<span class="c1">#: :py:meth:`idtrack.TheGraph.trios` and :py:meth:`idtrack.TheGraph.combined`, in the inference of the source of a</span>
+<span class="c1">#: list, and in the self-checks (derived from the table; updated in place by :py:func:`register_organism`).</span>
+<span class="n">ASSEMBLY_LABELS</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
 
 <span class="n">_ENTRY_FIELDS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"Name"</span><span class="p">,</span> <span class="s2">"DbSuffix"</span><span class="p">,</span> <span class="s2">"Ports"</span><span class="p">,</span> <span class="s2">"Priority"</span><span class="p">,</span> <span class="s2">"ReleaseRange"</span><span class="p">)</span>
 <span class="n">_REQUIRED_FIELDS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"Ports"</span><span class="p">,</span> <span class="s2">"Priority"</span><span class="p">,</span> <span class="s2">"ReleaseRange"</span><span class="p">)</span>
@@ -419,9 +443,9 @@
     <span class="n">_validate</span><span class="p">(</span><span class="n">ORGANISM_TABLE</span><span class="p">,</span> <span class="n">SYMBOL_DATABASES</span><span class="p">,</span> <span class="n">ALIASES</span><span class="p">)</span>
     <span class="n">_state</span><span class="p">[</span><span class="s2">"supported"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">ORGANISM_TABLE</span><span class="p">))</span>
     <span class="n">assemblies</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">({</span><span class="nb">int</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="k">for</span> <span class="n">entries</span> <span class="ow">in</span> <span class="n">ORGANISM_TABLE</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">entries</span><span class="p">})</span>
-    <span class="n">ASSEMBLY_NODE_TYPES</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+    <span class="n">ASSEMBLY_LABELS</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
     <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">assemblies</span><span class="p">:</span>
-        <span class="n">ASSEMBLY_NODE_TYPES</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="n">form</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"assembly_</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">_ensembl_</span><span class="si">{</span><span class="n">form</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">form</span> <span class="ow">in</span> <span class="n">ids</span><span class="o">.</span><span class="n">FORMS</span><span class="p">}</span>
+        <span class="n">ASSEMBLY_LABELS</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="n">form</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"assembly_</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">_ensembl_</span><span class="si">{</span><span class="n">form</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">form</span> <span class="ow">in</span> <span class="n">ids</span><span class="o">.</span><span class="n">FORMS</span><span class="p">}</span>
 
 
 <div class="viewcode-block" id="register_organism">
@@ -713,6 +737,30 @@
 
 
 
+<div class="viewcode-block" id="pseudoautosomal_repeats">
+<a class="viewcode-back" href="../../reference.html#idtrack.organisms.pseudoautosomal_repeats">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">pseudoautosomal_repeats</span><span class="p">(</span><span class="n">organism</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="o">...</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""Return, per assembly key of an organism, its pseudoautosomal regions of Y with the region of X each repeats.</span>
+
+<span class="sd">    Read from :py:data:`PSEUDOAUTOSOMAL_REGIONS` by the assembly's name; the one rule of a gene reads a place in such a</span>
+<span class="sd">    region of Y on the region of X it repeats (:py:mod:`idtrack.graph.genes`).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        organism: Ensembl production name (``None`` or an organism outside the table: none).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dict[int, tuple[tuple[str, int, int, str, int], ...]]: ``{assembly: ((region of Y, first base, last base,</span>
+<span class="sd">        region of X, its first base), ...)}`` for the assemblies that have such regions.</span>
+<span class="sd">    """</span>
+    <span class="n">found</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="o">...</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">assembly</span><span class="p">,</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">ORGANISM_TABLE</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">organism</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">pairs</span> <span class="o">=</span> <span class="n">PSEUDOAUTOSOMAL_REGIONS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"Name"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">,</span> <span class="p">())</span>
+        <span class="k">if</span> <span class="n">pairs</span><span class="p">:</span>
+            <span class="n">found</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">assembly</span><span class="p">)]</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">((</span><span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">y</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="k">for</span> <span class="n">y</span><span class="p">,</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">pairs</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">found</span></div>
+
+
+
 <div class="viewcode-block" id="core_db_name_pattern">
 <a class="viewcode-back" href="../../reference.html#idtrack.organisms.core_db_name_pattern">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">core_db_name_pattern</span><span class="p">(</span><span class="n">organism</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">assembly</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">re</span><span class="o">.</span><span class="n">Pattern</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
@@ -737,7 +785,9 @@
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
     <span class="s2">"ALIASES"</span><span class="p">,</span>
-    <span class="s2">"ASSEMBLY_NODE_TYPES"</span><span class="p">,</span>
+    <span class="s2">"ASSEMBLY_LABELS"</span><span class="p">,</span>
+    <span class="s2">"NCBI_GENE_DATABASE"</span><span class="p">,</span>
+    <span class="s2">"PSEUDOAUTOSOMAL_REGIONS"</span><span class="p">,</span>
     <span class="s2">"ORGANISM_TABLE"</span><span class="p">,</span>
     <span class="s2">"SYMBOL_DATABASES"</span><span class="p">,</span>
     <span class="s2">"assemblies_by_priority"</span><span class="p">,</span>
@@ -745,6 +795,7 @@
     <span class="s2">"assembly_name"</span><span class="p">,</span>
     <span class="s2">"check_organism"</span><span class="p">,</span>
     <span class="s2">"core_db_name_pattern"</span><span class="p">,</span>
+    <span class="s2">"pseudoautosomal_repeats"</span><span class="p">,</span>
     <span class="s2">"db_suffix"</span><span class="p">,</span>
     <span class="s2">"first_release"</span><span class="p">,</span>
     <span class="s2">"primary_assembly"</span><span class="p">,</span>

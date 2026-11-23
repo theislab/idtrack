@@ -110,6 +110,7 @@
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numbers</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">types</span><span class="w"> </span><span class="kn">import</span> <span class="n">MappingProxyType</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
 
@@ -120,6 +121,23 @@
 
 <span class="c1">#: The prefix of the graph's synonym nodes (``synonym_id::TP53``): the graph's bookkeeping, never part of an id.</span>
 <span class="n">SYNONYM_PREFIX</span> <span class="o">=</span> <span class="s2">"synonym_id::"</span>
+
+<span class="c1">#: The characters that join the parts of a name (``MIR138-2``, ``H1_0``, ``NKX2.1``): the step ``"separator"`` of</span>
+<span class="c1">#: the name resolution reads them as one (decision 87). A version (``NM_000546.6``, ``ENSG00000141510.18``) follows</span>
+<span class="c1">#: one of them, and so does the number a single-cell tool appends to a repeated name (``SRF.1``, ``SRF-1``,</span>
+<span class="c1">#: ``SRF_1``: decision 82).</span>
+<span class="n">SEPARATORS</span> <span class="o">=</span> <span class="s2">"-_."</span>
+
+<span class="c1">#: The form of an Ensembl stable id without its version, by Ensembl's scheme of identifiers: ``ENS``, the species'</span>
+<span class="c1">#: letters and the letter of the feature, then eleven digits (``ENSG00000141510``, ``ENSMUST00000000001``), or an LRG</span>
+<span class="c1">#: record's id (``LRG_&lt;number&gt;``). A pattern to embed (no anchors, no flags).</span>
+<span class="n">STABLE_ID_FORM</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">"(?:ENS[A-Z]*\d</span><span class="si">{11}</span><span class="s2">|LRG_\d+)"</span>
+<span class="c1">#: An Ensembl stable id or an LRG id without version, in any letter case (:py:data:`STABLE_ID_FORM`).</span>
+<span class="n">STABLE_ID</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">rf</span><span class="s2">"(?i)^</span><span class="si">{</span><span class="n">STABLE_ID_FORM</span><span class="si">}</span><span class="s2">$"</span><span class="p">)</span>
+<span class="c1">#: An LRG record's id, with or without version.</span>
+<span class="n">LRG_ID</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^LRG_\d+(?:\.\d+)?$"</span><span class="p">)</span>
+<span class="c1">#: A string that ends in one of the :py:data:`SEPARATORS` and digits: ``(string before, separator, digits)``.</span>
+<span class="n">NUMBERED_SUFFIX</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">rf</span><span class="s2">"^(.+)([</span><span class="si">{</span><span class="n">re</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">SEPARATORS</span><span class="p">)</span><span class="si">}</span><span class="s2">])([0-9]+)$"</span><span class="p">)</span>
 
 <span class="c1">#: The version of the node before the first version of a gene id (its birth).</span>
 <span class="n">VOID</span> <span class="o">=</span> <span class="s2">"Void"</span>
@@ -152,11 +170,6 @@
 <span class="n">GENE</span> <span class="o">=</span> <span class="n">ENSEMBL_TYPE</span><span class="p">[</span><span class="n">BACKBONE_FORM</span><span class="p">]</span>
 <span class="c1">#: The node type of gene ids without version.</span>
 <span class="n">BASE_GENE</span> <span class="o">=</span> <span class="n">BASE_ENSEMBL_TYPE</span><span class="p">[</span><span class="n">BACKBONE_FORM</span><span class="p">]</span>
-
-<span class="c1">#: Beginnings of the names of the external databases whose ids are sequence accessions, which their sources write</span>
-<span class="c1">#: with a version (``NM_000546.6``, ``P04637.4``, ``CCDS11118.1``). Only an id of such a database is looked up</span>
-<span class="c1">#: without a version suffix that the graph does not hold; a gene symbol never is.</span>
-<span class="n">ACCESSION_DATABASE_PREFIXES</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"RefSeq_"</span><span class="p">,</span> <span class="s2">"Uniprot/"</span><span class="p">,</span> <span class="s2">"CCDS"</span><span class="p">,</span> <span class="s2">"EMBL"</span><span class="p">,</span> <span class="s2">"protein_id"</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_is_missing</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
@@ -286,32 +299,59 @@
 
 
 
+<span class="c1">#: An Ensembl or LRG id (:py:data:`STABLE_ID_FORM`) with a version.</span>
+<span class="n">_VERSIONED_STABLE_ID</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">rf</span><span class="s2">"(?i)^(</span><span class="si">{</span><span class="n">STABLE_ID_FORM</span><span class="si">}</span><span class="s2">)</span><span class="si">{</span><span class="n">re</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">ID_VERSION_DELIMITER</span><span class="p">)</span><span class="si">}</span><span class="s2">(\d+)$"</span><span class="p">)</span>
+
+
 <div class="viewcode-block" id="stable_id_of">
 <a class="viewcode-back" href="../../reference.html#idtrack.ids.stable_id_of">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">stable_id_of</span><span class="p">(</span><span class="n">identifier</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Return an identifier without the synonym prefix and, for an Ensembl or LRG id, without its version.</span>
+<span class="w">    </span><span class="sd">"""Return an identifier without its version when it is an Ensembl or LRG id with a version.</span>
 
-<span class="sd">    This is how a conversion result is compared with the identifier it started from ("did the identifier change?"):</span>
-<span class="sd">    an Ensembl id is recognised by its prefix (``ENS``, ``LRG_``), so that a query without version, or in another</span>
-<span class="sd">    letter case, that maps to itself counts as unchanged.</span>
+<span class="sd">    This is how a conversion result is compared with the identifier it started from ("did the identifier change?"),</span>
+<span class="sd">    so that a query without version, or in another letter case, that maps to itself counts as unchanged. An Ensembl id</span>
+<span class="sd">    is recognised by its whole form (a prefix of Ensembl and eleven digits, or ``LRG_&lt;number&gt;``), so that a symbol</span>
+<span class="sd">    such as ``ENSA`` is never cut.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        identifier: An identifier or node name.</span>
+<span class="sd">        identifier: An identifier.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        str: The identifier to compare.</span>
 <span class="sd">    """</span>
-    <span class="n">identifier</span> <span class="o">=</span> <span class="n">identifier</span><span class="o">.</span><span class="n">removeprefix</span><span class="p">(</span><span class="n">SYNONYM_PREFIX</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">identifier</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">((</span><span class="s2">"ENS"</span><span class="p">,</span> <span class="s2">"LRG_"</span><span class="p">)):</span>
-        <span class="n">head</span><span class="p">,</span> <span class="n">sep</span><span class="p">,</span> <span class="n">tail</span> <span class="o">=</span> <span class="n">identifier</span><span class="o">.</span><span class="n">rpartition</span><span class="p">(</span><span class="n">ID_VERSION_DELIMITER</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">sep</span> <span class="ow">and</span> <span class="n">tail</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
-            <span class="k">return</span> <span class="n">head</span>
-    <span class="k">return</span> <span class="n">identifier</span></div>
+    <span class="n">found</span> <span class="o">=</span> <span class="n">_VERSIONED_STABLE_ID</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">identifier</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">found</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="n">found</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">identifier</span></div>
+
+
+
+<div class="viewcode-block" id="public_name">
+<a class="viewcode-back" href="../../reference.html#idtrack.ids.public_name">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">public_name</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return a node name or database name as results show it: without the graph's synonym prefix (decision 56).</span>
+
+<span class="sd">    The graph keeps a synonym under ``synonym_id::&lt;synonym&gt;`` and its database as ``synonym_id::&lt;database&gt;``; a</span>
+<span class="sd">    result says that a match is a synonym in its own words (``match="synonym:exact"``, :py:attr:`NameMatch.synonym`,</span>
+<span class="sd">    a path node of kind ``synonym``) and names the identifier and the database as they are.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        name: A node name or a database name of the graph.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: The name without the prefix.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">name</span><span class="o">.</span><span class="n">removeprefix</span><span class="p">(</span><span class="n">SYNONYM_PREFIX</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="is_synonym_database">
+<a class="viewcode-back" href="../../reference.html#idtrack.ids.is_synonym_database">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">is_synonym_database</span><span class="p">(</span><span class="n">database</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Tell whether a database name of the graph is the synonyms of a database (``synonym_id::&lt;database&gt;``)."""</span>
+    <span class="k">return</span> <span class="n">database</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">SYNONYM_PREFIX</span><span class="p">)</span></div>
 
 
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s2">"ACCESSION_DATABASE_PREFIXES"</span><span class="p">,</span>
     <span class="s2">"BACKBONE_FORM"</span><span class="p">,</span>
     <span class="s2">"BASE_ENSEMBL_TYPE"</span><span class="p">,</span>
     <span class="s2">"BASE_GENE"</span><span class="p">,</span>
@@ -324,12 +364,19 @@
     <span class="s2">"ID_VERSION_DELIMITER"</span><span class="p">,</span>
     <span class="s2">"NODE_TYPE_KEY"</span><span class="p">,</span>
     <span class="s2">"RETIRED"</span><span class="p">,</span>
+    <span class="s2">"LRG_ID"</span><span class="p">,</span>
+    <span class="s2">"NUMBERED_SUFFIX"</span><span class="p">,</span>
     <span class="s2">"SENTINEL_VERSIONS"</span><span class="p">,</span>
+    <span class="s2">"SEPARATORS"</span><span class="p">,</span>
+    <span class="s2">"STABLE_ID"</span><span class="p">,</span>
+    <span class="s2">"STABLE_ID_FORM"</span><span class="p">,</span>
     <span class="s2">"SYNONYM_PREFIX"</span><span class="p">,</span>
     <span class="s2">"VOID"</span><span class="p">,</span>
+    <span class="s2">"is_synonym_database"</span><span class="p">,</span>
     <span class="s2">"is_versioned_name"</span><span class="p">,</span>
     <span class="s2">"join"</span><span class="p">,</span>
     <span class="s2">"join_columns"</span><span class="p">,</span>
+    <span class="s2">"public_name"</span><span class="p">,</span>
     <span class="s2">"split"</span><span class="p">,</span>
     <span class="s2">"stable_id_of"</span><span class="p">,</span>
     <span class="s2">"versions_prefix"</span><span class="p">,</span>

@@ -325,6 +325,31 @@
 
 
 
+<div class="viewcode-block" id="settings_release_of">
+<a class="viewcode-back" href="../../../reference.html#idtrack.build.settings_release_of">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">settings_release_of</span><span class="p">(</span><span class="n">content</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">organism</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">release</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the release of a parsed externals YAML whose settings apply to *release*.</span>
+
+<span class="sd">    See :py:meth:`ExternalDatabases.settings_release`.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        content: The parsed YAML.</span>
+<span class="sd">        organism: The organism.</span>
+<span class="sd">        release: The release asked about.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        int | None: *release* if the file lists it for the organism; the last listed release if *release* is after</span>
+<span class="sd">        it; ``None`` otherwise (and for a file without an entry for the organism).</span>
+<span class="sd">    """</span>
+    <span class="n">listed</span> <span class="o">=</span> <span class="n">ExternalDatabases</span><span class="o">.</span><span class="n">_releases_of</span><span class="p">(</span><span class="n">content</span> <span class="ow">or</span> <span class="p">{},</span> <span class="n">organism</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">release</span> <span class="ow">in</span> <span class="n">listed</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">release</span>
+    <span class="k">if</span> <span class="n">listed</span> <span class="ow">and</span> <span class="n">release</span> <span class="o">&gt;</span> <span class="nb">max</span><span class="p">(</span><span class="n">listed</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="n">listed</span><span class="p">)</span>
+    <span class="k">return</span> <span class="kc">None</span></div>
+
+
+
 <div class="viewcode-block" id="ExternalDatabases">
 <a class="viewcode-back" href="../../../reference.html#idtrack.build.ExternalDatabases">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">ExternalDatabases</span><span class="p">:</span>
@@ -652,6 +677,22 @@
             <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">j4</span><span class="p">[</span><span class="s2">"Ensembl release"</span><span class="p">])</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">","</span><span class="p">)</span>
         <span class="p">}</span>
 
+<div class="viewcode-block" id="ExternalDatabases.settings_release">
+<a class="viewcode-back" href="../../../reference.html#idtrack.build.ExternalDatabases.settings_release">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">settings_release</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return the release of the externals YAML whose settings apply to the manager's release.</span>
+
+<span class="sd">        A release that the file lists takes its own settings. A release after the last one the file lists takes the</span>
+<span class="sd">        settings of that last release (for the same form and assembly), so that a new Ensembl release is never built</span>
+<span class="sd">        without external databases; a graph records which release's settings each of its releases took. A release</span>
+<span class="sd">        before or between listed releases has none.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            int | None: The release whose settings apply, or ``None``.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="n">settings_release_of</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_modified_yaml_view</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">release</span><span class="p">))</span></div>
+
+
 <div class="viewcode-block" id="ExternalDatabases.covered_releases">
 <a class="viewcode-back" href="../../../reference.html#idtrack.build.ExternalDatabases.covered_releases">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">covered_releases</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
@@ -697,11 +738,12 @@
             <span class="k">return</span>
 
         <span class="n">ensembl_releases</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_releases_of</span><span class="p">(</span><span class="n">read_yaml_file</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">release</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ensembl_releases</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">settings_release_of</span><span class="p">(</span><span class="n">read_yaml_file</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">release</span><span class="p">))</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">ExternalsReleaseNotCoveredError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"The Ensembl release </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">release</span><span class="si">}</span><span class="s2"> is not included in any entry of the YAML config file.</span><span class="se">\n</span><span class="s2">"</span>
+                <span class="sa">f</span><span class="s2">"The Ensembl release </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">release</span><span class="si">}</span><span class="s2"> is not included in any entry of the YAML config file, and it is not "</span>
+                <span class="sa">f</span><span class="s2">"after its last release (</span><span class="si">{</span><span class="nb">max</span><span class="p">(</span><span class="n">ensembl_releases</span><span class="p">)</span><span class="si">}</span><span class="s2">), whose settings a later release takes.</span><span class="se">\n</span><span class="s2">"</span>
                 <span class="sa">f</span><span class="s2">"Please extend the configuration to this release (`ExternalDatabases.extend_modified_yaml`), or "</span>
-                <span class="sa">f</span><span class="s2">"create the graph/track object using a supported release (e.g., </span><span class="si">{</span><span class="nb">max</span><span class="p">(</span><span class="n">ensembl_releases</span><span class="p">)</span><span class="si">}</span><span class="s2">).</span><span class="se">\n</span><span class="s2">"</span>
+                <span class="sa">f</span><span class="s2">"create the graph/track object using a supported release.</span><span class="se">\n</span><span class="s2">"</span>
                 <span class="s2">"You may also report this issue on GitHub so the default configuration can be updated."</span>
             <span class="p">)</span></div>
 
@@ -832,6 +874,33 @@
         <span class="k">return</span> <span class="n">report</span></div>
 
 
+<div class="viewcode-block" id="ExternalDatabases.selected_names">
+<a class="viewcode-back" href="../../../reference.html#idtrack.build.ExternalDatabases.selected_names">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">selected_names</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Return the database names the YAML enables for the organism anywhere: any form, assembly or release."""</span>
+        <span class="n">content</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modified_yaml_view</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="nb">str</span><span class="p">(</span><span class="n">db_name</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">databases</span> <span class="ow">in</span> <span class="n">content</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">db_name</span><span class="p">,</span> <span class="n">entry</span> <span class="ow">in</span> <span class="p">(</span><span class="n">databases</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"Include"</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"Assembly"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+        <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="ExternalDatabases.selected_units">
+<a class="viewcode-back" href="../../../reference.html#idtrack.build.ExternalDatabases.selected_units">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">selected_units</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">"""Return the ``(form, name)`` pairs the YAML enables for the organism anywhere (a synonym's by its entry's name)."""</span>
+        <span class="n">prefix</span> <span class="o">=</span> <span class="s2">"synonym_id::"</span>
+        <span class="n">content</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modified_yaml_view</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">form</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">db_name</span><span class="p">)[</span><span class="nb">len</span><span class="p">(</span><span class="n">prefix</span><span class="p">)</span> <span class="p">:]</span> <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">db_name</span><span class="p">)</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">prefix</span><span class="p">)</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">db_name</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">form</span><span class="p">,</span> <span class="n">databases</span> <span class="ow">in</span> <span class="n">content</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">db_name</span><span class="p">,</span> <span class="n">entry</span> <span class="ow">in</span> <span class="p">(</span><span class="n">databases</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"Include"</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"Assembly"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+        <span class="p">}</span></div>
+
+
 <div class="viewcode-block" id="ExternalDatabases.give_list_for_case">
 <a class="viewcode-back" href="../../../reference.html#idtrack.build.ExternalDatabases.give_list_for_case">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">give_list_for_case</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">give_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
@@ -877,13 +946,15 @@
         <span class="c1"># A file without an entry for this organism or form means "no external databases" (see</span>
         <span class="c1"># `validate_yaml_file_up_to_date`).</span>
         <span class="n">the_dict</span> <span class="o">=</span> <span class="p">(</span><span class="n">the_dict_loaded</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">form</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+        <span class="c1"># the settings of the release itself, or of the last listed release for a release after it</span>
+        <span class="n">release</span> <span class="o">=</span> <span class="n">settings_release_of</span><span class="p">(</span><span class="n">the_dict_loaded</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">release</span><span class="p">))</span>
 
         <span class="n">result</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">db_name</span> <span class="ow">in</span> <span class="n">the_dict</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">asm</span> <span class="ow">in</span> <span class="n">the_dict</span><span class="p">[</span><span class="n">db_name</span><span class="p">][</span><span class="s2">"Assembly"</span><span class="p">]:</span>
                 <span class="n">item</span> <span class="o">=</span> <span class="n">the_dict</span><span class="p">[</span><span class="n">db_name</span><span class="p">][</span><span class="s2">"Assembly"</span><span class="p">][</span><span class="n">asm</span><span class="p">]</span>
                 <span class="n">releases</span> <span class="o">=</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">"Ensembl release"</span><span class="p">])</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">","</span><span class="p">)}</span>
-                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">release</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">releases</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">item</span><span class="p">[</span><span class="s2">"Include"</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="n">release</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">releases</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">item</span><span class="p">[</span><span class="s2">"Include"</span><span class="p">]:</span>
                     <span class="k">continue</span>
                 <span class="k">if</span> <span class="n">give_type</span> <span class="o">==</span> <span class="s2">"db"</span><span class="p">:</span>
                     <span class="c1"># Only add db_name if assembly matches</span>

@@ -111,10 +111,24 @@
 <span class="sd">:py:func:`apply_allowlist`. Nothing else differs between template and modified file. The lists follow one</span>
 <span class="sd">conceptual set for every organism, with the species' own symbol databases:</span>
 
-<span class="sd">* **gene**: clone-based, Havana and Vega names, EntrezGene / NCBI gene, RFAM, UniProtKB gene names, the species'</span>
-<span class="sd">  symbol source(s), and the ``synonym_id::`` forms of the identifier and symbol databases;</span>
-<span class="sd">* **transcript**: CCDS, Havana transcripts and RefSeq mRNA / ncRNA (curated and predicted);</span>
-<span class="sd">* **translation**: Havana translations, RefSeq peptides (curated and predicted) and UniProt (Swiss-Prot, TrEMBL).</span>
+<span class="sd">* **gene**: clone-based, Havana and Vega names, RFAM with its labels (``RFAM label``, the names of the genes whose</span>
+<span class="sd">  display name they are), miRBase with its labels (``miRBase label``, on miRNA genes only), UniProtKB gene names, the</span>
+<span class="sd">  species' symbol source(s), and the ``synonym_id::`` forms of the identifier and symbol databases;</span>
+<span class="sd">* **transcript**: CCDS with its labels (``CCDS label``, the versioned accessions), Havana transcripts and RefSeq</span>
+<span class="sd">  mRNA / ncRNA (curated and predicted);</span>
+<span class="sd">* **translation**: Havana translations, RefSeq peptides (curated and predicted) and UniProt (Swiss-Prot, TrEMBL);</span>
+<span class="sd">* **every form**: NCBI's gene ids (``EntrezGene``) with their labels (``NCBI gene (formerly Entrezgene)``) and</span>
+<span class="sd">  synonyms (:py:data:`NCBI_GENE`).</span>
+
+<span class="sd">A list names a database by what it is; the graph reads it on every form and at every release at which Ensembl has it</span>
+<span class="sd">(NCBI's gene ids on translations up to release 62 and on genes from 63, Rfam's and miRBase's accessions on</span>
+<span class="sd">transcripts up to 62, MGI's symbols on translations up to 51), and with it every database of Ensembl whose links</span>
+<span class="sd">continue it (RefSeq's mRNA accessions under ``RefSeq_dna`` up to release 63, the HGNC projections of pig and macaque</span>
+<span class="sd">genes under ``HGNC_curated_gene`` and ``HGNC_automatic_gene`` up to 60): decision 104,</span>
+<span class="sd">:py:meth:`idtrack.DatabaseManager.database_filing`. The species' symbol source is what Ensembl names the genes by</span>
+<span class="sd">today. The names Ensembl gave the genes at a release, under whatever database it filed them (UniProt's entry names,</span>
+<span class="sd">clone-based names), are in the graph whatever this list says: a gene's display name at a release is a name of the</span>
+<span class="sd">gene at that release (:py:meth:`idtrack.DatabaseManager.create_external_db`).</span>
 
 <span class="sd">Names that an organism's template does not contain are skipped. Tutorial 02</span>
 <span class="sd">(``docs/_notebooks/02_prepare_new_external_yaml.ipynb``) shows the same lists as editable dictionaries.</span>
@@ -128,9 +142,18 @@
 <span class="n">Allowlist</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span>
 
 
+<span class="c1">#: NCBI's gene ids, their labels and their synonyms: listed on every form, since Ensembl attached them to translations</span>
+<span class="c1">#: up to release 62 and to genes from 63 (the graph reads a selected database on every form in any case).</span>
+<span class="n">NCBI_GENE</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">"EntrezGene"</span><span class="p">,</span>
+    <span class="s2">"NCBI gene (formerly Entrezgene)"</span><span class="p">,</span>
+    <span class="s2">"synonym_id::NCBI gene (formerly Entrezgene)"</span><span class="p">,</span>
+<span class="p">)</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_allowlist</span><span class="p">(</span><span class="n">assemblies</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="o">**</span><span class="n">forms</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Allowlist</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Build ``{form: {database: assemblies}}`` with the same assemblies for every database."""</span>
-    <span class="k">return</span> <span class="p">{</span><span class="n">form</span><span class="p">:</span> <span class="p">{</span><span class="n">db</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">assemblies</span><span class="p">)</span> <span class="k">for</span> <span class="n">db</span> <span class="ow">in</span> <span class="n">databases</span><span class="p">}</span> <span class="k">for</span> <span class="n">form</span><span class="p">,</span> <span class="n">databases</span> <span class="ow">in</span> <span class="n">forms</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+<span class="w">    </span><span class="sd">"""Build ``{form: {database: assemblies}}`` with the same assemblies for every database, NCBI's on every form."""</span>
+    <span class="k">return</span> <span class="p">{</span><span class="n">form</span><span class="p">:</span> <span class="p">{</span><span class="n">db</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">assemblies</span><span class="p">)</span> <span class="k">for</span> <span class="n">db</span> <span class="ow">in</span> <span class="p">(</span><span class="o">*</span><span class="n">databases</span><span class="p">,</span> <span class="o">*</span><span class="n">NCBI_GENE</span><span class="p">)}</span> <span class="k">for</span> <span class="n">form</span><span class="p">,</span> <span class="n">databases</span> <span class="ow">in</span> <span class="n">forms</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
 
 
 <span class="n">DEFAULT_EXTERNALS</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Allowlist</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
@@ -140,23 +163,21 @@
         <span class="n">gene</span><span class="o">=</span><span class="p">(</span>
             <span class="s2">"Clone_based_ensembl_gene"</span><span class="p">,</span>
             <span class="s2">"Clone_based_vega_gene"</span><span class="p">,</span>
-            <span class="s2">"EntrezGene"</span><span class="p">,</span>
             <span class="s2">"HGNC Symbol"</span><span class="p">,</span>
             <span class="s2">"Havana gene"</span><span class="p">,</span>
-            <span class="s2">"NCBI gene"</span><span class="p">,</span>
-            <span class="s2">"NCBI gene (formerly Entrezgene)"</span><span class="p">,</span>
             <span class="s2">"RFAM"</span><span class="p">,</span>
+            <span class="s2">"RFAM label"</span><span class="p">,</span>
+            <span class="s2">"miRBase"</span><span class="p">,</span>
+            <span class="s2">"miRBase label"</span><span class="p">,</span>
             <span class="s2">"UniProtKB Gene Name"</span><span class="p">,</span>
             <span class="s2">"Vega gene"</span><span class="p">,</span>
             <span class="s2">"Vega_gene"</span><span class="p">,</span>
-            <span class="s2">"synonym_id::EntrezGene"</span><span class="p">,</span>
             <span class="s2">"synonym_id::HGNC Symbol"</span><span class="p">,</span>
-            <span class="s2">"synonym_id::NCBI gene"</span><span class="p">,</span>
-            <span class="s2">"synonym_id::NCBI gene (formerly Entrezgene)"</span><span class="p">,</span>
             <span class="s2">"synonym_id::UniProtKB Gene Name"</span><span class="p">,</span>
         <span class="p">),</span>
         <span class="n">transcript</span><span class="o">=</span><span class="p">(</span>
             <span class="s2">"CCDS"</span><span class="p">,</span>
+            <span class="s2">"CCDS label"</span><span class="p">,</span>
             <span class="s2">"Havana transcript"</span><span class="p">,</span>
             <span class="s2">"RefSeq_mRNA"</span><span class="p">,</span>
             <span class="s2">"RefSeq_mRNA_predicted"</span><span class="p">,</span>
@@ -177,23 +198,21 @@
         <span class="n">gene</span><span class="o">=</span><span class="p">(</span>
             <span class="s2">"Clone_based_ensembl_gene"</span><span class="p">,</span>
             <span class="s2">"Clone_based_vega_gene"</span><span class="p">,</span>
-            <span class="s2">"EntrezGene"</span><span class="p">,</span>
             <span class="s2">"MGI Symbol"</span><span class="p">,</span>
             <span class="s2">"Havana gene"</span><span class="p">,</span>
-            <span class="s2">"NCBI gene"</span><span class="p">,</span>
-            <span class="s2">"NCBI gene (formerly Entrezgene)"</span><span class="p">,</span>
             <span class="s2">"RFAM"</span><span class="p">,</span>
+            <span class="s2">"RFAM label"</span><span class="p">,</span>
+            <span class="s2">"miRBase"</span><span class="p">,</span>
+            <span class="s2">"miRBase label"</span><span class="p">,</span>
             <span class="s2">"UniProtKB Gene Name"</span><span class="p">,</span>
             <span class="s2">"Vega gene"</span><span class="p">,</span>
             <span class="s2">"Vega_gene"</span><span class="p">,</span>
-            <span class="s2">"synonym_id::EntrezGene"</span><span class="p">,</span>
             <span class="s2">"synonym_id::MGI Symbol"</span><span class="p">,</span>
-            <span class="s2">"synonym_id::NCBI gene"</span><span class="p">,</span>
-            <span class="s2">"synonym_id::NCBI gene (formerly Entrezgene)"</span><span class="p">,</span>
             <span class="s2">"synonym_id::UniProtKB Gene Name"</span><span class="p">,</span>
         <span class="p">),</span>
         <span class="n">transcript</span><span class="o">=</span><span class="p">(</span>
             <span class="s2">"CCDS"</span><span class="p">,</span>
+            <span class="s2">"CCDS label"</span><span class="p">,</span>
             <span class="s2">"Havana transcript"</span><span class="p">,</span>
             <span class="s2">"RefSeq_mRNA"</span><span class="p">,</span>
             <span class="s2">"RefSeq_mRNA_predicted"</span><span class="p">,</span>
@@ -214,18 +233,15 @@
         <span class="n">gene</span><span class="o">=</span><span class="p">(</span>
             <span class="s2">"Clone_based_ensembl_gene"</span><span class="p">,</span>
             <span class="s2">"Clone_based_vega_gene"</span><span class="p">,</span>
-            <span class="s2">"EntrezGene"</span><span class="p">,</span>
             <span class="s2">"HGNC Symbol"</span><span class="p">,</span>
             <span class="s2">"VGNC Symbol"</span><span class="p">,</span>
             <span class="s2">"Havana gene"</span><span class="p">,</span>
-            <span class="s2">"NCBI gene"</span><span class="p">,</span>
-            <span class="s2">"NCBI gene (formerly Entrezgene)"</span><span class="p">,</span>
             <span class="s2">"RFAM"</span><span class="p">,</span>
+            <span class="s2">"RFAM label"</span><span class="p">,</span>
+            <span class="s2">"miRBase"</span><span class="p">,</span>
+            <span class="s2">"miRBase label"</span><span class="p">,</span>
             <span class="s2">"UniProtKB Gene Name"</span><span class="p">,</span>
-            <span class="s2">"synonym_id::EntrezGene"</span><span class="p">,</span>
             <span class="s2">"synonym_id::HGNC Symbol"</span><span class="p">,</span>
-            <span class="s2">"synonym_id::NCBI gene"</span><span class="p">,</span>
-            <span class="s2">"synonym_id::NCBI gene (formerly Entrezgene)"</span><span class="p">,</span>
             <span class="s2">"synonym_id::UniProtKB Gene Name"</span><span class="p">,</span>
         <span class="p">),</span>
         <span class="n">transcript</span><span class="o">=</span><span class="p">(</span>
@@ -249,25 +265,23 @@
         <span class="n">gene</span><span class="o">=</span><span class="p">(</span>
             <span class="s2">"Clone_based_ensembl_gene"</span><span class="p">,</span>
             <span class="s2">"Clone_based_vega_gene"</span><span class="p">,</span>
-            <span class="s2">"EntrezGene"</span><span class="p">,</span>
             <span class="s2">"HGNC Symbol"</span><span class="p">,</span>
             <span class="s2">"VGNC Symbol"</span><span class="p">,</span>
             <span class="s2">"Havana gene"</span><span class="p">,</span>
-            <span class="s2">"NCBI gene"</span><span class="p">,</span>
-            <span class="s2">"NCBI gene (formerly Entrezgene)"</span><span class="p">,</span>
             <span class="s2">"RFAM"</span><span class="p">,</span>
+            <span class="s2">"RFAM label"</span><span class="p">,</span>
+            <span class="s2">"miRBase"</span><span class="p">,</span>
+            <span class="s2">"miRBase label"</span><span class="p">,</span>
             <span class="s2">"UniProtKB Gene Name"</span><span class="p">,</span>
             <span class="s2">"Vega gene"</span><span class="p">,</span>
             <span class="s2">"Vega_gene"</span><span class="p">,</span>
-            <span class="s2">"synonym_id::EntrezGene"</span><span class="p">,</span>
             <span class="s2">"synonym_id::HGNC Symbol"</span><span class="p">,</span>
             <span class="s2">"synonym_id::VGNC Symbol"</span><span class="p">,</span>
-            <span class="s2">"synonym_id::NCBI gene"</span><span class="p">,</span>
-            <span class="s2">"synonym_id::NCBI gene (formerly Entrezgene)"</span><span class="p">,</span>
             <span class="s2">"synonym_id::UniProtKB Gene Name"</span><span class="p">,</span>
         <span class="p">),</span>
         <span class="n">transcript</span><span class="o">=</span><span class="p">(</span>
             <span class="s2">"CCDS"</span><span class="p">,</span>
+            <span class="s2">"CCDS label"</span><span class="p">,</span>
             <span class="s2">"Havana transcript"</span><span class="p">,</span>
             <span class="s2">"RefSeq_mRNA"</span><span class="p">,</span>
             <span class="s2">"RefSeq_mRNA_predicted"</span><span class="p">,</span>
@@ -288,25 +302,23 @@
         <span class="n">gene</span><span class="o">=</span><span class="p">(</span>
             <span class="s2">"Clone_based_ensembl_gene"</span><span class="p">,</span>
             <span class="s2">"Clone_based_vega_gene"</span><span class="p">,</span>
-            <span class="s2">"EntrezGene"</span><span class="p">,</span>
             <span class="s2">"HGNC Symbol"</span><span class="p">,</span>
             <span class="s2">"VGNC Symbol"</span><span class="p">,</span>
             <span class="s2">"Havana gene"</span><span class="p">,</span>
-            <span class="s2">"NCBI gene"</span><span class="p">,</span>
-            <span class="s2">"NCBI gene (formerly Entrezgene)"</span><span class="p">,</span>
             <span class="s2">"RFAM"</span><span class="p">,</span>
+            <span class="s2">"RFAM label"</span><span class="p">,</span>
+            <span class="s2">"miRBase"</span><span class="p">,</span>
+            <span class="s2">"miRBase label"</span><span class="p">,</span>
             <span class="s2">"UniProtKB Gene Name"</span><span class="p">,</span>
             <span class="s2">"Vega gene"</span><span class="p">,</span>
             <span class="s2">"Vega_gene"</span><span class="p">,</span>
-            <span class="s2">"synonym_id::EntrezGene"</span><span class="p">,</span>
             <span class="s2">"synonym_id::HGNC Symbol"</span><span class="p">,</span>
             <span class="s2">"synonym_id::VGNC Symbol"</span><span class="p">,</span>
-            <span class="s2">"synonym_id::NCBI gene"</span><span class="p">,</span>
-            <span class="s2">"synonym_id::NCBI gene (formerly Entrezgene)"</span><span class="p">,</span>
             <span class="s2">"synonym_id::UniProtKB Gene Name"</span><span class="p">,</span>
         <span class="p">),</span>
         <span class="n">transcript</span><span class="o">=</span><span class="p">(</span>
             <span class="s2">"CCDS"</span><span class="p">,</span>
+            <span class="s2">"CCDS label"</span><span class="p">,</span>
             <span class="s2">"Havana transcript"</span><span class="p">,</span>
             <span class="s2">"RefSeq_mRNA"</span><span class="p">,</span>
             <span class="s2">"RefSeq_mRNA_predicted"</span><span class="p">,</span>

@@ -100,10 +100,10 @@
 <span></span><span class="sd">"""Graph files: their names, the identity a file records, and finding the files of a folder.</span>
 
 <span class="sd">A graph file's name tells graphs apart that can sit in one folder:</span>
-<span class="sd">``graph_&lt;organism&gt;_assembly&lt;primary assembly&gt;_min&lt;first&gt;_max&lt;last&gt;[_narrow][_forms&lt;a-b&gt;][_extall].npz``. What a name</span>
-<span class="sd">does not say (the selection of external databases, the organism table, the format version) is in the manifest inside</span>
-<span class="sd">the file (:py:meth:`idtrack.graph.TheGraph.load` checks it). Nothing here needs the network, a table or PyYAML: the</span>
-<span class="sd">selection of external databases is given as parsed content.</span>
+<span class="sd">``graph_&lt;organism&gt;_assembly&lt;primary assembly&gt;_min&lt;first&gt;_max&lt;last&gt;[_sessions][_forms&lt;a-b&gt;][_extall].npz``. What a</span>
+<span class="sd">name does not say (the selection of external databases, the organism table, the format version) is in the record inside</span>
+<span class="sd">the file (:py:class:`idtrack.graph.GraphRecord`; :py:meth:`idtrack.graph.TheGraph.load` checks it). Nothing here</span>
+<span class="sd">needs the network, a table or PyYAML: the selection of external databases is given as parsed content.</span>
 <span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
@@ -119,7 +119,7 @@
 
 <span class="n">GRAPH_FILE_NAME</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
     <span class="sa">r</span><span class="s2">"^graph_(?P&lt;organism&gt;.+)_assembly(?P&lt;assembly&gt;-?[0-9]+)(?:_min(?P&lt;first_release&gt;[0-9]+))?"</span>
-    <span class="sa">r</span><span class="s2">"(?:_max(?P&lt;snapshot_release&gt;[0-9]+))?(?P&lt;narrow&gt;_narrow)?(?:_forms(?P&lt;forms&gt;[a-z-]+))?(?P&lt;extall&gt;_extall)?\.npz$"</span>
+    <span class="sa">r</span><span class="s2">"(?:_max(?P&lt;snapshot_release&gt;[0-9]+))?(?P&lt;sessions&gt;_sessions)?(?:_forms(?P&lt;forms&gt;[a-z-]+))?(?P&lt;extall&gt;_extall)?\.npz$"</span>
 <span class="p">)</span>
 
 
@@ -135,9 +135,9 @@
     <span class="n">assembly</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">first_release</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">snapshot_release</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">narrow</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">session_details</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">forms</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">narrow_external</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">all_external</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Return the path of a graph file; needs no manager and no network.</span>
 
@@ -147,9 +147,9 @@
 <span class="sd">        assembly: Primary assembly of the graph (key of the organism table).</span>
 <span class="sd">        first_release: First release of the window (infinity or ``None`` for no limit).</span>
 <span class="sd">        snapshot_release: Last release of the window (infinity or ``None`` for no limit).</span>
-<span class="sd">        narrow: See :py:meth:`idtrack.build.GraphMaker.construct_graph`.</span>
+<span class="sd">        session_details: See :py:meth:`idtrack.build.GraphMaker.construct_graph`.</span>
 <span class="sd">        forms: The forms if they are not all forms; ``None`` for all.</span>
-<span class="sd">        narrow_external: See :py:meth:`idtrack.build.GraphMaker.construct_graph`.</span>
+<span class="sd">        all_external: See :py:meth:`idtrack.build.GraphMaker.construct_graph`.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        str: The path.</span>
@@ -157,10 +157,10 @@
     <span class="n">first</span><span class="p">,</span> <span class="n">last</span> <span class="o">=</span> <span class="n">_limit</span><span class="p">(</span><span class="n">first_release</span><span class="p">),</span> <span class="n">_limit</span><span class="p">(</span><span class="n">snapshot_release</span><span class="p">)</span>
     <span class="n">min_ext</span> <span class="o">=</span> <span class="s2">""</span> <span class="k">if</span> <span class="n">first</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">"_min</span><span class="si">{</span><span class="n">first</span><span class="si">}</span><span class="s2">"</span>
     <span class="n">max_ext</span> <span class="o">=</span> <span class="s2">""</span> <span class="k">if</span> <span class="n">last</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">"_max</span><span class="si">{</span><span class="n">last</span><span class="si">}</span><span class="s2">"</span>
-    <span class="n">narrow_ext</span> <span class="o">=</span> <span class="s2">"_narrow"</span> <span class="k">if</span> <span class="n">narrow</span> <span class="k">else</span> <span class="s2">""</span>
+    <span class="n">sessions_ext</span> <span class="o">=</span> <span class="s2">"_sessions"</span> <span class="k">if</span> <span class="n">session_details</span> <span class="k">else</span> <span class="s2">""</span>
     <span class="n">forms_ext</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"_forms</span><span class="si">{</span><span class="s1">'-'</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">forms</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span> <span class="k">if</span> <span class="n">forms</span> <span class="k">else</span> <span class="s2">""</span>
-    <span class="n">external_ext</span> <span class="o">=</span> <span class="s2">""</span> <span class="k">if</span> <span class="n">narrow_external</span> <span class="k">else</span> <span class="s2">"_extall"</span>
-    <span class="n">name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"graph_</span><span class="si">{</span><span class="n">organism</span><span class="si">}</span><span class="s2">_assembly</span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">assembly</span><span class="p">)</span><span class="si">}{</span><span class="n">min_ext</span><span class="si">}{</span><span class="n">max_ext</span><span class="si">}{</span><span class="n">narrow_ext</span><span class="si">}{</span><span class="n">forms_ext</span><span class="si">}{</span><span class="n">external_ext</span><span class="si">}</span><span class="s2">.npz"</span>
+    <span class="n">external_ext</span> <span class="o">=</span> <span class="s2">"_extall"</span> <span class="k">if</span> <span class="n">all_external</span> <span class="k">else</span> <span class="s2">""</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"graph_</span><span class="si">{</span><span class="n">organism</span><span class="si">}</span><span class="s2">_assembly</span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">assembly</span><span class="p">)</span><span class="si">}{</span><span class="n">min_ext</span><span class="si">}{</span><span class="n">max_ext</span><span class="si">}{</span><span class="n">sessions_ext</span><span class="si">}{</span><span class="n">forms_ext</span><span class="si">}{</span><span class="n">external_ext</span><span class="si">}</span><span class="s2">.npz"</span>
     <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">local_repository</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span></div>
 
 
@@ -176,8 +176,8 @@
 
 <span class="sd">    Returns:</span>
 <span class="sd">        list[dict]: One entry per file, sorted by name: ``path``, ``organism``, ``assembly``,</span>
-<span class="sd">        ``first_release``, ``snapshot_release`` (``None`` where the name has no limit), ``narrow``, ``forms`` (``None``</span>
-<span class="sd">        for all forms) and ``narrow_external``.</span>
+<span class="sd">        ``first_release``, ``snapshot_release`` (``None`` where the name has no limit), ``session_details``, ``forms``</span>
+<span class="sd">        (``None`` for all forms) and ``all_external``.</span>
 <span class="sd">    """</span>
     <span class="n">found</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">local_repository</span><span class="p">):</span>
@@ -195,9 +195,9 @@
                 <span class="s2">"snapshot_release"</span><span class="p">:</span> <span class="p">(</span>
                     <span class="kc">None</span> <span class="k">if</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="s2">"snapshot_release"</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">int</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="s2">"snapshot_release"</span><span class="p">))</span>
                 <span class="p">),</span>
-                <span class="s2">"narrow"</span><span class="p">:</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="s2">"narrow"</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="s2">"session_details"</span><span class="p">:</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="s2">"sessions"</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span>
                 <span class="s2">"forms"</span><span class="p">:</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="s2">"forms"</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="s2">"forms"</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"-"</span><span class="p">),</span>
-                <span class="s2">"narrow_external"</span><span class="p">:</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="s2">"extall"</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="s2">"all_external"</span><span class="p">:</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="s2">"extall"</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span>
             <span class="p">}</span>
         <span class="p">)</span>
     <span class="k">return</span> <span class="n">found</span></div>
@@ -210,7 +210,9 @@
 <span class="w">    </span><span class="sd">"""Return a digest of the selection of external databases that takes effect in a graph.</span>
 
 <span class="sd">    Of a parsed externals YAML this is, per form, database and assembly, the included releases that lie in the</span>
-<span class="sd">    window of the graph and in the release range the organism table gives the assembly. An entry that can never</span>
+<span class="sd">    window of the graph and in the release range the organism table gives the assembly; a release of the window after</span>
+<span class="sd">    the last release the file lists takes the selection of that last release, as the build does</span>
+<span class="sd">    (:py:meth:`idtrack.ExternalDatabases.settings_release`). An entry that can never</span>
 <span class="sd">    produce an edge (a database that is not included, a release outside the window, an assembly at releases it does</span>
 <span class="sd">    not have, an assembly the organism does not have) is not part of the identity of a graph: tidying such entries in</span>
 <span class="sd">    a YAML file leaves the graphs built with it readable.</span>
@@ -227,6 +229,14 @@
 <span class="sd">    """</span>
     <span class="n">table</span> <span class="o">=</span> <span class="n">organisms</span><span class="o">.</span><span class="n">ORGANISM_TABLE</span><span class="p">[</span><span class="n">organism</span><span class="p">]</span>
     <span class="n">selected</span> <span class="o">=</span> <span class="p">(</span><span class="n">content</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">organism</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+    <span class="n">listed</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">per_form</span> <span class="ow">in</span> <span class="n">selected</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="p">(</span><span class="n">per_form</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="p">((</span><span class="n">entry</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"Assembly"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">"Ensembl release"</span><span class="p">])</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">","</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="n">last_listed</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">listed</span><span class="p">)</span> <span class="k">if</span> <span class="n">listed</span> <span class="k">else</span> <span class="kc">None</span>
     <span class="n">selection</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">form</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">forms</span><span class="p">):</span>
         <span class="k">for</span> <span class="n">database</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">selected</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">form</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}):</span>
@@ -236,15 +246,40 @@
                 <span class="k">if</span> <span class="ow">not</span> <span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"Include"</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">int</span><span class="p">(</span><span class="n">assembly</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">table</span><span class="p">:</span>
                     <span class="k">continue</span>
                 <span class="n">lowest</span><span class="p">,</span> <span class="n">highest</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">assembly</span><span class="p">)][</span><span class="s2">"ReleaseRange"</span><span class="p">]</span>
+                <span class="n">own</span> <span class="o">=</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">"Ensembl release"</span><span class="p">])</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">","</span><span class="p">)}</span>
+                <span class="k">if</span> <span class="n">last_listed</span> <span class="ow">in</span> <span class="n">own</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">math</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">last</span><span class="p">):</span>
+                    <span class="n">own</span> <span class="o">|=</span> <span class="nb">set</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">last_listed</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">last</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>  <span class="c1"># later releases take the last settings</span>
                 <span class="n">releases</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
-                    <span class="n">r</span>
-                    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">"Ensembl release"</span><span class="p">])</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">","</span><span class="p">)}</span>
-                    <span class="k">if</span> <span class="n">first</span> <span class="o">&lt;=</span> <span class="n">r</span> <span class="o">&lt;=</span> <span class="n">last</span> <span class="ow">and</span> <span class="n">lowest</span> <span class="o">&lt;=</span> <span class="n">r</span> <span class="ow">and</span> <span class="p">(</span><span class="n">highest</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">r</span> <span class="o">&lt;=</span> <span class="n">highest</span><span class="p">)</span>
+                    <span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">own</span> <span class="k">if</span> <span class="n">first</span> <span class="o">&lt;=</span> <span class="n">r</span> <span class="o">&lt;=</span> <span class="n">last</span> <span class="ow">and</span> <span class="n">lowest</span> <span class="o">&lt;=</span> <span class="n">r</span> <span class="ow">and</span> <span class="p">(</span><span class="n">highest</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">r</span> <span class="o">&lt;=</span> <span class="n">highest</span><span class="p">)</span>
                 <span class="p">)</span>
                 <span class="k">if</span> <span class="n">releases</span><span class="p">:</span>
                     <span class="n">selection</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">form</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">database</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">assembly</span><span class="p">),</span> <span class="n">releases</span><span class="p">])</span>
     <span class="k">return</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">selection</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">"utf-8"</span><span class="p">))</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()[:</span><span class="mi">20</span><span class="p">]</span></div>
 
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">content_digest</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the content digest a graph file records, reading its record alone (not the graph).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        path: A graph file (:py:meth:`idtrack.graph.TheGraph.save`).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str | None: :py:attr:`idtrack.graph.GraphRecord.content_digest`; ``None`` when the file cannot be read as a</span>
+<span class="sd">        graph file of this format (its loading says why).</span>
+<span class="sd">    """</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">zipfile</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">zlib</span>
+
+    <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">allow_pickle</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="k">as</span> <span class="n">arrays</span><span class="p">:</span>
+            <span class="n">document</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">arrays</span><span class="p">[</span><span class="s2">"document"</span><span class="p">]</span><span class="o">.</span><span class="n">tobytes</span><span class="p">()</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">"utf-8"</span><span class="p">))</span>
+        <span class="n">digest</span> <span class="o">=</span> <span class="n">document</span><span class="p">[</span><span class="s2">"record"</span><span class="p">][</span><span class="s2">"content_digest"</span><span class="p">]</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="ne">KeyError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">,</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">BadZipFile</span><span class="p">,</span> <span class="ne">EOFError</span><span class="p">,</span> <span class="n">zlib</span><span class="o">.</span><span class="n">error</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">digest</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">digest</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
 
 
 <div class="viewcode-block" id="table_fingerprint">

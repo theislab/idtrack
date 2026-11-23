@@ -107,20 +107,40 @@
 
 <span class="sd">A pair is ordered by its key (:py:class:`Pair`): being the queried gene id's own version at the target release;</span>
 <span class="sd">then how its entry gene compares with the other entry genes (the *lineage*: final confidence, bridges, gap of the</span>
-<span class="sd">bridges, support of the query on the entry gene), then how its gene compares with the other successors of the same</span>
-<span class="sd">entry gene (*within*: mapping score, being the query itself), then steps and ids.</span>
+<span class="sd">bridges, the query being the entry gene's display name at the starting release, support of the query on the entry</span>
+<span class="sd">gene; where the history merges several entry genes into the gene, the best display rank and support of them all,</span>
+<span class="sd">decision 106), then how its gene compares with the other successors of the same entry gene (*within*: steps without a score,</span>
+<span class="sd">mapping score, being the query itself), then steps and ids.</span>
+
+<span class="sd">Of the evidence of which gene a name stands for at a release, Ensembl's display name of a gene (``gene.display_xref_id``)</span>
+<span class="sd">is Ensembl's own statement of the gene's name there; support counts the databases that attach the name to a gene, of</span>
+<span class="sd">which a projection or a symbol that NCBI attached to another gene's translation is one like any other. So among the</span>
+<span class="sd">genes that carry a name at one release the gene whose display name it is ranks first, and support decides between genes</span>
+<span class="sd">that are equal in it (two genes that both display the name, or neither). The display name holds for the string as it</span>
+<span class="sd">is typed (decision 102): letter case is evidence where the string has mixed case (``Foxl1`` is not the display name</span>
+<span class="sd">``FOXL1`` of another gene); a string in one letter case carries none, and in an organism whose symbols are written in</span>
+<span class="sd">mixed case the display name of a name authority, read without letter case, ranks before another source's (mouse</span>
+<span class="sd">``GAPDH`` is the gene that MGI displays as ``Gapdh`` before the gene that UniProt displays as ``GAPDH``). A name</span>
+<span class="sd">authority's symbol against another</span>
+<span class="sd">gene's synonym is decided before both, when the string is read (decision 94: every name of a release before any</span>
+<span class="sd">synonym, :py:meth:`idtrack.graph.TheGraph.resolve_name`).</span>
 
 <span class="sd">The best answer: the pairs of the queried gene id's own version when the search reached it, else all pairs; of</span>
 <span class="sd">those, the entry genes that are equal in the lineage evidence all belong to the answer. The mapping score compares</span>
 <span class="sd">the successors of one entry gene (it says how much of that gene a successor keeps, not which of two genes a name</span>
 <span class="sd">stands for), then being the query itself, and between successors that are still equal the richness of annotation</span>
-<span class="sd">decides, as the last resort. What remains is the answer; more than one pair is a tie.</span>
+<span class="sd">decides, as the last resort. What remains is the answer; more than one pair is a tie, given in ascending order of</span>
+<span class="sd">gene id and target id.</span>
 <span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">NamedTuple</span>
+
+<span class="c1">#: The criteria of the lineage, in the order of :py:attr:`Pair.lineage` (named as</span>
+<span class="c1">#: :py:data:`idtrack.results.CRITERIA` names them).</span>
+<span class="n">LINEAGE_CRITERIA</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"final_confidence"</span><span class="p">,</span> <span class="s2">"bridges"</span><span class="p">,</span> <span class="s2">"bridge_gap"</span><span class="p">,</span> <span class="s2">"display_name"</span><span class="p">,</span> <span class="s2">"entry_support"</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="Pair">
@@ -134,9 +154,13 @@
 
     <span class="c1">#: The full key: ``(own, *lineage, *within, external steps, history steps, gene, target)``.</span>
     <span class="n">order</span><span class="p">:</span> <span class="nb">tuple</span>
-    <span class="c1">#: ``(final confidence, bridges, bridge gap, -entry support)``.</span>
+    <span class="c1">#: ``(final confidence, bridges, bridge gap, display rank of the query on the entry gene, -entry support)``: the</span>
+    <span class="c1">#: display rank is 0 where the query is the entry gene's display name as the string is read, 1 where it is another</span>
+    <span class="c1">#: source's display name read without letter case, 2 where it is not its display name</span>
+    <span class="c1">#: (:py:attr:`idtrack.results.Candidate.display_rank`).</span>
     <span class="n">lineage</span><span class="p">:</span> <span class="nb">tuple</span>
-    <span class="c1">#: ``(-score rounded to 12 places, 0 if the target is the query itself else 1)``.</span>
+    <span class="c1">#: ``(history steps between two ids without a score, -score rounded to 12 places, 0 if the target is the query</span>
+    <span class="c1">#: itself else 1)``: a step that Ensembl scored 0 (no score) ranks a path below every measured score (decision 57).</span>
     <span class="n">within</span><span class="p">:</span> <span class="nb">tuple</span>
     <span class="c1">#: The gene at the target release.</span>
     <span class="n">gene</span><span class="p">:</span> <span class="nb">str</span>
@@ -153,12 +177,14 @@
     <span class="n">bridges</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">gap</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">support</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">unscored</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">score</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">same_as_query</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
     <span class="n">external_steps</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">history_steps</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">gene</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">target</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">display_rank</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Pair</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Return the ranking pair of a candidate.</span>
 
@@ -168,19 +194,22 @@
 <span class="sd">            result share it).</span>
 <span class="sd">        bridges: The bridges of the gene's path.</span>
 <span class="sd">        gap: The bridge gap of the gene's path.</span>
-<span class="sd">        support: The support of the query on the gene's entry gene.</span>
-<span class="sd">        score: The path score.</span>
+<span class="sd">        support: The support of the query on the gene's entry genes (the best of them).</span>
+<span class="sd">        unscored: The history steps of the path between two different ids without a score (Ensembl's 0).</span>
+<span class="sd">        score: The path score (the product of the measured scores).</span>
 <span class="sd">        same_as_query: The target is the query itself.</span>
 <span class="sd">        external_steps: Cross-reference steps of the path.</span>
 <span class="sd">        history_steps: History steps of the path.</span>
 <span class="sd">        gene: The gene.</span>
 <span class="sd">        target: The target.</span>
+<span class="sd">        display_rank: How the query is the display name of the gene's entry genes at the starting release (the best)</span>
+<span class="sd">            (:py:attr:`idtrack.results.Candidate.display_rank`: 0 first, 2 not at all).</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Pair: The pair.</span>
 <span class="sd">    """</span>
-    <span class="n">lineage</span> <span class="o">=</span> <span class="p">(</span><span class="n">confidence</span><span class="p">,</span> <span class="n">bridges</span><span class="p">,</span> <span class="n">gap</span><span class="p">,</span> <span class="o">-</span><span class="n">support</span><span class="p">)</span>
-    <span class="n">within</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="nb">round</span><span class="p">(</span><span class="n">score</span><span class="p">,</span> <span class="mi">12</span><span class="p">),</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">same_as_query</span> <span class="k">else</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">lineage</span> <span class="o">=</span> <span class="p">(</span><span class="n">confidence</span><span class="p">,</span> <span class="n">bridges</span><span class="p">,</span> <span class="n">gap</span><span class="p">,</span> <span class="n">display_rank</span><span class="p">,</span> <span class="o">-</span><span class="n">support</span><span class="p">)</span>
+    <span class="n">within</span> <span class="o">=</span> <span class="p">(</span><span class="n">unscored</span><span class="p">,</span> <span class="o">-</span><span class="nb">round</span><span class="p">(</span><span class="n">score</span><span class="p">,</span> <span class="mi">12</span><span class="p">),</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">same_as_query</span> <span class="k">else</span> <span class="mi">1</span><span class="p">)</span>
     <span class="n">rest</span> <span class="o">=</span> <span class="p">(</span><span class="n">external_steps</span><span class="p">,</span> <span class="n">history_steps</span><span class="p">,</span> <span class="n">gene</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">Pair</span><span class="p">((</span><span class="mi">0</span> <span class="k">if</span> <span class="n">own</span> <span class="k">else</span> <span class="mi">1</span><span class="p">,)</span> <span class="o">+</span> <span class="n">lineage</span> <span class="o">+</span> <span class="n">within</span> <span class="o">+</span> <span class="n">rest</span><span class="p">,</span> <span class="n">lineage</span><span class="p">,</span> <span class="n">within</span><span class="p">,</span> <span class="n">gene</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span></div>
 
@@ -223,13 +252,31 @@
 
 
 
+<div class="viewcode-block" id="best_order">
+<a class="viewcode-back" href="../../../reference.html#idtrack.engine.ranking.best_order">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">best_order</span><span class="p">(</span><span class="n">gene</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return the key that orders the pairs of the best answer: gene id, then target id, ascending.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        gene: The gene at the target release.</span>
+<span class="sd">        target: The target id.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple[str, str]: The key.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">gene</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span></div>
+
+
+
 <div class="viewcode-block" id="ranked">
 <a class="viewcode-back" href="../../../reference.html#idtrack.engine.ranking.ranked">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">ranked</span><span class="p">(</span><span class="n">pairs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Pair</span><span class="p">],</span> <span class="n">best</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Pair</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Pair</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""Return every pair in the order of results: the best pairs first, the others by their key, grouped by gene.</span>
 
-<span class="sd">    The pairs of one gene stay together, in the order in which the gene first appears (a result lists each gene's</span>
-<span class="sd">    targets together).</span>
+<span class="sd">    The best pairs are equal in the evidence that decides; what still tells them apart (steps, the mapping score of</span>
+<span class="sd">    successors of different entry genes) did not decide, so a tie is given in ascending order of gene id and target id</span>
+<span class="sd">    (:py:func:`best_order`), a stated order that does not depend on how each was reached. The pairs of one gene stay</span>
+<span class="sd">    together, in the order in which the gene first appears (a result lists each gene's targets together).</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        pairs: Every pair, sorted.</span>
@@ -239,7 +286,9 @@
 <span class="sd">        list[Pair]: The ranked pairs.</span>
 <span class="sd">    """</span>
     <span class="n">leading</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">best</span><span class="p">)</span>
-    <span class="n">order</span> <span class="o">=</span> <span class="n">best</span> <span class="o">+</span> <span class="p">[</span><span class="n">pair</span> <span class="k">for</span> <span class="n">pair</span> <span class="ow">in</span> <span class="n">pairs</span> <span class="k">if</span> <span class="n">pair</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">leading</span><span class="p">]</span>
+    <span class="n">order</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">best</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">pair</span><span class="p">:</span> <span class="n">best_order</span><span class="p">(</span><span class="n">pair</span><span class="o">.</span><span class="n">gene</span><span class="p">,</span> <span class="n">pair</span><span class="o">.</span><span class="n">target</span><span class="p">))</span> <span class="o">+</span> <span class="p">[</span>
+        <span class="n">pair</span> <span class="k">for</span> <span class="n">pair</span> <span class="ow">in</span> <span class="n">pairs</span> <span class="k">if</span> <span class="n">pair</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">leading</span>
+    <span class="p">]</span>
     <span class="n">by_gene</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Pair</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">for</span> <span class="n">pair</span> <span class="ow">in</span> <span class="n">order</span><span class="p">:</span>
         <span class="n">by_gene</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">pair</span><span class="o">.</span><span class="n">gene</span><span class="p">,</span> <span class="p">[])</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pair</span><span class="p">)</span>
@@ -262,8 +311,8 @@
 <span class="sd">        counts: The annotation counts compared (:py:func:`select_best`).</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        str | None: ``own_version``, ``final_confidence``, ``bridges``, ``bridge_gap``, ``entry_support``, ``score``,</span>
-<span class="sd">        ``same_as_query`` or ``annotation``; ``None`` when every pair is best.</span>
+<span class="sd">        str | None: ``own_version``, ``final_confidence``, ``bridges``, ``bridge_gap``, ``display_name``,</span>
+<span class="sd">        ``entry_support``, ``score``, ``same_as_query`` or ``annotation``; ``None`` when every pair is best.</span>
 <span class="sd">    """</span>
     <span class="n">leading</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">best</span><span class="p">)</span>
     <span class="n">runner_up</span> <span class="o">=</span> <span class="nb">next</span><span class="p">((</span><span class="n">pair</span> <span class="k">for</span> <span class="n">pair</span> <span class="ow">in</span> <span class="n">ordered</span> <span class="k">if</span> <span class="n">pair</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">leading</span><span class="p">),</span> <span class="kc">None</span><span class="p">)</span>
@@ -272,14 +321,13 @@
     <span class="n">first</span> <span class="o">=</span> <span class="n">best</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
     <span class="k">if</span> <span class="n">own</span> <span class="ow">and</span> <span class="p">(</span><span class="n">first</span><span class="o">.</span><span class="n">gene</span> <span class="ow">in</span> <span class="n">own</span><span class="p">)</span> <span class="o">!=</span> <span class="p">(</span><span class="n">runner_up</span><span class="o">.</span><span class="n">gene</span> <span class="ow">in</span> <span class="n">own</span><span class="p">):</span>
         <span class="k">return</span> <span class="s2">"own_version"</span>
-    <span class="n">names</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"final_confidence"</span><span class="p">,</span> <span class="s2">"bridges"</span><span class="p">,</span> <span class="s2">"bridge_gap"</span><span class="p">,</span> <span class="s2">"entry_support"</span><span class="p">)</span>
-    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">names</span><span class="p">,</span> <span class="n">first</span><span class="o">.</span><span class="n">lineage</span><span class="p">,</span> <span class="n">runner_up</span><span class="o">.</span><span class="n">lineage</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">LINEAGE_CRITERIA</span><span class="p">,</span> <span class="n">first</span><span class="o">.</span><span class="n">lineage</span><span class="p">,</span> <span class="n">runner_up</span><span class="o">.</span><span class="n">lineage</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">a</span> <span class="o">!=</span> <span class="n">b</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">name</span>
     <span class="c1"># Same lineage: the runner-up is a successor of its entry gene that lost against that entry gene's best.</span>
     <span class="n">entry</span> <span class="o">=</span> <span class="n">entry_of</span><span class="p">[</span><span class="n">runner_up</span><span class="o">.</span><span class="n">gene</span><span class="p">]</span>
     <span class="n">rival</span> <span class="o">=</span> <span class="nb">next</span><span class="p">((</span><span class="n">pair</span> <span class="k">for</span> <span class="n">pair</span> <span class="ow">in</span> <span class="n">best</span> <span class="k">if</span> <span class="n">entry_of</span><span class="p">[</span><span class="n">pair</span><span class="o">.</span><span class="n">gene</span><span class="p">]</span> <span class="o">==</span> <span class="n">entry</span><span class="p">),</span> <span class="n">first</span><span class="p">)</span>
-    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">((</span><span class="s2">"score"</span><span class="p">,</span> <span class="s2">"same_as_query"</span><span class="p">),</span> <span class="n">rival</span><span class="o">.</span><span class="n">within</span><span class="p">,</span> <span class="n">runner_up</span><span class="o">.</span><span class="n">within</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">((</span><span class="s2">"score"</span><span class="p">,</span> <span class="s2">"score"</span><span class="p">,</span> <span class="s2">"same_as_query"</span><span class="p">),</span> <span class="n">rival</span><span class="o">.</span><span class="n">within</span><span class="p">,</span> <span class="n">runner_up</span><span class="o">.</span><span class="n">within</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">a</span> <span class="o">!=</span> <span class="n">b</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">name</span>
     <span class="k">if</span> <span class="n">counts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">runner_up</span><span class="o">.</span><span class="n">gene</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>

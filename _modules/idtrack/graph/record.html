@@ -1,0 +1,372 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>idtrack.graph.record &mdash; idtrack 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=6a604523" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/tutorials.css?v=0e72a3a5" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../../_static/design-tabs.js?v=fcb327ea"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />  
+<!-- Google tag (gtag.js) -->
+<script
+    async
+    src="https://www.googletagmanager.com/gtag/js?id=G-FYKLWNJBVK"
+></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() {
+        dataLayer.push(arguments);
+    }
+    gtag("js", new Date());
+
+    gtag("config", "G-FYKLWNJBVK");
+</script>
+
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            idtrack
+              <img src="../../../_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../changes.html">Changes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../code_of_conduct.html">Code of Conduct</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">idtrack</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">idtrack.graph.record</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for idtrack.graph.record</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""The record of a graph file: what the graph is and what built it, one typed record, each fact once.</span>
+
+<span class="sd">A graph file (:py:meth:`idtrack.graph.TheGraph.save`) holds its arrays and one :py:class:`GraphRecord`. The record</span>
+<span class="sd">says which graph the file holds (organism, primary assembly, release window, forms, the selection of external</span>
+<span class="sd">databases and the organism table it was built with: :py:meth:`GraphRecord.identity`), what the graph covers (its</span>
+<span class="sd">releases, the assembly that serves each, the external databases per assembly), what built it (package version and</span>
+<span class="sd">commit, date, the tables read and their fingerprints, the counts of the build and its history report) and the digest</span>
+<span class="sd">of its content. This module imports nothing beyond the standard library and :py:mod:`idtrack.errors`.</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">dataclasses</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mapping</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">IntegrityError</span>
+
+<span class="c1">#: Version of the graph file layout and of the build rules behind it. It is raised whenever a graph built by an</span>
+<span class="c1">#: earlier version of the code must not be loaded any more (a change of the file layout, of what an edge means, of</span>
+<span class="c1">#: how names are chosen or of how the history is validated). There is no reader of an earlier version.</span>
+<span class="n">GRAPH_FORMAT_VERSION</span> <span class="o">=</span> <span class="mi">6</span>
+
+<span class="c1">#: The fields of a record that say which graph a file holds (what a caller asks for when it loads a file by name).</span>
+<span class="n">IDENTITY_FIELDS</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">"organism"</span><span class="p">,</span>
+    <span class="s2">"primary_assembly"</span><span class="p">,</span>
+    <span class="s2">"first_release"</span><span class="p">,</span>
+    <span class="s2">"window_end"</span><span class="p">,</span>
+    <span class="s2">"snapshot_release"</span><span class="p">,</span>
+    <span class="s2">"forms"</span><span class="p">,</span>
+    <span class="s2">"session_details"</span><span class="p">,</span>
+    <span class="s2">"all_external"</span><span class="p">,</span>
+    <span class="s2">"externals_fingerprint"</span><span class="p">,</span>
+    <span class="s2">"organism_table_fingerprint"</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<div class="viewcode-block" id="GraphRecord">
+<a class="viewcode-back" href="../../../reference.html#idtrack.graph.GraphRecord">[docs]</a>
+<span class="nd">@dataclasses</span><span class="o">.</span><span class="n">dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GraphRecord</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""What a graph is and what built it.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        organism (str): The organism.</span>
+<span class="sd">        primary_assembly (int): The assembly of the snapshot release, the organism's default primary assembly there.</span>
+<span class="sd">        first_release (int): The first release of the window the graph was built for.</span>
+<span class="sd">        window_end (int | None): The last release of that window (``None``: no limit); the snapshot is the newest</span>
+<span class="sd">            release of the primary assembly in the window.</span>
+<span class="sd">        snapshot_release (int): The snapshot: the last release of the graph.</span>
+<span class="sd">        releases (tuple[int, ...]): Every release the graph covers, ascending.</span>
+<span class="sd">        serving_assembly (dict[int, int]): Release to the assembly that serves it in the backbone.</span>
+<span class="sd">        releases_per_assembly (dict[int, tuple[int, ...]]): Assembly to the releases its cross-references carry.</span>
+<span class="sd">        forms (tuple[str, ...]): The Ensembl forms of the graph.</span>
+<span class="sd">        session_details (bool): The history report lists Ensembl's mapping sessions with their database names,</span>
+<span class="sd">            assemblies and dates (the graph itself is the same).</span>
+<span class="sd">        all_external (bool): Every external database of Ensembl is in the graph, not only the selected ones.</span>
+<span class="sd">        externals_fingerprint (str): Digest of the selection of external databases that took effect.</span>
+<span class="sd">        organism_table_fingerprint (str): Digest of the organism's assemblies in the organism table.</span>
+<span class="sd">        externals_settings (dict[int, int]): Release to the release of the externals configuration whose settings</span>
+<span class="sd">            it took (itself where the configuration lists it; the last listed release for a later one).</span>
+<span class="sd">        external_databases (dict[int, tuple[str, ...]]): Assembly to the external databases whose ids it has.</span>
+<span class="sd">        connection_form (dict[str, str]): External database to the Ensembl form its ids are attached to.</span>
+<span class="sd">        label_names (dict[str, str]): The external databases whose ids are labels (display names, symbols) rather</span>
+<span class="sd">            than accessions, by Ensembl's database name (``external_db.db_name``): the one name a database's label rows</span>
+<span class="sd">            take at every release of the graph (decision 53), for the databases whose labels the graph holds.</span>
+<span class="sd">        renamed_databases (dict[str, str]): Names that Ensembl gives a database's labels at some release and the</span>
+<span class="sd">            graph does not, with the name the graph gives them (one name at every release).</span>
+<span class="sd">        misplaced_external_entries (tuple[str, ...]): External ids left out because they are Ensembl ids.</span>
+<span class="sd">        entries_of_several_genes (tuple[str, ...]): Entries of the databases of</span>
+<span class="sd">            :py:data:`idtrack.build.database_manager.ONE_GENE_ONLY` left out because Ensembl gives them to genes at</span>
+<span class="sd">            several loci over the releases of the graph (lower case).</span>
+<span class="sd">        database_names (dict[str, dict[str, tuple[tuple[int, int], ...]]]): Per database of the graph's selection, the</span>
+<span class="sd">            names of Ensembl's databases it holds and the releases (inclusive ranges) at which they hold links: its own</span>
+<span class="sd">            name on every form, and the names whose links continue it (decision 104,</span>
+<span class="sd">            :py:mod:`idtrack.build.continuity`).</span>
+<span class="sd">        assembly_mappings (dict[str, dict[str, Any]]): Ensembl's mappings of one assembly onto a later one that the</span>
+<span class="sd">            graph carried places by (decision 103): per chain file, ``from`` and ``to`` (assembly keys), the</span>
+<span class="sd">            ``release`` whose ``assembly_chain`` folder held it and its ``sha256``; empty where Ensembl publishes none.</span>
+<span class="sd">        package_version (str | None): The idtrack version that built the graph; for a graph built from a source folder</span>
+<span class="sd">            that is not an installed idtrack, the statement :py:data:`idtrack._version.SOURCE_FOLDER_BUILD` (no</span>
+<span class="sd">            released version names that code; the commit does, where it was known).</span>
+<span class="sd">        package_commit (str | None): The git commit of idtrack that built the graph, where it was known.</span>
+<span class="sd">        build_date (str | None): When the graph was built (UTC, ISO 8601).</span>
+<span class="sd">        tables (dict[str, Any]): The kinds of tables read and their row counts.</span>
+<span class="sd">        source_tables (dict[str, Any]): Per assembly, the number of table files and a fingerprint over them.</span>
+<span class="sd">        counts (dict[str, int]): Counts of the build (nodes, edges, merged spellings, places, ...).</span>
+<span class="sd">        history (dict[str, Any]): The history report of the build (sessions, corrections, the events placed</span>
+<span class="sd">            otherwise than Ensembl recorded them, the events left out).</span>
+<span class="sd">        content_digest (str): Digest of the graph's content (nodes, edges, connections, spellings, places, marks).</span>
+<span class="sd">    """</span>
+
+    <span class="n">organism</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">primary_assembly</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">first_release</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">window_end</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">snapshot_release</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">releases</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+    <span class="n">serving_assembly</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span>
+    <span class="n">releases_per_assembly</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]]</span>
+    <span class="n">forms</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+    <span class="n">session_details</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">all_external</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">externals_fingerprint</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">organism_table_fingerprint</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">externals_settings</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span>
+    <span class="n">external_databases</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]]</span>
+    <span class="n">connection_form</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span>
+    <span class="n">label_names</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span>
+    <span class="n">renamed_databases</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span>
+    <span class="n">misplaced_external_entries</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+    <span class="n">entries_of_several_genes</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+    <span class="n">database_names</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="o">...</span><span class="p">]]]</span>
+    <span class="n">assembly_mappings</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span>
+    <span class="n">package_version</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">package_commit</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">build_date</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">tables</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+    <span class="n">source_tables</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+    <span class="n">counts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span>
+    <span class="n">history</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+    <span class="n">content_digest</span><span class="p">:</span> <span class="nb">str</span>
+
+<div class="viewcode-block" id="GraphRecord.identity">
+<a class="viewcode-back" href="../../../reference.html#idtrack.graph.GraphRecord.identity">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">identity</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Return the fields that say which graph this is (:py:data:`IDENTITY_FIELDS`), as JSON values."""</span>
+        <span class="n">document</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span>
+        <span class="k">return</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">document</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">IDENTITY_FIELDS</span><span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="GraphRecord.to_json">
+<a class="viewcode-back" href="../../../reference.html#idtrack.graph.GraphRecord.to_json">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Return the record as a JSON document (integer keys become strings, tuples lists)."""</span>
+        <span class="k">return</span> <span class="p">{</span><span class="n">field</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">_json</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">field</span><span class="o">.</span><span class="n">name</span><span class="p">))</span> <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">dataclasses</span><span class="o">.</span><span class="n">fields</span><span class="p">(</span><span class="bp">self</span><span class="p">)}</span></div>
+
+
+<div class="viewcode-block" id="GraphRecord.from_json">
+<a class="viewcode-back" href="../../../reference.html#idtrack.graph.GraphRecord.from_json">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_json</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">document</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">GraphRecord</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Read a record written by :py:meth:`to_json`.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            IntegrityError: If a field is missing, unknown or of the wrong type.</span>
+<span class="sd">        """</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="p">{</span><span class="n">field</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">dataclasses</span><span class="o">.</span><span class="n">fields</span><span class="p">(</span><span class="bp">cls</span><span class="p">)}</span>
+        <span class="n">missing</span><span class="p">,</span> <span class="n">unknown</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">names</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">document</span><span class="p">)),</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">document</span><span class="p">)</span> <span class="o">-</span> <span class="n">names</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">missing</span> <span class="ow">or</span> <span class="n">unknown</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">IntegrityError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"A graph record lacks the fields </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2"> or has unknown fields </span><span class="si">{</span><span class="n">unknown</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
+                <span class="n">organism</span><span class="o">=</span><span class="n">_text</span><span class="p">(</span><span class="n">document</span><span class="p">[</span><span class="s2">"organism"</span><span class="p">]),</span>
+                <span class="n">primary_assembly</span><span class="o">=</span><span class="n">_integer</span><span class="p">(</span><span class="n">document</span><span class="p">[</span><span class="s2">"primary_assembly"</span><span class="p">]),</span>
+                <span class="n">first_release</span><span class="o">=</span><span class="n">_integer</span><span class="p">(</span><span class="n">document</span><span class="p">[</span><span class="s2">"first_release"</span><span class="p">]),</span>
+                <span class="n">window_end</span><span class="o">=</span><span class="kc">None</span> <span class="k">if</span> <span class="n">document</span><span class="p">[</span><span class="s2">"window_end"</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">_integer</span><span class="p">(</span><span class="n">document</span><span class="p">[</span><span class="s2">"window_end"</span><span class="p">]),</span>
+                <span class="n">snapshot_release</span><span class="o">=</span><span class="n">_integer</span><span class="p">(</span><span class="n">document</span><span class="p">[</span><span class="s2">"snapshot_release"</span><span class="p">]),</span>
+                <span class="n">releases</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">_integer</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">document</span><span class="p">[</span><span class="s2">"releases"</span><span class="p">]),</span>
+                <span class="n">serving_assembly</span><span class="o">=</span><span class="p">{</span><span class="n">_integer</span><span class="p">(</span><span class="n">r</span><span class="p">):</span> <span class="n">_integer</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">document</span><span class="p">[</span><span class="s2">"serving_assembly"</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span>
+                <span class="n">releases_per_assembly</span><span class="o">=</span><span class="p">{</span>
+                    <span class="n">_integer</span><span class="p">(</span><span class="n">a</span><span class="p">):</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">_integer</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">rs</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">rs</span> <span class="ow">in</span> <span class="n">document</span><span class="p">[</span><span class="s2">"releases_per_assembly"</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                <span class="p">},</span>
+                <span class="n">forms</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">_text</span><span class="p">(</span><span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">document</span><span class="p">[</span><span class="s2">"forms"</span><span class="p">]),</span>
+                <span class="n">session_details</span><span class="o">=</span><span class="n">_flag</span><span class="p">(</span><span class="n">document</span><span class="p">[</span><span class="s2">"session_details"</span><span class="p">]),</span>
+                <span class="n">all_external</span><span class="o">=</span><span class="n">_flag</span><span class="p">(</span><span class="n">document</span><span class="p">[</span><span class="s2">"all_external"</span><span class="p">]),</span>
+                <span class="n">externals_fingerprint</span><span class="o">=</span><span class="n">_text</span><span class="p">(</span><span class="n">document</span><span class="p">[</span><span class="s2">"externals_fingerprint"</span><span class="p">]),</span>
+                <span class="n">organism_table_fingerprint</span><span class="o">=</span><span class="n">_text</span><span class="p">(</span><span class="n">document</span><span class="p">[</span><span class="s2">"organism_table_fingerprint"</span><span class="p">]),</span>
+                <span class="n">externals_settings</span><span class="o">=</span><span class="p">{</span><span class="n">_integer</span><span class="p">(</span><span class="n">r</span><span class="p">):</span> <span class="n">_integer</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">document</span><span class="p">[</span><span class="s2">"externals_settings"</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span>
+                <span class="n">external_databases</span><span class="o">=</span><span class="p">{</span>
+                    <span class="n">_integer</span><span class="p">(</span><span class="n">a</span><span class="p">):</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">_text</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">dbs</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">dbs</span> <span class="ow">in</span> <span class="n">document</span><span class="p">[</span><span class="s2">"external_databases"</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                <span class="p">},</span>
+                <span class="n">connection_form</span><span class="o">=</span><span class="p">{</span><span class="n">_text</span><span class="p">(</span><span class="n">d</span><span class="p">):</span> <span class="n">_text</span><span class="p">(</span><span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span><span class="p">,</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">document</span><span class="p">[</span><span class="s2">"connection_form"</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span>
+                <span class="n">label_names</span><span class="o">=</span><span class="p">{</span><span class="n">_text</span><span class="p">(</span><span class="n">d</span><span class="p">):</span> <span class="n">_text</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">document</span><span class="p">[</span><span class="s2">"label_names"</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span>
+                <span class="n">renamed_databases</span><span class="o">=</span><span class="p">{</span><span class="n">_text</span><span class="p">(</span><span class="n">o</span><span class="p">):</span> <span class="n">_text</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">o</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">document</span><span class="p">[</span><span class="s2">"renamed_databases"</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span>
+                <span class="n">misplaced_external_entries</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">_text</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">document</span><span class="p">[</span><span class="s2">"misplaced_external_entries"</span><span class="p">]),</span>
+                <span class="n">entries_of_several_genes</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">_text</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">document</span><span class="p">[</span><span class="s2">"entries_of_several_genes"</span><span class="p">]),</span>
+                <span class="n">database_names</span><span class="o">=</span><span class="p">{</span>
+                    <span class="n">_text</span><span class="p">(</span><span class="n">d</span><span class="p">):</span> <span class="p">{</span>
+                        <span class="n">_text</span><span class="p">(</span><span class="n">n</span><span class="p">):</span> <span class="nb">tuple</span><span class="p">((</span><span class="n">_integer</span><span class="p">(</span><span class="n">a</span><span class="p">),</span> <span class="n">_integer</span><span class="p">(</span><span class="n">b</span><span class="p">))</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">ranges</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">ranges</span> <span class="ow">in</span> <span class="n">held</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                    <span class="p">}</span>
+                    <span class="k">for</span> <span class="n">d</span><span class="p">,</span> <span class="n">held</span> <span class="ow">in</span> <span class="n">document</span><span class="p">[</span><span class="s2">"database_names"</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                <span class="p">},</span>
+                <span class="n">assembly_mappings</span><span class="o">=</span><span class="p">{</span>
+                    <span class="n">_text</span><span class="p">(</span><span class="n">name</span><span class="p">):</span> <span class="p">{</span>
+                        <span class="s2">"from"</span><span class="p">:</span> <span class="n">_integer</span><span class="p">(</span><span class="n">m</span><span class="p">[</span><span class="s2">"from"</span><span class="p">]),</span>
+                        <span class="s2">"to"</span><span class="p">:</span> <span class="n">_integer</span><span class="p">(</span><span class="n">m</span><span class="p">[</span><span class="s2">"to"</span><span class="p">]),</span>
+                        <span class="s2">"release"</span><span class="p">:</span> <span class="n">_integer</span><span class="p">(</span><span class="n">m</span><span class="p">[</span><span class="s2">"release"</span><span class="p">]),</span>
+                        <span class="s2">"sha256"</span><span class="p">:</span> <span class="n">_text</span><span class="p">(</span><span class="n">m</span><span class="p">[</span><span class="s2">"sha256"</span><span class="p">]),</span>
+                    <span class="p">}</span>
+                    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">document</span><span class="p">[</span><span class="s2">"assembly_mappings"</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                <span class="p">},</span>
+                <span class="n">package_version</span><span class="o">=</span><span class="n">_optional_text</span><span class="p">(</span><span class="n">document</span><span class="p">[</span><span class="s2">"package_version"</span><span class="p">]),</span>
+                <span class="n">package_commit</span><span class="o">=</span><span class="n">_optional_text</span><span class="p">(</span><span class="n">document</span><span class="p">[</span><span class="s2">"package_commit"</span><span class="p">]),</span>
+                <span class="n">build_date</span><span class="o">=</span><span class="n">_optional_text</span><span class="p">(</span><span class="n">document</span><span class="p">[</span><span class="s2">"build_date"</span><span class="p">]),</span>
+                <span class="n">tables</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">document</span><span class="p">[</span><span class="s2">"tables"</span><span class="p">]),</span>
+                <span class="n">source_tables</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">document</span><span class="p">[</span><span class="s2">"source_tables"</span><span class="p">]),</span>
+                <span class="n">counts</span><span class="o">=</span><span class="p">{</span><span class="n">_text</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="n">_integer</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">document</span><span class="p">[</span><span class="s2">"counts"</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span>
+                <span class="n">history</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">document</span><span class="p">[</span><span class="s2">"history"</span><span class="p">]),</span>
+                <span class="n">content_digest</span><span class="o">=</span><span class="n">_text</span><span class="p">(</span><span class="n">document</span><span class="p">[</span><span class="s2">"content_digest"</span><span class="p">]),</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">AttributeError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">)</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">IntegrityError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"A graph record holds a value of the wrong type (</span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">)."</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">error</span></div>
+</div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_json</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="n">_json</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">value</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">_json</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">value</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">value</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_integer</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"expected an integer, got </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">value</span>
+    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"expected an integer, got </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_text</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"expected a string, got </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">value</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_optional_text</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">_text</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_flag</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"expected true or false, got </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">value</span>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"GRAPH_FORMAT_VERSION"</span><span class="p">,</span> <span class="s2">"IDENTITY_FIELDS"</span><span class="p">,</span> <span class="s2">"GraphRecord"</span><span class="p">]</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Kemal Inecik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

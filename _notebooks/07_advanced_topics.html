@@ -385,7 +385,7 @@ carry later release numbers and are not used).</p></li>
 <span class="n">snakemake_rule</span> <span class="o">=</span> <span class="s2">"""</span>
 <span class="s2">rule idtrack_build_human_graph:</span>
 <span class="s2">    output:</span>
-<span class="s2">        'idtrack_cache/graph_homo_sapiens_assembly38_min48_max115_narrow.npz'</span>
+<span class="s2">        'idtrack_cache/graph_homo_sapiens_assembly38_min48_max115.npz'</span>
 <span class="s2">    shell:</span>
 <span class="s2">        "python - &lt;&lt;'PY'</span><span class="se">\n</span><span class="s2">import os</span><span class="se">\n</span><span class="s2">from pathlib import Path</span><span class="se">\n</span><span class="s2">import idtrack</span><span class="se">\n\n</span><span class="s2">repo = os.path.abspath('idtrack_cache')</span><span class="se">\n</span><span class="s2">Path(repo).mkdir(parents=True, exist_ok=True)</span><span class="se">\n\n</span><span class="s2">idtrack.API.build('homo_sapiens', 115, repo)</span><span class="se">\n</span><span class="s2">print('Built: homo_sapiens 115')</span><span class="se">\n</span><span class="s2">PY"</span>
 <span class="s2">"""</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
@@ -393,7 +393,7 @@ carry later release numbers and are not used).</p></li>
 <span class="n">nextflow_process</span> <span class="o">=</span> <span class="s2">"""</span>
 <span class="s2">process BUILD_IDTRACK_HUMAN {</span>
 <span class="s2">  output:</span>
-<span class="s2">    path "idtrack_cache/graph_homo_sapiens_assembly38_min48_max115_narrow.npz"</span>
+<span class="s2">    path "idtrack_cache/graph_homo_sapiens_assembly38_min48_max115.npz"</span>
 <span class="s2">  script:</span>
 <span class="s2">    "export IDTRACK_LOCAL_REPO=$PWD/idtrack_cache</span><span class="se">\n</span><span class="s2">python - &lt;&lt;'PY'</span><span class="se">\n</span><span class="s2">import os</span><span class="se">\n</span><span class="s2">from pathlib import Path</span><span class="se">\n</span><span class="s2">import idtrack</span><span class="se">\n\n</span><span class="s2">repo = os.environ['IDTRACK_LOCAL_REPO']</span><span class="se">\n</span><span class="s2">Path(repo).mkdir(parents=True, exist_ok=True)</span><span class="se">\n\n</span><span class="s2">idtrack.API.build('homo_sapiens', 115, repo)</span><span class="se">\n</span><span class="s2">print('Built: homo_sapiens 115')</span><span class="se">\n</span><span class="s2">PY"</span>
 <span class="s2">}</span>
@@ -414,7 +414,7 @@ carry later release numbers and are not used).</p></li>
 --- Snakemake example ---
 rule idtrack_build_human_graph:
     output:
-        &#39;idtrack_cache/graph_homo_sapiens_assembly38_min48_max115_narrow.npz&#39;
+        &#39;idtrack_cache/graph_homo_sapiens_assembly38_min48_max115.npz&#39;
     shell:
         &#34;python - &lt;&lt;&#39;PY&#39;
 import os
@@ -430,7 +430,7 @@ PY&#34;
 --- Nextflow example ---
 process BUILD_IDTRACK_HUMAN {
   output:
-    path &#34;idtrack_cache/graph_homo_sapiens_assembly38_min48_max115_narrow.npz&#34;
+    path &#34;idtrack_cache/graph_homo_sapiens_assembly38_min48_max115.npz&#34;
   script:
     &#34;export IDTRACK_LOCAL_REPO=$PWD/idtrack_cache
 python - &lt;&lt;&#39;PY&#39;

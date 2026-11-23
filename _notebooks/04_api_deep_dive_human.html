@@ -298,8 +298,8 @@ Ready: homo_sapiens snapshot 115
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-[&#39;CCDS&#39;, &#39;Clone_based_ensembl_gene&#39;, &#39;Clone_based_vega_gene&#39;, &#39;EntrezGene&#39;, &#39;HGNC Symbol&#39;, &#39;Havana gene&#39;, &#39;Havana transcript&#39;, &#39;Havana translation&#39;, &#39;NCBI gene&#39;, &#39;NCBI gene (formerly Entrezgene)&#39;, &#39;RFAM&#39;, &#39;RefSeq_mRNA&#39;, &#39;RefSeq_mRNA_predicted&#39;, &#39;RefSeq_ncRNA&#39;, &#39;RefSeq_ncRNA_predicted&#39;, &#39;RefSeq_peptide&#39;, &#39;RefSeq_peptide_predicted&#39;, &#39;UniProtKB Gene Name&#39;, &#39;Uniprot/SPTREMBL&#39;, &#39;Uniprot/SWISSPROT&#39;, &#39;Vega gene&#39;, &#39;Vega_gene&#39;, &#39;synonym_id::EntrezGene&#39;, &#39;synonym_id::HGNC Symbol&#39;, &#39;synonym_id::NCBI gene&#39;, &#39;synonym_id::NCBI gene (formerly Entrezgene)&#39;, &#39;synonym_id::UniProtKB Gene Name&#39;]
-[&#39;CCDS&#39;, &#39;Clone_based_ensembl_gene&#39;, &#39;Clone_based_vega_gene&#39;, &#39;EntrezGene&#39;, &#39;HGNC Symbol&#39;, &#39;Havana gene&#39;, &#39;Havana transcript&#39;, &#39;Havana translation&#39;, &#39;NCBI gene&#39;, &#39;NCBI gene (formerly Entrezgene)&#39;]
+[&#39;CCDS&#39;, &#39;CCDS label&#39;, &#39;Clone_based_ensembl_gene&#39;, &#39;Clone_based_vega_gene&#39;, &#39;EntrezGene&#39;, &#39;HGNC Symbol&#39;, &#39;Havana gene&#39;, &#39;Havana transcript&#39;, &#39;Havana translation&#39;, &#39;NCBI gene (formerly Entrezgene)&#39;, &#39;RFAM&#39;, &#39;RFAM label&#39;, &#39;RefSeq_mRNA&#39;, &#39;RefSeq_mRNA_predicted&#39;, &#39;RefSeq_ncRNA&#39;, &#39;RefSeq_ncRNA_predicted&#39;, &#39;RefSeq_peptide&#39;, &#39;RefSeq_peptide_predicted&#39;, &#39;UniProtKB Gene Name&#39;, &#39;Uniprot/SPTREMBL&#39;, &#39;Uniprot/SWISSPROT&#39;, &#39;Vega gene&#39;, &#39;Vega_gene&#39;, &#39;miRBase&#39;, &#39;miRBase label&#39;, &#39;synonym_id::HGNC Symbol&#39;, &#39;synonym_id::NCBI gene (formerly Entrezgene)&#39;, &#39;synonym_id::UniProtKB Gene Name&#39;]
+[&#39;CCDS&#39;, &#39;CCDS label&#39;, &#39;Clone_based_ensembl_gene&#39;, &#39;Clone_based_vega_gene&#39;, &#39;EntrezGene&#39;, &#39;HGNC Symbol&#39;, &#39;Havana gene&#39;, &#39;Havana transcript&#39;, &#39;Havana translation&#39;, &#39;NCBI gene (formerly Entrezgene)&#39;]
 </pre></div></div>
 </div>
 </section>
@@ -538,7 +538,7 @@ final    ENSG00000141510.20 -&gt; TP53 | release 115 | HGNC Symbol, NCBI gene (f
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-external TP53 () (&#39;EntrezGene&#39;, &#39;HGNC Symbol&#39;, &#39;NCBI gene&#39;)
+external TP53 () (&#39;HGNC Symbol&#39;, &#39;NCBI gene (formerly Entrezgene)&#39;, &#39;UniProtKB Gene Name&#39;)
 ensembl_gene ENSG00000141510.20 ((115, None),) ()
 </pre></div></div>
 </div>
@@ -614,18 +614,18 @@ more than its budget (<code class="docutils literal notranslate"><span class="pr
 <div class="output_area docutils container">
 <div class="highlight"><pre>
 Threshold (genes at once): 5
-Hyperconnected external nodes: 10825
+Hyperconnected external nodes: 10875
 Top 10 by the number of genes they are linked to in one release:
   1562 - RF00026
-  1562 - U6
-  1266 - Metazoa_SRP
+  1337 - U6
   1266 - RF00017
   1013 - RF00019
-  1013 - Y_RNA
-  615 - 5S_rRNA
+  955 - Y_RNA
+  905 - Metazoa_SRP
   615 - RF00001
+  510 - 5S_rRNA
   480 - RF01210
-  480 - snoU13
+  479 - snoU13
 allow_bridges=False -&gt; {&#39;ENSG00000141510.20&#39;: 0}
 allow_bridges=True  -&gt; {&#39;ENSG00000141510.20&#39;: 0}
 </pre></div></div>
@@ -688,7 +688,7 @@ allow_bridges=True  -&gt; {&#39;ENSG00000141510.20&#39;: 0}
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2026-11-18 05:19:46 INFO:idtrack.graph.graph: Graph-wide table being calculated: assembly_releases
+2026-11-18 08:44:24 INFO:idtrack.graph.graph: Graph-wide table being calculated: assembly_releases
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -697,11 +697,12 @@ allow_bridges=True  -&gt; {&#39;ENSG00000141510.20&#39;: 0}
 <div class="output_area docutils container">
 <div class="highlight"><pre>
 Assemblies in this graph: [36, 37, 38]
-External DBs enabled (count): 27
-External DBs (first 25): [&#39;CCDS&#39;, &#39;Clone_based_ensembl_gene&#39;, &#39;Clone_based_vega_gene&#39;, &#39;EntrezGene&#39;, &#39;HGNC Symbol&#39;, &#39;Havana gene&#39;, &#39;Havana transcript&#39;, &#39;Havana translation&#39;, &#39;NCBI gene&#39;, &#39;NCBI gene (formerly Entrezgene)&#39;, &#39;RFAM&#39;, &#39;RefSeq_mRNA&#39;, &#39;RefSeq_mRNA_predicted&#39;, &#39;RefSeq_ncRNA&#39;, &#39;RefSeq_ncRNA_predicted&#39;, &#39;RefSeq_peptide&#39;, &#39;RefSeq_peptide_predicted&#39;, &#39;UniProtKB Gene Name&#39;, &#39;Uniprot/SPTREMBL&#39;, &#39;Uniprot/SWISSPROT&#39;, &#39;Vega gene&#39;, &#39;Vega_gene&#39;, &#39;synonym_id::EntrezGene&#39;, &#39;synonym_id::HGNC Symbol&#39;, &#39;synonym_id::NCBI gene&#39;]
+External DBs enabled (count): 28
+External DBs (first 25): [&#39;CCDS&#39;, &#39;CCDS label&#39;, &#39;Clone_based_ensembl_gene&#39;, &#39;Clone_based_vega_gene&#39;, &#39;EntrezGene&#39;, &#39;HGNC Symbol&#39;, &#39;Havana gene&#39;, &#39;Havana transcript&#39;, &#39;Havana translation&#39;, &#39;NCBI gene (formerly Entrezgene)&#39;, &#39;RFAM&#39;, &#39;RFAM label&#39;, &#39;RefSeq_mRNA&#39;, &#39;RefSeq_mRNA_predicted&#39;, &#39;RefSeq_ncRNA&#39;, &#39;RefSeq_ncRNA_predicted&#39;, &#39;RefSeq_peptide&#39;, &#39;RefSeq_peptide_predicted&#39;, &#39;UniProtKB Gene Name&#39;, &#39;Uniprot/SPTREMBL&#39;, &#39;Uniprot/SWISSPROT&#39;, &#39;Vega gene&#39;, &#39;Vega_gene&#39;, &#39;miRBase&#39;, &#39;miRBase label&#39;]
 
 External DB connection forms (sample):
   CCDS → transcript
+  CCDS label → transcript
   Clone_based_ensembl_gene → gene
   Clone_based_vega_gene → gene
   EntrezGene → gene
@@ -709,7 +710,6 @@ External DB connection forms (sample):
   Havana gene → gene
   Havana transcript → transcript
   Havana translation → translation
-  NCBI gene → gene
   NCBI gene (formerly Entrezgene) → gene
 
 Ensembl releases in snapshot window: (48, 115)

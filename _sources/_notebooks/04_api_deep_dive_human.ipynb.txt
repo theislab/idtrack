@@ -56,10 +56,10 @@
     "deletable": true,
     "editable": true,
     "execution": {
-     "iopub.execute_input": "2026-11-18T04:19:39.757769Z",
-     "iopub.status.busy": "2026-11-18T04:19:39.757260Z",
-     "iopub.status.idle": "2026-11-18T04:19:46.622869Z",
-     "shell.execute_reply": "2026-11-18T04:19:46.621749Z"
+     "iopub.execute_input": "2026-11-18T07:44:18.071387Z",
+     "iopub.status.busy": "2026-11-18T07:44:18.071142Z",
+     "iopub.status.idle": "2026-11-18T07:44:24.554613Z",
+     "shell.execute_reply": "2026-11-18T07:44:24.553675Z"
     },
     "frozen": false
    },
@@ -126,10 +126,10 @@
     "deletable": true,
     "editable": true,
     "execution": {
-     "iopub.execute_input": "2026-11-18T04:19:46.626445Z",
-     "iopub.status.busy": "2026-11-18T04:19:46.626134Z",
-     "iopub.status.idle": "2026-11-18T04:19:46.630410Z",
-     "shell.execute_reply": "2026-11-18T04:19:46.629355Z"
+     "iopub.execute_input": "2026-11-18T07:44:24.556592Z",
+     "iopub.status.busy": "2026-11-18T07:44:24.556334Z",
+     "iopub.status.idle": "2026-11-18T07:44:24.561047Z",
+     "shell.execute_reply": "2026-11-18T07:44:24.560189Z"
     },
     "frozen": false
    },
@@ -188,10 +188,10 @@
     "deletable": true,
     "editable": true,
     "execution": {
-     "iopub.execute_input": "2026-11-18T04:19:46.633852Z",
-     "iopub.status.busy": "2026-11-18T04:19:46.633676Z",
-     "iopub.status.idle": "2026-11-18T04:19:46.637466Z",
-     "shell.execute_reply": "2026-11-18T04:19:46.636539Z"
+     "iopub.execute_input": "2026-11-18T07:44:24.562765Z",
+     "iopub.status.busy": "2026-11-18T07:44:24.562515Z",
+     "iopub.status.idle": "2026-11-18T07:44:24.566719Z",
+     "shell.execute_reply": "2026-11-18T07:44:24.565943Z"
     },
     "frozen": false
    },
@@ -235,10 +235,10 @@
     "deletable": true,
     "editable": true,
     "execution": {
-     "iopub.execute_input": "2026-11-18T04:19:46.639403Z",
-     "iopub.status.busy": "2026-11-18T04:19:46.639186Z",
-     "iopub.status.idle": "2026-11-18T04:19:46.648703Z",
-     "shell.execute_reply": "2026-11-18T04:19:46.647792Z"
+     "iopub.execute_input": "2026-11-18T07:44:24.568222Z",
+     "iopub.status.busy": "2026-11-18T07:44:24.568030Z",
+     "iopub.status.idle": "2026-11-18T07:44:24.578546Z",
+     "shell.execute_reply": "2026-11-18T07:44:24.577792Z"
     },
     "frozen": false
    },
@@ -279,10 +279,10 @@
     "deletable": true,
     "editable": true,
     "execution": {
-     "iopub.execute_input": "2026-11-18T04:19:46.651002Z",
-     "iopub.status.busy": "2026-11-18T04:19:46.650817Z",
-     "iopub.status.idle": "2026-11-18T04:19:46.654008Z",
-     "shell.execute_reply": "2026-11-18T04:19:46.653145Z"
+     "iopub.execute_input": "2026-11-18T07:44:24.580188Z",
+     "iopub.status.busy": "2026-11-18T07:44:24.579992Z",
+     "iopub.status.idle": "2026-11-18T07:44:24.583431Z",
+     "shell.execute_reply": "2026-11-18T07:44:24.582654Z"
     },
     "frozen": false
    },
@@ -291,8 +291,8 @@
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      "['CCDS', 'Clone_based_ensembl_gene', 'Clone_based_vega_gene', 'EntrezGene', 'HGNC Symbol', 'Havana gene', 'Havana transcript', 'Havana translation', 'NCBI gene', 'NCBI gene (formerly Entrezgene)', 'RFAM', 'RefSeq_mRNA', 'RefSeq_mRNA_predicted', 'RefSeq_ncRNA', 'RefSeq_ncRNA_predicted', 'RefSeq_peptide', 'RefSeq_peptide_predicted', 'UniProtKB Gene Name', 'Uniprot/SPTREMBL', 'Uniprot/SWISSPROT', 'Vega gene', 'Vega_gene', 'synonym_id::EntrezGene', 'synonym_id::HGNC Symbol', 'synonym_id::NCBI gene', 'synonym_id::NCBI gene (formerly Entrezgene)', 'synonym_id::UniProtKB Gene Name']\n",
-      "['CCDS', 'Clone_based_ensembl_gene', 'Clone_based_vega_gene', 'EntrezGene', 'HGNC Symbol', 'Havana gene', 'Havana transcript', 'Havana translation', 'NCBI gene', 'NCBI gene (formerly Entrezgene)']\n"
+      "['CCDS', 'CCDS label', 'Clone_based_ensembl_gene', 'Clone_based_vega_gene', 'EntrezGene', 'HGNC Symbol', 'Havana gene', 'Havana transcript', 'Havana translation', 'NCBI gene (formerly Entrezgene)', 'RFAM', 'RFAM label', 'RefSeq_mRNA', 'RefSeq_mRNA_predicted', 'RefSeq_ncRNA', 'RefSeq_ncRNA_predicted', 'RefSeq_peptide', 'RefSeq_peptide_predicted', 'UniProtKB Gene Name', 'Uniprot/SPTREMBL', 'Uniprot/SWISSPROT', 'Vega gene', 'Vega_gene', 'miRBase', 'miRBase label', 'synonym_id::HGNC Symbol', 'synonym_id::NCBI gene (formerly Entrezgene)', 'synonym_id::UniProtKB Gene Name']\n",
+      "['CCDS', 'CCDS label', 'Clone_based_ensembl_gene', 'Clone_based_vega_gene', 'EntrezGene', 'HGNC Symbol', 'Havana gene', 'Havana transcript', 'Havana translation', 'NCBI gene (formerly Entrezgene)']\n"
      ]
     }
    ],
@@ -354,10 +354,10 @@
    "id": "d3ff4bd1",
    "metadata": {
     "execution": {
-     "iopub.execute_input": "2026-11-18T04:19:46.656004Z",
-     "iopub.status.busy": "2026-11-18T04:19:46.655757Z",
-     "iopub.status.idle": "2026-11-18T04:19:46.790517Z",
-     "shell.execute_reply": "2026-11-18T04:19:46.789701Z"
+     "iopub.execute_input": "2026-11-18T07:44:24.585159Z",
+     "iopub.status.busy": "2026-11-18T07:44:24.584946Z",
+     "iopub.status.idle": "2026-11-18T07:44:24.773734Z",
+     "shell.execute_reply": "2026-11-18T07:44:24.772945Z"
     }
    },
    "outputs": [
@@ -365,8 +365,21 @@
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      "'ENSG00000141510.5' {} -> ['ENSG00000141510.20'] | graph_id='ENSG00000141510.5' match='exact' from_release=54 fallback=False status=converted\n",
-      "'ENSG00000141510.3' {} -> [] | graph_id=None match=None from_release=None fallback=False status=unknown_version known_versions: 17, ENSG00000141510.4 to ENSG00000141510.20\n",
+      "'ENSG00000141510.5' {} -> ['ENSG00000141510.20'] | graph_id='ENSG00000141510.5' match='exact' from_release=54 fallback=False status=converted\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "'ENSG00000141510.3' {} -> [] | graph_id=None match=None from_release=None fallback=False status=unknown_version known_versions: 17, ENSG00000141510.4 to ENSG00000141510.20"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "\n",
       "'ENSG00000141510.25' {} -> ['ENSG00000141510.20'] | graph_id='ENSG00000141510.20' match='version_newer_than_graph' from_release=115 fallback=False status=converted\n",
       "'hla_a' {} -> ['ENSG00000206503.16'] | graph_id='HLA-A' match='separator' from_release=115 fallback=False status=converted\n",
       "'NM_000546.9' {} -> ['ENSG00000141510.20'] | graph_id='NM_000546' match='version' from_release=115 fallback=False status=converted\n",
@@ -429,10 +442,10 @@
     "deletable": true,
     "editable": true,
     "execution": {
-     "iopub.execute_input": "2026-11-18T04:19:46.793187Z",
-     "iopub.status.busy": "2026-11-18T04:19:46.793009Z",
-     "iopub.status.idle": "2026-11-18T04:19:46.800059Z",
-     "shell.execute_reply": "2026-11-18T04:19:46.798914Z"
+     "iopub.execute_input": "2026-11-18T07:44:24.775334Z",
+     "iopub.status.busy": "2026-11-18T07:44:24.775125Z",
+     "iopub.status.idle": "2026-11-18T07:44:24.781678Z",
+     "shell.execute_reply": "2026-11-18T07:44:24.780836Z"
     },
     "frozen": false
    },
@@ -489,10 +502,10 @@
     "deletable": true,
     "editable": true,
     "execution": {
-     "iopub.execute_input": "2026-11-18T04:19:46.801557Z",
-     "iopub.status.busy": "2026-11-18T04:19:46.801385Z",
-     "iopub.status.idle": "2026-11-18T04:19:46.877111Z",
-     "shell.execute_reply": "2026-11-18T04:19:46.875988Z"
+     "iopub.execute_input": "2026-11-18T07:44:24.783496Z",
+     "iopub.status.busy": "2026-11-18T07:44:24.783243Z",
+     "iopub.status.idle": "2026-11-18T07:44:24.883101Z",
+     "shell.execute_reply": "2026-11-18T07:44:24.881894Z"
     },
     "frozen": false
    },
@@ -525,10 +538,10 @@
     "deletable": true,
     "editable": true,
     "execution": {
-     "iopub.execute_input": "2026-11-18T04:19:46.880148Z",
-     "iopub.status.busy": "2026-11-18T04:19:46.879970Z",
-     "iopub.status.idle": "2026-11-18T04:19:46.884648Z",
-     "shell.execute_reply": "2026-11-18T04:19:46.883595Z"
+     "iopub.execute_input": "2026-11-18T07:44:24.884897Z",
+     "iopub.status.busy": "2026-11-18T07:44:24.884675Z",
+     "iopub.status.idle": "2026-11-18T07:44:24.889051Z",
+     "shell.execute_reply": "2026-11-18T07:44:24.888229Z"
     },
     "frozen": false
    },
@@ -577,10 +590,10 @@
     "deletable": true,
     "editable": true,
     "execution": {
-     "iopub.execute_input": "2026-11-18T04:19:46.887257Z",
-     "iopub.status.busy": "2026-11-18T04:19:46.887067Z",
-     "iopub.status.idle": "2026-11-18T04:19:46.890953Z",
-     "shell.execute_reply": "2026-11-18T04:19:46.890099Z"
+     "iopub.execute_input": "2026-11-18T07:44:24.890775Z",
+     "iopub.status.busy": "2026-11-18T07:44:24.890514Z",
+     "iopub.status.idle": "2026-11-18T07:44:24.894033Z",
+     "shell.execute_reply": "2026-11-18T07:44:24.893266Z"
     },
     "frozen": false
    },
@@ -639,10 +652,10 @@
     "deletable": true,
     "editable": true,
     "execution": {
-     "iopub.execute_input": "2026-11-18T04:19:46.892632Z",
-     "iopub.status.busy": "2026-11-18T04:19:46.892444Z",
-     "iopub.status.idle": "2026-11-18T04:19:46.898162Z",
-     "shell.execute_reply": "2026-11-18T04:19:46.897450Z"
+     "iopub.execute_input": "2026-11-18T07:44:24.895575Z",
+     "iopub.status.busy": "2026-11-18T07:44:24.895398Z",
+     "iopub.status.idle": "2026-11-18T07:44:24.901252Z",
+     "shell.execute_reply": "2026-11-18T07:44:24.900350Z"
     },
     "frozen": false
    },
@@ -672,10 +685,10 @@
     "deletable": true,
     "editable": true,
     "execution": {
-     "iopub.execute_input": "2026-11-18T04:19:46.899790Z",
-     "iopub.status.busy": "2026-11-18T04:19:46.899646Z",
-     "iopub.status.idle": "2026-11-18T04:19:46.903002Z",
-     "shell.execute_reply": "2026-11-18T04:19:46.902171Z"
+     "iopub.execute_input": "2026-11-18T07:44:24.902934Z",
+     "iopub.status.busy": "2026-11-18T07:44:24.902722Z",
+     "iopub.status.idle": "2026-11-18T07:44:24.906319Z",
+     "shell.execute_reply": "2026-11-18T07:44:24.905497Z"
     },
     "frozen": false
    },
@@ -684,7 +697,7 @@
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      "external TP53 () ('EntrezGene', 'HGNC Symbol', 'NCBI gene')\n",
+      "external TP53 () ('HGNC Symbol', 'NCBI gene (formerly Entrezgene)', 'UniProtKB Gene Name')\n",
       "ensembl_gene ENSG00000141510.20 ((115, None),) ()\n"
      ]
     }
@@ -782,10 +795,10 @@
     "deletable": true,
     "editable": true,
     "execution": {
-     "iopub.execute_input": "2026-11-18T04:19:46.904616Z",
-     "iopub.status.busy": "2026-11-18T04:19:46.904455Z",
-     "iopub.status.idle": "2026-11-18T04:19:46.989555Z",
-     "shell.execute_reply": "2026-11-18T04:19:46.988689Z"
+     "iopub.execute_input": "2026-11-18T07:44:24.908006Z",
+     "iopub.status.busy": "2026-11-18T07:44:24.907815Z",
+     "iopub.status.idle": "2026-11-18T07:44:24.928622Z",
+     "shell.execute_reply": "2026-11-18T07:44:24.927666Z"
     },
     "frozen": false
    },
@@ -795,18 +808,18 @@
      "output_type": "stream",
      "text": [
       "Threshold (genes at once): 5\n",
-      "Hyperconnected external nodes: 10825\n",
+      "Hyperconnected external nodes: 10875\n",
       "Top 10 by the number of genes they are linked to in one release:\n",
       "  1562 - RF00026\n",
-      "  1562 - U6\n",
-      "  1266 - Metazoa_SRP\n",
+      "  1337 - U6\n",
       "  1266 - RF00017\n",
       "  1013 - RF00019\n",
-      "  1013 - Y_RNA\n",
-      "  615 - 5S_rRNA\n",
+      "  955 - Y_RNA\n",
+      "  905 - Metazoa_SRP\n",
       "  615 - RF00001\n",
+      "  510 - 5S_rRNA\n",
       "  480 - RF01210\n",
-      "  480 - snoU13\n",
+      "  479 - snoU13\n",
       "allow_bridges=False -> {'ENSG00000141510.20': 0}\n",
       "allow_bridges=True  -> {'ENSG00000141510.20': 0}\n"
      ]
@@ -861,10 +874,10 @@
     "deletable": true,
     "editable": true,
     "execution": {
-     "iopub.execute_input": "2026-11-18T04:19:46.991814Z",
-     "iopub.status.busy": "2026-11-18T04:19:46.991634Z",
-     "iopub.status.idle": "2026-11-18T04:19:47.504690Z",
-     "shell.execute_reply": "2026-11-18T04:19:47.503596Z"
+     "iopub.execute_input": "2026-11-18T07:44:24.930475Z",
+     "iopub.status.busy": "2026-11-18T07:44:24.930254Z",
+     "iopub.status.idle": "2026-11-18T07:44:25.556925Z",
+     "shell.execute_reply": "2026-11-18T07:44:25.556155Z"
     },
     "frozen": false
    },
@@ -873,7 +886,7 @@
      "name": "stderr",
      "output_type": "stream",
      "text": [
-      "2026-11-18 05:19:46 INFO:idtrack.graph.graph: Graph-wide table being calculated: assembly_releases\n"
+      "2026-11-18 08:44:24 INFO:idtrack.graph.graph: Graph-wide table being calculated: assembly_releases\n"
      ]
     },
     {
@@ -881,11 +894,12 @@
      "output_type": "stream",
      "text": [
       "Assemblies in this graph: [36, 37, 38]\n",
-      "External DBs enabled (count): 27\n",
-      "External DBs (first 25): ['CCDS', 'Clone_based_ensembl_gene', 'Clone_based_vega_gene', 'EntrezGene', 'HGNC Symbol', 'Havana gene', 'Havana transcript', 'Havana translation', 'NCBI gene', 'NCBI gene (formerly Entrezgene)', 'RFAM', 'RefSeq_mRNA', 'RefSeq_mRNA_predicted', 'RefSeq_ncRNA', 'RefSeq_ncRNA_predicted', 'RefSeq_peptide', 'RefSeq_peptide_predicted', 'UniProtKB Gene Name', 'Uniprot/SPTREMBL', 'Uniprot/SWISSPROT', 'Vega gene', 'Vega_gene', 'synonym_id::EntrezGene', 'synonym_id::HGNC Symbol', 'synonym_id::NCBI gene']\n",
+      "External DBs enabled (count): 28\n",
+      "External DBs (first 25): ['CCDS', 'CCDS label', 'Clone_based_ensembl_gene', 'Clone_based_vega_gene', 'EntrezGene', 'HGNC Symbol', 'Havana gene', 'Havana transcript', 'Havana translation', 'NCBI gene (formerly Entrezgene)', 'RFAM', 'RFAM label', 'RefSeq_mRNA', 'RefSeq_mRNA_predicted', 'RefSeq_ncRNA', 'RefSeq_ncRNA_predicted', 'RefSeq_peptide', 'RefSeq_peptide_predicted', 'UniProtKB Gene Name', 'Uniprot/SPTREMBL', 'Uniprot/SWISSPROT', 'Vega gene', 'Vega_gene', 'miRBase', 'miRBase label']\n",
       "\n",
       "External DB connection forms (sample):\n",
       "  CCDS → transcript\n",
+      "  CCDS label → transcript\n",
       "  Clone_based_ensembl_gene → gene\n",
       "  Clone_based_vega_gene → gene\n",
       "  EntrezGene → gene\n",
@@ -893,7 +907,6 @@
       "  Havana gene → gene\n",
       "  Havana transcript → transcript\n",
       "  Havana translation → translation\n",
-      "  NCBI gene → gene\n",
       "  NCBI gene (formerly Entrezgene) → gene\n",
       "\n",
       "Ensembl releases in snapshot window: (48, 115)\n",

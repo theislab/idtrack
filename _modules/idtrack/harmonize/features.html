@@ -124,9 +124,9 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack</span><span class="w"> </span><span class="kn">import</span> <span class="n">_arguments</span><span class="p">,</span> <span class="n">organisms</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._atomic</span><span class="w"> </span><span class="kn">import</span> <span class="n">write_text</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._version</span><span class="w"> </span><span class="kn">import</span> <span class="n">package_version</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.api</span><span class="w"> </span><span class="kn">import</span> <span class="n">API</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">IntegrityError</span><span class="p">,</span> <span class="n">InvalidArgumentError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.graph</span><span class="w"> </span><span class="kn">import</span> <span class="n">files</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.graph.files</span><span class="w"> </span><span class="kn">import</span> <span class="n">list_graph_files</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.harmonize.core</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">STATUSES</span><span class="p">,</span>
@@ -138,8 +138,9 @@
     <span class="n">output_plan</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.results</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConversionResult</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack.settings</span><span class="w"> </span><span class="kn">import</span> <span class="n">RULES_VERSION</span>
 
-<span class="n">_CACHE_FORMAT</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="n">_CACHE_FORMAT</span> <span class="o">=</span> <span class="mi">4</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">read_feature_names</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
@@ -230,17 +231,23 @@
 <span class="sd">    the target release (:py:meth:`idtrack.engine.Track.gene_to_database`: read from the gene, no search), the first in</span>
 <span class="sd">    sorted order when there are several (the others in ``"&lt;final database&gt;_alternatives"``). A gene without an id in</span>
 <span class="sd">    the final database keeps the gene id as its feature name and a missing final-database name (status ``"converted_no_final_id"``):</span>
-<span class="sd">    the final-database column never holds an Ensembl id. Features that are not converted keep their input name; no</span>
-<span class="sd">    feature is dropped silently. Every output feature has, in ``var``:</span>
+<span class="sd">    the final-database column never holds an Ensembl id. Which gene a feature is, is decided as Ensembl genes</span>
+<span class="sd">    (:py:meth:`idtrack.API.convert`: a target in a final database is an id of the gene answered), so a feature whose</span>
+<span class="sd">    gene has no name there is that gene, never another gene that has one. Features that are not converted keep their</span>
+<span class="sd">    input name; no feature is dropped silently. Every output feature has, in ``var``:</span>
 
 <span class="sd">    * ``"idtrack_status"``: ``"converted"``, ``"converted_no_final_id"``, ``"merged"``, ``"merged_no_final_id"``</span>
 <span class="sd">      (with ``merge="sum"``, the sum of several input features), ``"unconverted_merge_partner"`` (with</span>
 <span class="sd">      ``merge="flag"``, an input feature that shares its gene with others), ``"unconverted_ambiguous"`` (several</span>
 <span class="sd">      genes), ``"unconverted_no_conversion"`` (in the graph, but no gene at the target release),</span>
-<span class="sd">      ``"unconverted_not_in_graph"`` or ``"unconverted_error"`` (the conversion of this feature raised an error that</span>
-<span class="sd">      concerns it alone, a search over its budget);</span>
-<span class="sd">    * ``"idtrack_reason"``: why (missing for a plain conversion; for a feature that the graph does not hold at its</span>
-<span class="sd">      dataset's source release and that was therefore read at another release, that release);</span>
+<span class="sd">      ``"unconverted_not_in_graph"``, ``"unconverted_missing_value"`` (a spelling of a missing value, ``nan`` or</span>
+<span class="sd">      ``NA``, which is never a gene: decision 81) or ``"unconverted_error"`` (the conversion of this feature raised an</span>
+<span class="sd">      error that concerns it alone, a search over its budget);</span>
+<span class="sd">    * ``"idtrack_reason"``: why (missing for a plain conversion; the text of the conversion's reason,</span>
+<span class="sd">      :py:data:`idtrack.results.REASONS`, for a feature without a conversion; for a feature that the graph does not</span>
+<span class="sd">      hold at its dataset's source release and that was therefore read at another release, that release; for a</span>
+<span class="sd">      feature that is another feature of the dataset with a suffix a single-cell tool appends to repeated names, the</span>
+<span class="sd">      feature it copies, decision 82);</span>
 <span class="sd">    * ``"Query ID"``: the input name(s), ``";"``-joined for a merged feature;</span>
 <span class="sd">    * ``"matching_ensembl_gene"``: the gene (also for a merge partner; missing for the other unconverted features).</span>
 
@@ -257,10 +264,11 @@
 <span class="sd">    merging) is renamed ``"unconverted:&lt;name&gt;"``, so that converted and unconverted measurements never share a row.</span>
 
 <span class="sd">    **Result cache.** The conversions of each dataset are stored in *project_local_repository* as one JSON file per</span>
-<span class="sd">    dataset (written to a temporary file and renamed). A stored file is used only if it was written by the same</span>
-<span class="sd">    idtrack version for the same feature names, organism, final database, target and source release, graph snapshot</span>
-<span class="sd">    and graph (the graph file's name, size and modification time, or the loaded graph's metadata when *api* is</span>
-<span class="sd">    given); an unreadable or mismatching file is recomputed and replaced.</span>
+<span class="sd">    dataset (written to a temporary file and renamed). A stored file is used only if it was written under the same</span>
+<span class="sd">    rules of conversion (:py:data:`idtrack.settings.RULES_VERSION`, raised with every change of an answer) for the same</span>
+<span class="sd">    graph (its content digest, read from the graph file's record or from the loaded graph) and the same feature</span>
+<span class="sd">    names, organism, final database, target and source release and graph snapshot; an unreadable or mismatching file</span>
+<span class="sd">    is recomputed and replaced. Conversions with a graph that records no digest (made in memory) are not cached.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        project_name (str): Label used in log messages and cache file names.</span>
@@ -409,9 +417,8 @@
             <span class="p">)</span>
 
         <span class="k">if</span> <span class="n">api</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">graph</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">graph</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">organism</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">graph</span><span class="p">[</span><span class="s2">"organism"</span><span class="p">])</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">snapshot_release</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">graph</span><span class="p">[</span><span class="s2">"ensembl_release"</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">organism</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">organism</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">snapshot_release</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">snapshot_release</span><span class="p">)</span>
             <span class="n">given</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"organism"</span><span class="p">:</span> <span class="n">organism</span><span class="p">,</span> <span class="s2">"snapshot_release"</span><span class="p">:</span> <span class="n">snapshot_release</span><span class="p">}</span>
             <span class="k">if</span> <span class="n">organism</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_organism</span><span class="p">(</span><span class="n">organism</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="n">InvalidArgumentError</span><span class="p">(</span>
@@ -496,7 +503,7 @@
 
 <span class="sd">        Those are the files :py:func:`idtrack.graph.files.list_graph_files` lists with the window and the content the</span>
 <span class="sd">        API builds: from the organism's first release (:py:meth:`idtrack.organisms.first_release`) to a snapshot release,</span>
-<span class="sd">        the narrow history, every form, the selected external databases, and as primary assembly the organism's</span>
+<span class="sd">        without session details, every form, the selected external databases, and as primary assembly the organism's</span>
 <span class="sd">        preferred one that has the snapshot release.</span>
 
 <span class="sd">        Args:</span>
@@ -513,9 +520,9 @@
                 <span class="n">entry</span><span class="p">[</span><span class="s2">"organism"</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">organisms</span><span class="o">.</span><span class="n">supported_organisms</span><span class="p">()</span>
                 <span class="ow">or</span> <span class="n">snapshot</span> <span class="ow">is</span> <span class="kc">None</span>
                 <span class="ow">or</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"first_release"</span><span class="p">]</span> <span class="o">!=</span> <span class="n">organisms</span><span class="o">.</span><span class="n">first_release</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s2">"organism"</span><span class="p">])</span>
-                <span class="ow">or</span> <span class="ow">not</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"narrow"</span><span class="p">]</span>
+                <span class="ow">or</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"session_details"</span><span class="p">]</span>
                 <span class="ow">or</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"forms"</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-                <span class="ow">or</span> <span class="ow">not</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"narrow_external"</span><span class="p">]</span>
+                <span class="ow">or</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"all_external"</span><span class="p">]</span>
             <span class="p">):</span>
                 <span class="k">continue</span>
             <span class="k">for</span> <span class="n">assembly</span> <span class="ow">in</span> <span class="n">organisms</span><span class="o">.</span><span class="n">assemblies_by_priority</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s2">"organism"</span><span class="p">]):</span>
@@ -571,31 +578,20 @@
     <span class="c1"># ----------------------------------------------------------------------------------------------------------------</span>
     <span class="c1"># Conversions and their cache</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_graph_identity</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">"""Return what identifies the graph the conversions come from (see "Result cache" in the class docs).</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_graph_identity</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return the content digest of the graph the conversions come from (see "Result cache" in the class docs).</span>
 
-<span class="sd">        The graph file of the organism and snapshot in *idtrack_local_repository* (where a given API's graph is</span>
-<span class="sd">        expected to come from, and where an own one is loaded from): its name, size and modification time, so that the</span>
-<span class="sd">        same graph identifies the same way whether it is loaded or not. A loaded graph without such a file (e.g. built</span>
-<span class="sd">        elsewhere) is identified by a digest of its metadata.</span>
+<span class="sd">        The loaded graph's (when an API is given), else the one the graph file of the organism and snapshot in</span>
+<span class="sd">        *idtrack_local_repository* records (read from the file's record without loading the graph); ``None`` for a</span>
+<span class="sd">        graph without a record (made in memory), whose conversions are never cached.</span>
 <span class="sd">        """</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_api</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">record</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_api</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">record</span>
+            <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">record</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">record</span><span class="o">.</span><span class="n">content_digest</span>
         <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph_files</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">idtrack_local_repository</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"snapshot_release"</span><span class="p">]</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">snapshot_release</span><span class="p">:</span>
-                <span class="n">stat</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">stat</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s2">"path"</span><span class="p">])</span>
-                <span class="k">return</span> <span class="p">{</span>
-                    <span class="s2">"graph_file"</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s2">"path"</span><span class="p">]),</span>
-                    <span class="s2">"size"</span><span class="p">:</span> <span class="n">stat</span><span class="o">.</span><span class="n">st_size</span><span class="p">,</span>
-                    <span class="s2">"mtime_ns"</span><span class="p">:</span> <span class="n">stat</span><span class="o">.</span><span class="n">st_mtime_ns</span><span class="p">,</span>
-                <span class="p">}</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_api</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">metadata</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="n">k</span><span class="p">:</span> <span class="n">v</span>
-                <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_api</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
-                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">bool</span><span class="p">))</span> <span class="ow">or</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">))</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1000</span><span class="p">)</span>
-            <span class="p">}</span>
-            <span class="n">digest</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">metadata</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
-            <span class="k">return</span> <span class="p">{</span><span class="s2">"loaded_graph_metadata_sha256"</span><span class="p">:</span> <span class="n">digest</span><span class="p">}</span>
-        <span class="k">return</span> <span class="p">{</span><span class="s2">"graph_file"</span><span class="p">:</span> <span class="kc">None</span><span class="p">}</span>
+                <span class="k">return</span> <span class="n">files</span><span class="o">.</span><span class="n">content_digest</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s2">"path"</span><span class="p">])</span>
+        <span class="k">return</span> <span class="kc">None</span>
 
 <div class="viewcode-block" id="HarmonizeFeatures.result_cache_path">
 <a class="viewcode-back" href="../../../reference.html#idtrack.harmonize.HarmonizeFeatures.result_cache_path">[docs]</a>
@@ -620,14 +616,14 @@
         <span class="n">names</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span><span class="p">[</span><span class="n">dataset_name</span><span class="p">]</span>
         <span class="k">return</span> <span class="p">{</span>
             <span class="s2">"format"</span><span class="p">:</span> <span class="n">_CACHE_FORMAT</span><span class="p">,</span>
-            <span class="s2">"idtrack_version"</span><span class="p">:</span> <span class="n">package_version</span><span class="p">(),</span>
+            <span class="s2">"rules_version"</span><span class="p">:</span> <span class="n">RULES_VERSION</span><span class="p">,</span>
             <span class="s2">"organism"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="p">,</span>
             <span class="s2">"final_database"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">final_database</span><span class="p">,</span>
             <span class="s2">"target_ensembl_release"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">to_release</span><span class="p">,</span>
             <span class="s2">"source_release"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">from_release_by_dataset</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">dataset_name</span><span class="p">),</span>
             <span class="s2">"source_database"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">from_database_by_dataset</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">dataset_name</span><span class="p">),</span>
             <span class="s2">"graph_snapshot"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">snapshot_release</span><span class="p">,</span>
-            <span class="s2">"graph"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph_identity</span><span class="p">(),</span>
+            <span class="s2">"graph_content_digest"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph_identity</span><span class="p">(),</span>
             <span class="s2">"feature_names_sha256"</span><span class="p">:</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">names</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">(),</span>
         <span class="p">}</span>
 
@@ -636,6 +632,8 @@
         <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">result_cache_path</span><span class="p">(</span><span class="n">dataset_name</span><span class="p">)</span>
         <span class="n">header</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache_header</span><span class="p">(</span><span class="n">dataset_name</span><span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">header</span><span class="p">[</span><span class="s2">"graph_content_digest"</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">FileNotFoundError</span>  <span class="c1"># a graph without a digest: nothing cached is known to be of it</span>
             <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
                 <span class="n">stored</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">handle</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">stored</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"header"</span><span class="p">)</span> <span class="o">==</span> <span class="n">header</span><span class="p">:</span>
@@ -650,9 +648,10 @@
         <span class="n">api</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_require_api</span><span class="p">()</span>
         <span class="n">header</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache_header</span><span class="p">(</span><span class="n">dataset_name</span><span class="p">)</span>  <span class="c1"># the graph is loaded now: identify it as loaded</span>
         <span class="n">matchings</span><span class="p">,</span> <span class="n">gene_names</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_convert_dataset</span><span class="p">(</span><span class="n">api</span><span class="p">,</span> <span class="n">dataset_name</span><span class="p">)</span>
-        <span class="n">_write_json_atomically</span><span class="p">(</span>
-            <span class="n">path</span><span class="p">,</span> <span class="p">{</span><span class="s2">"header"</span><span class="p">:</span> <span class="n">header</span><span class="p">,</span> <span class="s2">"matchings"</span><span class="p">:</span> <span class="p">[</span><span class="n">m</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">matchings</span><span class="p">],</span> <span class="s2">"gene_names"</span><span class="p">:</span> <span class="n">gene_names</span><span class="p">}</span>
-        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">header</span><span class="p">[</span><span class="s2">"graph_content_digest"</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">_write_json_atomically</span><span class="p">(</span>
+                <span class="n">path</span><span class="p">,</span> <span class="p">{</span><span class="s2">"header"</span><span class="p">:</span> <span class="n">header</span><span class="p">,</span> <span class="s2">"matchings"</span><span class="p">:</span> <span class="p">[</span><span class="n">m</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">matchings</span><span class="p">],</span> <span class="s2">"gene_names"</span><span class="p">:</span> <span class="n">gene_names</span><span class="p">}</span>
+            <span class="p">)</span>
         <span class="k">return</span> <span class="n">matchings</span><span class="p">,</span> <span class="n">gene_names</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_require_api</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">API</span><span class="p">:</span>
