@@ -167,6 +167,16 @@ nox --session=mypy --python=3.12
 
 The sessions are `pre-commit`, `pip-audit`, `mypy`, `tests`, `typeguard`, `xdoctest`, `docs-build`, `coverage` and `docs` (a live preview), each for Python 3.12 to 3.15 where it applies; without `--session`, nox runs the default sessions on every interpreter it finds. Besides the nox sessions, the workflows build the sdist and the wheel and run the unit suite against the installed wheel (`.github/scripts/test_wheel.sh`, runnable locally: `PYTHON=python3.12 bash .github/scripts/test_wheel.sh dist/idtrack-*-py3-none-any.whl` after `make dist`; `PYTHON` names the interpreter of its virtual environment, `python3` if unset), and install the wheel against the oldest and newest dependency versions (`dependency_compatibility.yml`). A change is ready when the workflows pass; `docs/contributing.rst` says how to propose it.
 
+### Files written by tools
+
+Some files of the repository are written by scripts in `tools/` (not part of the package), never by hand: the externals YAML files the package ships (`idtrack/default_config/`), the cut Ensembl tables of the tests (`tests/data/real/<organism>.tables.json.xz`) and the expectations of the consumer-contract test (`tests/data/real/consumer_contract.json`). `tools/README.md` says what each tool writes, from what, how long it takes and how to check the result against the file in the repository. They must be written again:
+
+- when an organism's selection of external databases changes (`idtrack/build/default_externals.py`) or a newer Ensembl release is to be listed: `tools/make_externals.py` for the organism, then the cut tables and the contract;
+- when a test needs genes that the cut tables lack: the gene list, `tools/cut_coverage.py`, `tools/cut_tables.py`, then the contract's answers (`tools/contract_answers.py`, in a checkout of `d4c2dda`) and `tools/consumer_contract.py --answers ...`;
+- when a change of the build changes the cut graphs (`tests/unit/test_consumer_contract.py` fails on the content digest): `tools/consumer_contract.py`.
+
+The tools need a local repository with the organism's complete tables (one in which its graph was built, section 3); their tests (`tests/unit/test_tools.py`) run them on the cut tables.
+
 ## 6. Release
 
 The version is written in one place, `version` in `[project]` of `pyproject.toml`; the package, the documentation and the graph files read it from the installed metadata. For a release:

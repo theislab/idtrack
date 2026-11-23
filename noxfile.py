@@ -197,7 +197,7 @@ def pip_audit(session: Session) -> None:
 @session(python=python_versions)
 def mypy(session: Session) -> None:
     """Type-check using mypy."""
-    args = session.posargs or ["idtrack", "tests", "docs/conf.py"]
+    args = session.posargs or ["idtrack", "tests", "tools", "docs/conf.py"]
     session.install(".[harmonize]")
     session.install(
         "mypy",
