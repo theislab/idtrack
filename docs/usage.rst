@@ -462,9 +462,10 @@ would answer):
   neither a copy nor a version: it stays not found, never another gene. A versioned accession written with a version
   (``NM_000546.5`` beside ``NM_000546``) is that version, read as it is alone, never a copy.
   In any call, such a string is not read, with its separators taken as one or without letter case, as a synonym of
-  another gene than the one an authority's symbol written before the suffix names: ``SRF.1`` alone is not the synonym
-  ``SRF-1`` of SPATA6 (the reading is reported, ``reason="make_unique_suffix"``, and ``SRF.1`` is not found). A name
-  is still read so (``MIR138_2`` is ``MIR138-2``).
+  another gene than the one an authority's symbol written before the suffix names at the release asked about
+  (:ref:`current-limitations`): ``SRF.1`` alone is not the synonym ``SRF-1`` of SPATA6 (the reading is reported,
+  ``reason="make_unique_suffix"``, and ``SRF.1`` is not found). A name is still read so (``MIR138_2`` is
+  ``MIR138-2``).
 * **A separator reading of several names that exist at one release is one answer.** Where ``-``, ``_`` and ``.``
   read as one reach several names of the release read, their answers join, the second reading reported
   (``reason="same_step"``), and are ranked as the genes of one conversion: the readings whose best answers are equal
@@ -680,10 +681,28 @@ judgement):
   answers ENSSSCG00000042508, an offshoot, while the id's own successors rank fourth to sixth). Pig: 7 ids, 1,133
   conversions (748 of them without a tie), all at the Sscrofa9 to Sscrofa10.2 change; human: none; mouse and the
   macaques: no id is branched while it lives. ``result.view("all")`` lists the id's own successors.
-* **An id that Ensembl retired and later brought back with an old version is one node with two lives.** Converting
-  within the gap or across it can differ by direction (mouse ENSMUSG00000118483, version 1 at 97 to 102 and again from
-  109; human ENSG00000288686): 1 mouse and 1 human id found, and 9 more ids of the two organisms with a version that
-  falls back to another release.
+* **An id that Ensembl's history carries to another place answers that id, and the result does not say that the gene
+  moved.** Where Ensembl keeps a stable id across a version event that puts the gene on another chromosome or strand,
+  idtrack follows the id as Ensembl does; only the explained path marks the step (``PathStep.places`` is
+  ``"places_apart"``), and ``Candidate.score``, the product of Ensembl's scores along the path, shows how weak the
+  event is. Ensembl moved human 609, mouse 210 and pig 34 stable gene ids to another chromosome within one assembly,
+  and human 386, mouse 113 and pig 226 to the other strand. Human ``convert("ENSG00000115934", from_release=61,
+  to_release=115)`` answers ENSG00000115934.11, a processed transcript on chromosome 12 from release 62, although at
+  61 the id was a protein-coding gene on chromosome 19 (Ensembl's score of the event 0.046, ``Candidate.score``
+  0.033). Where a move matters, convert with ``explain=True`` and read the ``places`` of the history steps.
+* **An id that Ensembl retired and later brought back with an old version is one node with two lives.** Converted
+  into the gap between its lives, it answers by the life it starts from: human ENSG00000288686 (version 1 at 103,
+  version 2 at 104 to 107, absent at 108 and 109, version 1 again from 110) answers XG, ENSG00000124343.14, from its
+  first life (``convert("ENSG00000288686", from_release=107, to_release=108)``) and nothing from its second
+  (``from_release=110``). It is the one id found: of the human and mouse ids that Ensembl brought back after a gap or
+  whose version falls back to an earlier number (human 7, mouse 4), each converted between every two releases at
+  which it exists, both ways, and into its gaps from every release before and after them, every other id answers
+  alike in both directions.
+* **An Ensembl id that names a transcript at some releases and a translation at others is one node.** The graph keeps
+  one node per identifier: Ensembl 107 gives a translation of IL2RB the id ENST00000515292, the id of a transcript of
+  LINC02497 (ENSG00000251182) at releases 58 to 96, so ``convert("ENST00000515292", from_release=107,
+  to_release=107)`` answers ENSG00000251182.2, not IL2RB's ENSG00000100385.15. It is the one such id in the graphs of
+  the five organisms. Ask by IL2RB's transcript, ``ENST00000703410``, or its gene.
 * **At its own release, a symbol of the organism's name authority can answer another gene** where Ensembl displays
   the name for both genes, or for neither, and more databases give the other gene the name: Ensembl's display name
   ranks first, then the support of the evidence (the authority's symbol wins against another gene's synonym only). Of
@@ -703,6 +722,26 @@ judgement):
   families at releases 63 to 71 (reading such strings without letter case at the exact step would undo the exact
   match for strings that do name a gene as typed, which is kept). Written as the authority writes it, the name is read
   as that gene's display name.
+* **Where an organism's symbols are written in capitals, a symbol typed with small letters can answer another gene
+  whose synonym is spelt so.** The rule that reads a string against the organism's letter case first as a symbol
+  without letter case (**Symbols without letter case first**, above) holds where symbols are written in mixed case
+  (mouse); in pig, the macaques and human an exact synonym of another gene comes first. Of the symbols of the name
+  authorities at release 115 that name one gene, each typed in small letters and with a capital first: pig 2 of 15,979
+  symbols (``convert("afp")`` answers ENSSSCG00000001233, whose NCBI synonym is ``afp``, not AFP, ENSSSCG00000008949;
+  ``Has2`` answers ENSSSCG00000057079, not HAS2), rhesus (15,206 symbols), cynomolgus (748) and human (40,826) none.
+  Type the symbol as the authority writes it (``AFP``), or name its database:
+  ``convert("afp", from_database="VGNC Symbol")`` is AFP.
+* **Where Ensembl's history gives a gene no successor, an answer is the gene a bridge reaches, which no record of
+  Ensembl states.** A bridge needs an identifier that the two genes carried one after the other and places that
+  overlap (or, across an assembly change that Ensembl publishes no mapping for, chromosomes of one name: above), so its
+  gene is the plausible successor at that place, not one that Ensembl's history or the place proves. Of the gene ids
+  whose history ends without a successor, each asked at its last release to release 115, a bridge answers human 8,679
+  of 34,385, mouse 4,017 of 11,375, pig 5,245 of 22,656, rhesus 3,492 of 21,890 and cynomolgus 961 of 8,483; the
+  others answer nothing (but 18 human ids: LRG records, which answer the gene they describe, and one id that Ensembl
+  brought back). Human ``convert("ENSG00000198477", from_release=48, to_release=76)`` (SUHW2 at 48, ZNF280B later,
+  last at release 75) answers ENSG00000275004.1, ZNF280B on GRCh38, through NCBI's id 140883, RefSeq's NM_080764 and
+  the symbol ZNF280B at the same place on chromosome 22. ``Candidate.bridges`` counts the bridges of an answer and
+  ``result.path.bridges`` lists them; ``allow_bridges=False`` answers by Ensembl's history alone.
 * **A gene that Ensembl retired without a successor can answer another gene than the one that holds its accessions
   today.** Where Ensembl retired a gene and filed its accession (an NCBI gene id, a RefSeq or UniProt accession, a
   miRBase accession) on another gene before, or without, giving the accession to the gene that holds it at the last
@@ -742,6 +781,52 @@ judgement):
   makes one gene the answer (``Adora3`` at 62 answers ENSMUSG00000000562, which MGI, NCBI and UniProt name, not the
   tie with ENSMUSG00000074344, which MGI and NCBI name). ``view("all")`` lists the other gene, and each candidate's
   ``entry_databases`` names the databases counted.
+* **A suffix of single-cell tools after a name that is no symbol of the name authority at the release asked about
+  can be read into another gene's synonym.** The rule that keeps ``SRF.1`` from SPATA6's synonym ``SRF-1`` (**Names
+  made unique by single-cell tools**, above) needs the string before the suffix to be a symbol that a name authority
+  gives at the release asked about (without a release, the target release), also where the synonym is read at
+  another release. Cynomolgus ``CAV1`` is NCBI's symbol at releases 91 to 102 and HGNC's at 103 to 114, but only
+  UniProt's name at 115, so ``convert("CAV1-1")`` is read at 98 as ``Cav1.1``, a synonym of CACNA1S, and answers
+  ENSMFAG00000037274, while ``convert("CAV1-1", from_release=98)`` is not found. Of the names of release 115 written
+  with ``-1``, ``.1`` and ``_1``, each asked alone, such a string answers another gene's synonym in cynomolgus 35 of
+  61,284 strings, pig 4 of 59,994 (in these 39 the string before the suffix is an authority's symbol where the synonym
+  is read), human 10 of 131,985 and mouse 3 of 232,527 (the string before the suffix is no authority's symbol there:
+  human ``FY.1`` is TBCK's synonym ``FY-1``); rhesus none. A string that is exactly a synonym or a name of another
+  gene is that gene's, as everywhere. In a batch with the name it repeats, as a single-cell matrix holds it, such a
+  string is that name's copy (``convert_many(["CAV1", "CAV1-1"])`` answers CAV1 twice).
+* **Low-9 quotation marks are not read as quotes.** The quotation marks removed around an identifier are Unicode's
+  initial and final quotes and the ASCII ones (**What is read**, above); the low-9 marks that open a quotation in German
+  and other languages (``„`` and ``‚``) belong to Unicode's category of opening punctuation together with the brackets,
+  and no property of Unicode tells the two apart, so ``„TP53“`` and ``‚TP53‘`` are not found (never another gene).
+  Remove them before converting.
+* **Identifiers of databases that the graph does not hold answer nothing.** A graph holds the databases that its
+  externals configuration selects (``idtrack/default_config/<organism>_externals_modified.yml``;
+  :py:meth:`idtrack.API.external_databases` lists them), and the shipped configurations do not select RNAcentral, the
+  name authorities' own ids (HGNC, MGI and VGNC ids), UniProt's secondary accessions and entry names (but the entry
+  names that early releases display as genes' names) or UniProt's isoforms. Such an identifier is not found, never
+  another gene, unless the same string is an identifier of a database the graph holds: human ``Q15086`` (a secondary
+  accession of TP53's P04637), ``URS0000761A87`` (RNAcentral's id of a MALAT1 transcript) and ``P53_HUMAN``, mouse
+  ``MGI:98834`` (Trp53) and pig ``VGNC:100174`` are not found. Ask by the primary accession, the symbol or the
+  Ensembl id; to read another database of Ensembl, build a graph whose configuration selects it
+  (:doc:`_notebooks/02_prepare_new_external_yaml`).
+* **A few synonyms are fragments of UniProt's evidence text.** The graph drops a synonym that carries the evidence
+  UniProt writes in a gene name (``{ECO:...}``), but where Ensembl's rows split such a text, the piece without its
+  opening brace stays a synonym of the gene: human 45 synonyms, mouse 20, pig and the macaques none
+  (``api.genes_named("GNECO:0000312|HGNC:HGNC:11125}")`` gives UniProt's synonym of SUMO2, ENSG00000188612, at
+  release 79). They name the gene they came with and are reached only by typing such a string;
+  :py:meth:`idtrack.API.names_of` lists them among a gene's synonyms.
+* **An identifier of another database answers the gene Ensembl's cross-references give it, also where the
+  database's own file says otherwise.**
+  Ensembl's tables are the record idtrack reads; where NCBI, RefSeq or UniProt give an identifier another gene, or
+  none, in their own files, the answer is still Ensembl's gene. At release 115 the databases' own files (NCBI's
+  ``gene2ensembl`` and ``gene2refseq`` and UniProt's ``idmapping_selected``, as fetched in November 2026) give another
+  gene or none to these shares of the identifiers that Ensembl gives a gene: NCBI gene ids cynomolgus 52.8 % (7,158
+  of 13,563; no gene 6,554), rhesus 12.6 % (2,695 of 21,446); RefSeq accessions cynomolgus 44.8 %, rhesus 39.9 %;
+  UniProt accessions cynomolgus 5.4 %, rhesus 14.4 %, pig 38.6 %. NCBI's files give pig's ids to the genes of another
+  Ensembl annotation of pig (``ENSSSCG00220...``), so none of them names a gene of the reference assembly; human and
+  mouse were not compared. Rhesus ``convert("100425060")`` answers ENSMMUG00000002917, the gene Ensembl gives NCBI's
+  id 100425060, while NCBI's ``gene2ensembl`` gives it ENSMMUG00000049684. Where the authority's assignment matters,
+  check the answer against the authority's own file.
 
 
 Environment Variable Configuration
