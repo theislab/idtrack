@@ -60,8 +60,6 @@ Data Sources
       - Human Gene Nomenclature Committee - official human gene symbols
     * - `MGI <http://www.informatics.jax.org/>`_
       - Mouse Genome Informatics - mouse gene nomenclature and annotation
-    * - `RGD <https://rgd.mcw.edu/>`_
-      - Rat Genome Database - rat gene nomenclature and annotation
     * - `UniProt <https://www.uniprot.org/>`_
       - Universal Protein Resource - protein sequence and annotation
     * - `NCBI Gene <https://www.ncbi.nlm.nih.gov/gene>`_
@@ -84,14 +82,18 @@ IDTrack relies on excellent open-source software:
       - Data manipulation and analysis
     * - `NumPy <https://numpy.org/>`_
       - Numerical computing
-    * - `AnnData <https://anndata.readthedocs.io/>`_
-      - Annotated data matrices for single-cell analysis
     * - `h5py <https://www.h5py.org/>`_
       - HDF5 file format support
     * - `requests <https://requests.readthedocs.io/>`_
       - HTTP library for database downloads
-    * - `Rich <https://rich.readthedocs.io/>`_
-      - Beautiful terminal output and progress bars
+    * - `PyMySQL <https://pymysql.readthedocs.io/>`_
+      - Ensembl's public MySQL server
+    * - `PyYAML <https://pyyaml.org/>`_
+      - The externals configuration files
+    * - `tqdm <https://tqdm.github.io/>`_
+      - Progress bars
+    * - `AnnData <https://anndata.scverse.org/>`_ and `SciPy <https://scipy.org/>`_
+      - Annotated data matrices for single-cell analysis (the ``harmonize`` extra)
 
 Documentation Tools
 ~~~~~~~~~~~~~~~~~~~
@@ -144,4 +146,4 @@ License
 
 IDTrack is released under the `BSD 3-Clause License <https://opensource.org/licenses/BSD-3-Clause>`_.
 For the full license text, see the repository file:
-`LICENSE <https://github.com/theislab/idtrack/blob/development/LICENSE>`_.
+`LICENSE <https://github.com/theislab/idtrack/blob/main/LICENSE>`_.

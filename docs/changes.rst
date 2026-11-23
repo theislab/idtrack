@@ -4,6 +4,30 @@ Changes
 This page lists the changes that affect users, newest first. Version numbers follow ``pyproject.toml``.
 
 
+0.1.1
+-----
+
+Conversions, graphs and file formats are those of 0.1.0: a graph built with 0.1.0 is read by 0.1.1 and one built with
+0.1.1 by 0.1.0 (the loader checks the graph format, the organism table and the selection of external databases, not
+the package version; a graph's record names the version that built it, ``api.describe().package_version``, so a
+graph built with 0.1.1 says ``0.1.1``). The changes are the command line, the setup guide and the documentation.
+
+* **The command line does work.** ``idtrack build <organism> <release> --repository <folder>`` builds a graph (as
+  :py:meth:`idtrack.API.build`, making the folder), ``idtrack verify <graph file>`` checks a graph file (its format and
+  record, and its content against the digest it records; with ``--repository``, also the self-tests of
+  :py:class:`idtrack.checks.GraphChecks` against its tables), ``idtrack info <graph file>`` shows what it holds
+  (:py:meth:`idtrack.API.describe`, ``--json``), and ``idtrack convert <graph file> <identifiers>`` converts (one line
+  per identifier, or ``--json``; ``--file`` reads a list). ``idtrack`` without a command prints its help instead of a
+  banner. Errors of idtrack exit with status 1 and one line on standard error.
+* **Setting up.** ``SETUP.md`` at the root of the repository: install, configure, build and check graphs, use, test,
+  release. The contributor guide points to it instead of keeping its own setup commands; one ``Makefile`` with
+  working targets (``make`` lists them) replaces the two platform makefiles.
+* **Documentation.** The documentation builds with every warning an error and every cross-reference to an ``idtrack``
+  name checked; it is published by Read the Docs only (the workflow no longer deploys a second copy to GitHub Pages).
+  The installation page says what Python 3.15 needs (HDF5 and a C compiler for h5py), and the time and memory of
+  building and loading are those of this version's graphs.
+
+
 0.1.0
 -----
 

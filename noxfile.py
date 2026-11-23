@@ -255,16 +255,10 @@ def xdoctest(session: Session) -> None:
 
 @session(name="docs-build", python=python_versions)
 def docs_build(session: Session) -> None:
-    """Build the documentation."""
-    args = session.posargs or ["docs", "docs/_build"]
+    """Build the documentation, every warning an error (the tools of docs/requirements.txt, at the lock's versions)."""
+    args = session.posargs or ["-W", "--keep-going", "docs", "docs/_build"]
     session.install(".[harmonize]")
-    session.install(
-        "sphinx",
-        "sphinx-design",
-        "sphinx-rtd-theme",
-        "nbsphinx",
-        "IPython",
-    )
+    session.install("-r", "docs/requirements.txt")
 
     build_dir = Path("docs", "_build")
     if build_dir.exists():
@@ -278,14 +272,7 @@ def docs(session: Session) -> None:
     """Build and serve the documentation with live reloading on file changes."""
     args = session.posargs or ["--open-browser", "docs", "docs/_build"]
     session.install(".[harmonize]")
-    session.install(
-        "sphinx",
-        "sphinx-autobuild",
-        "sphinx-design",
-        "sphinx-rtd-theme",
-        "nbsphinx",
-        "IPython",
-    )
+    session.install("-r", "docs/requirements.txt", "sphinx-autobuild")
 
     build_dir = Path("docs", "_build")
     if build_dir.exists():

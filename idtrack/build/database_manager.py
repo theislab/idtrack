@@ -2608,9 +2608,9 @@ class DatabaseManager:
 
         The selected databases are the ``(form, name)`` pairs the YAML enables anywhere (any assembly or release; a
         synonym's name by its entry's). The links of every release of the window are read on the assembly that serves it
-        (:py:meth:`_release_links`) and compared between adjacent releases (:py:func:`idtrack.build.continuity.
-        database_filing`). Computed once per process and window; a graph holds what it found
-        (:py:attr:`idtrack.graph.GraphRecord.database_names`).
+        (:py:meth:`_release_links`) and compared between adjacent releases
+        (:py:func:`idtrack.build.continuity.database_filing`). Computed once per process and window; a graph holds what
+        it found (:py:attr:`idtrack.graph.GraphRecord.database_names`).
 
         Returns:
             idtrack.build.continuity.Filing: The names and where they go.

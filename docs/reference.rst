@@ -42,6 +42,8 @@ Settings
     :members:
     :show-inheritance:
 
+.. autodata:: idtrack.settings.RULES_VERSION
+
 
 Organisms
 ---------
@@ -75,6 +77,14 @@ The graph and its file
 .. automodule:: idtrack.graph.files
     :members:
 
+.. automodule:: idtrack.graph.record
+    :members:
+    :exclude-members: GraphRecord
+
+.. autoclass:: idtrack.graph.types.AssemblyException
+
+.. autoclass:: idtrack.graph.names.NameResolution
+
 .. automodule:: idtrack.graph.genes
     :members:
 
@@ -85,6 +95,8 @@ The conversion engine
 .. automodule:: idtrack.engine
     :members:
     :show-inheritance:
+
+.. autodata:: idtrack.engine.SOURCE_MODES
 
 .. automodule:: idtrack.engine.ranking
     :members:
@@ -106,6 +118,8 @@ Harmonization
 
 .. automodule:: idtrack.harmonize
     :members:
+
+.. autodata:: idtrack.harmonize.STATUSES
 
 .. autoclass:: idtrack.harmonize.HarmonizeFeatures
     :members:
@@ -136,6 +150,12 @@ Building graphs
     :members:
 
 .. automodule:: idtrack.build.tables
+    :members:
+
+.. automodule:: idtrack.build.continuity
+    :members:
+
+.. automodule:: idtrack.build.assembly_chain
     :members:
 
 .. automodule:: idtrack.build.ensembl_access

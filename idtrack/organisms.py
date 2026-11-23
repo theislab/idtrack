@@ -20,6 +20,8 @@ from typing import Any
 from idtrack import ids, settings
 from idtrack.errors import InvalidArgumentError, UnknownAssemblyError, UnknownOrganismError, UnknownReleaseError
 
+#: The table of the organisms of idtrack, ``{organism: {assembly key: entry}}``, each entry with the assembly's
+#: ``Name``, MySQL ``Ports``, ``Priority`` and ``ReleaseRange`` (and ``DbSuffix`` where Ensembl reuses a code).
 ORGANISM_TABLE: dict[str, dict[int, dict[str, Any]]] = {
     # The one table of organisms. Change it with `register_organism`, which validates it and recomputes everything
     # derived from it (`supported_organisms()`, the `assembly_<key>_ensembl_<form>` node types).

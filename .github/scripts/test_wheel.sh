@@ -2,7 +2,7 @@
 # Install a built wheel of idtrack into a fresh virtual environment and run the unit suite against the installed
 # package, not against the source tree.
 #
-# Usage: test_wheel.sh <wheel> [<extra>]      (e.g. test_wheel.sh dist/idtrack-0.1.0-py3-none-any.whl harmonize)
+# Usage: test_wheel.sh <wheel> [<extra>]      (e.g. test_wheel.sh dist/idtrack-*-py3-none-any.whl harmonize)
 #
 #   <wheel>   the wheel to test.
 #   <extra>   an extra to install with it (`harmonize`), or nothing for the plain install. Without `harmonize`, the

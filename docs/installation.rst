@@ -25,16 +25,16 @@ Before installing IDTrack, ensure your system meets these requirements:
     * - Requirement
       - Details
     * - **Python**
-      - 3.12 to 3.15
+      - 3.12 to 3.15 (3.15 needs HDF5 and a C compiler, see :ref:`python-315`)
     * - **Operating Systems**
       - Linux, macOS (Intel and Apple Silicon), Windows
     * - **Memory**
-      - Using a graph: 0.26 GB (cynomolgus) to 1.14 GB (human) after loading, plus your data. Building a graph:
-        0.6 GB (cynomolgus) to 4.5 GB (human) at the peak. See :ref:`time-and-memory`.
+      - Using a graph: 0.3 GB (cynomolgus) to 1.5 GB (human) after loading, plus your data. Building a graph: 1.1 GB (cynomolgus) to 6.8 GB
+        (human) at the peak. See :ref:`time-and-memory`.
     * - **Disk Space**
-      - The tables a graph is built from stay in the local repository: 0.27 GB (cynomolgus), 0.65 GB (pig and
-        rhesus), 2.1 GB (mouse), 5.3 GB (human) for a graph of snapshot release 115, plus the graph file itself
-        (47 MB to 345 MB).
+      - The tables a graph is built from stay in the local repository: 0.24 GB (cynomolgus) and at most 1.1 GB (pig),
+        1.2 GB (rhesus), 3.3 GB (mouse) and 9.3 GB (human) for a graph of snapshot release 115, plus the graph file
+        itself (22 MB to 156 MB).
     * - **Network**
       - HTTPS access to ``ftp.ensembl.org`` and ``rest.ensembl.org`` to build a graph (and for
         :py:meth:`idtrack.API.ensembl_organism` to learn the latest release); the Ensembl MySQL ports are optional
@@ -42,8 +42,8 @@ Before installing IDTrack, ensure your system meets these requirements:
 
 .. note::
 
-    **Apple Silicon users (M1/M2/M3/M4):** If ``h5py`` fails to install or import, install HDF5 first.
-    See the :ref:`apple-silicon` section below.
+    **Python 3.15**, and **Apple Silicon users (M1/M2/M3/M4)** whose ``h5py`` fails to install or import: install
+    HDF5 first, see :ref:`python-315` and :ref:`apple-silicon` below.
 
 
 Install with pip
@@ -76,9 +76,36 @@ which brings anndata and scipy:
 
     The release on PyPI (``pip install idtrack``), 0.0.5, is an older, different version with another API: the
     changes listed in :doc:`changes` are not in it, and it reads neither the graphs nor the table cache of this version
-    (nor this version its). Install from GitHub until version 0.1.0 is published on PyPI.
-    ``idtrack.__version__`` tells them apart: this version reports 0.1.0 (``unknown`` when the code runs from a source
+    (nor this version its). Install from GitHub until this version is published on PyPI.
+    ``idtrack.__version__`` tells them apart: this version reports 0.1.1 (``unknown`` when the code runs from a source
     folder that is not installed).
+
+
+.. _python-315:
+
+Python 3.15
+-----------
+
+h5py publishes no wheels for Python 3.15 yet (h5py 3.16.0, November 2026), so on Python 3.15 pip compiles h5py from
+source. That needs a C compiler and the HDF5 library with its headers, installed before idtrack:
+
+.. code-block:: console
+
+    # Debian or Ubuntu
+    $ sudo apt-get install build-essential libhdf5-dev
+
+    # Fedora, RHEL
+    $ sudo dnf install gcc hdf5-devel
+
+    # macOS
+    $ brew install hdf5
+
+    # or, in a conda environment
+    $ conda install -c conda-forge hdf5
+
+If pip does not find HDF5, set ``HDF5_DIR`` to the folder that holds its ``include/`` and ``lib/``. The install then
+takes about 6 minutes (compiling h5py) instead of about 2.5 (measured for the plain install on a Linux server).
+Python 3.12 to 3.14 need none of this: their h5py wheels bundle HDF5.
 
 
 .. _apple-silicon:
@@ -164,56 +191,9 @@ Using venv + pip
 Development Installation
 ------------------------
 
-For contributors or users who want the latest development features.
-
-Prerequisites
-~~~~~~~~~~~~~
-
-Ensure you have these tools installed:
-
-- `Git <https://git-scm.com/>`_ for version control
-- `Poetry <https://python-poetry.org/>`_ for dependency management
-
-.. code-block:: console
-
-    $ pip install poetry poetry-plugin-export
-
-Clone and Install
-~~~~~~~~~~~~~~~~~
-
-**Step 1: Clone the repository**
-
-.. code-block:: console
-
-    $ git clone https://github.com/theislab/idtrack.git
-    $ cd idtrack
-
-**Step 2: Install with Poetry**
-
-.. code-block:: console
-
-    $ make install
-
-This installs IDTrack in development mode with all dependencies, including development
-and testing tools.
-
-**Step 3: Verify installation**
-
-.. code-block:: console
-
-    $ poetry run python -c "import idtrack; print(f'IDTrack {idtrack.__version__}')"
-
-Alternative: Install from Tarball
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-For users who want the code of the ``main`` branch without cloning the repository:
-
-.. code-block:: console
-
-    $ curl -OJL https://github.com/theislab/idtrack/tarball/main
-    $ tar -xzf theislab-idtrack-*.tar.gz
-    $ cd theislab-idtrack-*
-    $ pip install .
+For contributors: clone the repository and install it with Poetry and nox as
+`SETUP.md <https://github.com/theislab/idtrack/blob/main/SETUP.md>`_ describes (``make install``; the tests, the checks
+and the release are there too). Without cloning, the code of the ``main`` branch installs with pip as above.
 
 
 Verifying Your Installation
@@ -244,7 +224,7 @@ script:
 
 .. code-block:: text
 
-    IDTrack version: 0.1.0
+    IDTrack version: 0.1.1
     Organisms: homo_sapiens, macaca_fascicularis, macaca_mulatta, mus_musculus, sus_scrofa
     Resolved organism: homo_sapiens
     Latest Ensembl release: 116
@@ -384,14 +364,13 @@ Getting Help
 If you encounter issues not covered here:
 
 1. Check the `GitHub Issues <https://github.com/theislab/idtrack/issues>`_ for known problems and solutions
-2. Search `existing discussions <https://github.com/theislab/idtrack/discussions>`_ for similar questions
-3. Open a new issue with:
+2. Open a new issue with:
 
    - Your operating system and Python version
    - The complete error message
    - Steps to reproduce the issue
 
-4. See the :doc:`_notebooks/01_installation_guide` tutorial for detailed environment setup
+3. See the :doc:`_notebooks/01_installation_guide` tutorial for detailed environment setup
 
 
 What's Next?
@@ -416,4 +395,3 @@ After successful installation, continue with these resources:
 
 
 .. _pip: https://pip.pypa.io
-.. _Poetry: https://python-poetry.org/

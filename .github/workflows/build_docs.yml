@@ -1,8 +1,6 @@
-# CI: Build documentation and (optionally) deploy it to GitHub Pages.
-#
-# Why two jobs?
-# - `build`: read-only permissions, runs on PRs to catch docs regressions.
-# - `deploy`: write permissions, runs only on pushes to main/master.
+# CI: Build the documentation as Read the Docs builds it (from docs/requirements.txt, with `make html`), with every
+# warning an error. The documentation is published by Read the Docs (https://idtrack.readthedocs.io/, .readthedocs.yml);
+# this workflow publishes nothing.
 name: Build Documentation
 
 on:
@@ -57,36 +55,3 @@ jobs:
               run: |
                   cd docs
                   make html
-
-            # Upload the rendered site so the deploy job can publish without rebuilding.
-            - name: Upload built docs
-              uses: actions/upload-artifact@v7
-              with:
-                  name: docs-html
-                  path: docs/_build/html
-
-    deploy:
-        name: Deploy docs
-        needs: build
-        runs-on: ubuntu-22.04
-        timeout-minutes: 15
-        # Only deploy from the default branches (never from PR refs).
-        # This also allows a manual `workflow_dispatch` on main/master to redeploy.
-        if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
-
-        # This job needs write access to push to the `gh-pages` branch.
-        permissions:
-            contents: write
-
-        steps:
-            - name: Download built docs
-              uses: actions/download-artifact@v8
-              with:
-                  name: docs-html
-                  path: docs/_build/html
-
-            - name: Deploy to GitHub Pages (gh-pages branch)
-              uses: peaceiris/actions-gh-pages@v4
-              with:
-                  github_token: ${{ secrets.GITHUB_TOKEN }}
-                  publish_dir: ./docs/_build/html

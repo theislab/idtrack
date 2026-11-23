@@ -1,0 +1,183 @@
+# Setting up idtrack
+
+How to install idtrack, configure it, build and check its data, run its tests and its checks, use it, and release it. Every command below is meant to be run as written, from the folder the section starts in, on Linux or macOS with `bash` (on Windows, use the same commands in WSL, or activate a virtual environment with `idtrack-env\Scripts\activate`). Times were measured on a Linux server. The documentation (<https://idtrack.readthedocs.io/>) explains what the package does; this file is about getting it to run.
+
+Contents: [1. Install](#1-install) · [2. Configure](#2-configure) · [3. Data: build and check a graph](#3-data-build-and-check-a-graph) · [4. Use it](#4-use-it) · [5. Develop: tests and checks](#5-develop-tests-and-checks) · [6. Release](#6-release)
+
+## 1. Install
+
+idtrack runs on Python 3.12 to 3.15 (`python3 --version`). Install it from GitHub: the release on PyPI (`pip install idtrack`, 0.0.5) is an older version with another API, until this version is published there.
+
+### For use
+
+In a new folder:
+
+```bash
+python3 -m venv idtrack-env
+source idtrack-env/bin/activate
+pip install "git+https://github.com/theislab/idtrack.git"
+idtrack --version
+```
+
+`idtrack --version` prints the version (`idtrack 0.1.1`). To harmonize `.h5ad` datasets (`idtrack.harmonize.HarmonizeFeatures`), add the `harmonize` extra (anndata and scipy, about 150 MB):
+
+```bash
+pip install "idtrack[harmonize] @ git+https://github.com/theislab/idtrack.git"
+```
+
+**Python 3.15:** h5py publishes no wheels for Python 3.15 yet (h5py 3.16.0), so pip compiles h5py from source, which needs a C compiler and the HDF5 library with its headers: install them first (Debian or Ubuntu `sudo apt-get install build-essential libhdf5-dev`, Fedora or RHEL `sudo dnf install gcc hdf5-devel`, macOS `brew install hdf5`, or `conda install -c conda-forge hdf5` in a conda environment; if pip does not find HDF5, set `HDF5_DIR` to the folder that holds its `include/` and `lib/`). The install then takes about 6 minutes instead of 2.5. Python 3.12 to 3.14 need nothing of this.
+
+### For development
+
+```bash
+git clone https://github.com/theislab/idtrack.git
+cd idtrack
+python3 -m venv ../idtrack-tools
+../idtrack-tools/bin/pip install poetry poetry-plugin-export nox nox-poetry
+export PATH="$PWD/../idtrack-tools/bin:$PATH"
+make install
+poetry run idtrack --version
+```
+
+`make install` (`poetry install`) installs idtrack in editable mode with the development tools at the versions of `poetry.lock`, into a virtual environment that Poetry manages (`poetry env info --path` shows where); the block takes about 4 minutes. Every development command runs in it through `poetry run` (the `make` targets do so: `make` lists them). The tools folder `../idtrack-tools` holds Poetry and nox only; any other installation of them works (with pipx, for example), as long as the export plugin sits beside Poetry and nox-poetry beside nox.
+
+What else the checks need: [pandoc](https://pandoc.org/installing.html) for the documentation (`make docs`), Node.js for the prettier hook of `nox -s pre-commit` (pre-commit installs one if `node` is not on the path), and, for the sessions of several Python versions, each interpreter on the path as `python3.12` to `python3.15`.
+
+## 2. Configure
+
+idtrack has no configuration file. What it needs:
+
+- **The local repository**: a folder you choose, where idtrack keeps what it downloads from Ensembl (`idtrack_tables/`, per assembly one compressed HDF5 file per table and release; `ensembl_https_index_*.json`, the listing of Ensembl's dumps; `assembly_chain/`, Ensembl's mappings between assemblies) and the graph files it builds (`graph_<organism>_assembly<key>_min<first>_max<snapshot>.npz`). It is the `local_repository` argument of `idtrack.API.build` and the `--repository` of `idtrack build` (default `idtrack_cache` in the working folder; the command makes it). The API does not make it: `API.build` refuses a folder that does not exist. A graph file can be copied anywhere and loaded alone (`idtrack.API.load(<file>)`, `idtrack convert <file> ...`): loading needs no tables, no network and no repository. Several graphs (organisms, snapshot releases) share one repository. A file `<organism>_externals_modified.yml` in the repository replaces the selection of external databases shipped with the package (tutorial 2 of the documentation); a graph records the selection it was built with and is refused under another.
+- **How Ensembl is reached**: over HTTPS (`https://ftp.ensembl.org/pub/`, its MySQL dumps, and `https://rest.ensembl.org/`) or over Ensembl's public MySQL server (`ensembldb.ensembl.org`, ports 3306, 5306 and 3337). The tables are the same either way. Many institutional networks and clusters block the MySQL ports; then set `IDTRACK_ENSEMBL_ACCESS=https` (the default, `auto`, probes each port once per process with a short timeout and falls back to HTTPS). The same setting from Python, with the timeouts and retries: `idtrack.settings.configure_ensembl(access="https", reading_timeout=120, rest_attempts=5)`. An HTTPS proxy is read from `HTTPS_PROXY`.
+- **Environment variables**: idtrack itself reads `IDTRACK_ENSEMBL_ACCESS` only (`auto` or `https`). The test suite reads `IDTRACK_SKIP_SLOW` (`0` runs the tests marked slow, as `--runslow` does). The tutorial notebooks read `IDTRACK_LOCAL_REPO` for their local repository (default `idtrack_cache`).
+- **Logging**: idtrack logs through Python's `logging` under the logger `idtrack`; `idtrack.API.configure_logger("INFO")` shows its messages on the console (`idtrack build` does so).
+
+## 3. Data: build and check a graph
+
+A graph holds the identifier history of one organism from its first release in idtrack to a snapshot release. It is built once from Ensembl's tables of every release and then loaded from its file. With the environment of section 1 active, in its folder (the smallest organism first, 12 to 14 minutes):
+
+```bash
+export IDTRACK_ENSEMBL_ACCESS=https
+idtrack build cynomolgus 115 --repository idtrack_cache
+```
+
+The last two lines it prints are the graph file and what it holds:
+
+```text
+idtrack_cache/graph_macaca_fascicularis_assembly6_min91_max115.npz
+macaca_fascicularis, releases 91 to 115, 22.5 MB, 721 s
+```
+
+The organisms are `homo_sapiens` (`human`), `mus_musculus` (`mouse`), `sus_scrofa` (`pig`), `macaca_mulatta` (`rhesus`) and `macaca_fascicularis` (`cynomolgus`); `idtrack build --help` lists the options (`--first-release`, `--rebuild`). Building the graphs of snapshot release 115, one process (the time of the graph itself, after the tables are downloaded; a first build also downloads them, which depends on the network: the cynomolgus build above took 721 s and 816 s in two runs from nothing, 0.24 GB of tables; the table sizes of the other organisms were measured on repositories that also hold tables of earlier builds, so they are upper bounds):
+
+|                          | cynomolgus | pig            | rhesus         | mouse          | human          |
+| ------------------------ | ---------- | -------------- | -------------- | -------------- | -------------- |
+| build time               | 8 min      | 13 min         | 14 min         | 40 min         | 2.6 h          |
+| peak memory              | 1.1 GB     | 1.8 GB         | 1.7 GB         | 4.6 GB         | 6.8 GB         |
+| graph file               | 22 MB      | 40 MB          | 34 MB          | 101 MB         | 156 MB         |
+| tables in the repository | 0.24 GB    | at most 1.1 GB | at most 1.2 GB | at most 3.3 GB | at most 9.3 GB |
+
+Run a long build where it may run for hours (a batch job on a cluster, or `nohup`); an interrupted build starts again from the tables already downloaded.
+
+Check a graph file: that this version reads it, that its record fits, and that its content gives the digest it records (seconds):
+
+```bash
+idtrack verify idtrack_cache/graph_macaca_fascicularis_assembly6_min91_max115.npz
+```
+
+With the repository it was built in, `idtrack verify` also runs the graph's self-tests against those tables (cynomolgus under a minute, human about 8 minutes); the exit status is 0 when everything holds:
+
+```bash
+idtrack verify idtrack_cache/graph_macaca_fascicularis_assembly6_min91_max115.npz --repository idtrack_cache
+```
+
+What a graph holds (organism, releases, assemblies, databases, the idtrack version and commit that built it):
+
+```bash
+idtrack info idtrack_cache/graph_macaca_fascicularis_assembly6_min91_max115.npz
+```
+
+## 4. Use it
+
+From the command line, with the graph of section 3 (to the snapshot release; `--final-database "VGNC Symbol"` for symbols, `--from-release` for identifiers of an older table, `--json` for the full results, `--file` for a list):
+
+```bash
+idtrack convert idtrack_cache/graph_macaca_fascicularis_assembly6_min91_max115.npz TP53 BRCA1 MT-CO1 NOT_A_GENE
+```
+
+```text
+query	status	targets	reason
+TP53	converted	ENSMFAG00000038506.2
+BRCA1	converted	ENSMFAG00000043956.2
+MT-CO1	converted	ENSMFAG00000060073.1
+NOT_A_GENE	not_found		not_in_graph
+```
+
+From Python, with the path behind an answer (`explain=True`): a gene id of release 91, on the assembly Macaca_fascicularis_5.0, that Ensembl's history ends; the search passes to the gene of the next assembly through the NCBI gene id both carried (a bridge):
+
+```bash
+python - <<'EOF'
+from idtrack import API
+
+api = API.load("idtrack_cache/graph_macaca_fascicularis_assembly6_min91_max115.npz")
+result = api.convert("ENSMFAG00000000060", from_release=91, explain=True)
+print(result.status, result.targets())
+best = result.best[0]
+for index in best.path + best.final_path:
+    step = result.path.steps[index]
+    print(step.kind, step.source, "->", step.target, "at", step.release)
+EOF
+```
+
+```text
+converted ('ENSMFAG00000054957.1',)
+entry ENSMFAG00000000060 -> ENSMFAG00000000060.1 at 91
+bridge_near ENSMFAG00000000060.1 -> 102131583 at 102
+bridge_far 102131583 -> ENSMFAG00000054957.1 at 103
+```
+
+The documentation's Quickstart (`docs/usage.rst`) and tutorials (`docs/_notebooks/`) go on from here; its Current Limitations section says what this version does not do, with how often it matters.
+
+## 5. Develop: tests and checks
+
+In the clone, with the tools of section 1 on the path (`export PATH="$PWD/../idtrack-tools/bin:$PATH"` in a new shell).
+
+The test suite (tests marked slow are skipped; about 25 minutes; it builds the graphs of pig and human from the cut Ensembl tables in `tests/data/real`, without network; tests that need Ensembl skip themselves when it cannot be reached):
+
+```bash
+make test
+```
+
+Its last line counts `2623 passed, 57 skipped` and the warnings of other packages (anndata's under pandas 3). One file, or the tests matching a name: `poetry run pytest tests/unit/test_api.py`, `poetry run pytest -k convert`. The tests marked slow (`--runslow`) download from Ensembl for hours; they are not part of a setup. Lint and formatting (black, isort, flake8 with the plugins of `.flake8`), and the documentation, every warning an error (into `docs/_build/html`):
+
+```bash
+make lint
+make docs
+```
+
+The checks of CI are nox sessions, each in its own virtual environment with the versions of `poetry.lock` (the workflows under `.github/workflows` run them on every push):
+
+```bash
+nox --list-sessions
+nox --session=pre-commit --python=3.12
+nox --session=mypy --python=3.12
+```
+
+The sessions are `pre-commit`, `pip-audit`, `mypy`, `tests`, `typeguard`, `xdoctest`, `docs-build`, `coverage` and `docs` (a live preview), each for Python 3.12 to 3.15 where it applies; without `--session`, nox runs the default sessions on every interpreter it finds. Besides the nox sessions, the workflows build the sdist and the wheel and run the unit suite against the installed wheel (`.github/scripts/test_wheel.sh`, runnable locally: `bash .github/scripts/test_wheel.sh dist/idtrack-*-py3-none-any.whl` after `make dist`), and install the wheel against the oldest and newest dependency versions (`dependency_compatibility.yml`). A change is ready when the workflows pass; `docs/contributing.rst` says how to propose it.
+
+## 6. Release
+
+The version is written in one place, `version` in `[project]` of `pyproject.toml`; the package, the documentation and the graph files read it from the installed metadata. For a release:
+
+1. Set the version in `pyproject.toml`, add its section to `docs/changes.rst`, commit on `main`, and check that the workflows pass on that commit.
+2. Build and check the distributions locally:
+
+    ```bash
+    make dist
+    ../idtrack-tools/bin/pip install twine
+    ../idtrack-tools/bin/twine check --strict dist/*
+    ```
+
+3. Tag the commit `v<version>` (for version 0.1.1, for example: `git tag v0.1.1`, `git push origin v0.1.1`; a pushed tag is never moved: a change after it is a new version) and publish a GitHub release of that tag. Publishing the release starts `.github/workflows/publish_package.yml`, which checks that the tag equals the version, builds and uploads to PyPI by trusted publishing (no token: PyPI's project settings must list this repository, the workflow `publish_package.yml` and the environment `pypi` as a trusted publisher). A version that is already on PyPI fails. Read the Docs builds the documentation of `main` on every push.
+
+These three steps publish; the maintainer does them.

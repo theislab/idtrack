@@ -33,7 +33,7 @@ There are many ways to contribute to IDTrack, regardless of your experience leve
     * - **Add Organism Support**
       - Declare a new species and configure its external databases (see `Adding Organism Support`_)
     * - **Answer Questions**
-      - Help other users in discussions and issues
+      - Help other users in the issues
 
 
 Quick Links
@@ -50,8 +50,8 @@ Quick Links
       - `GitHub Issues <https://github.com/theislab/idtrack/issues>`_
     * - Pull Requests
       - `GitHub Pull Requests <https://github.com/theislab/idtrack/pulls>`_
-    * - Discussions
-      - `GitHub Discussions <https://github.com/theislab/idtrack/discussions>`_
+    * - Setting up, testing, releasing
+      - `SETUP.md <https://github.com/theislab/idtrack/blob/main/SETUP.md>`_
     * - Code of Conduct
       - :doc:`code_of_conduct`
 
@@ -117,183 +117,14 @@ Have an idea for a new feature? Open an issue on the `Issue Tracker`_ with:
     This allows maintainers to discuss the approach and avoid duplicate effort.
 
 
-Development Setup
------------------
-
-Prerequisites
-~~~~~~~~~~~~~
-
-Before setting up your development environment, ensure you have:
-
-.. list-table::
-    :header-rows: 1
-    :widths: 25 75
-
-    * - Requirement
-      - Details
-    * - **Python**
-      - 3.12 to 3.15
-    * - **Git**
-      - For version control
-    * - **Pandoc**
-      - Required for building documentation with Jupyter notebooks
-
-Install Pandoc:
-
-.. code-block:: console
-
-    # macOS
-    $ brew install pandoc
-
-    # Ubuntu/Debian
-    $ sudo apt-get install -y pandoc
-
-    # Windows (using Chocolatey)
-    $ choco install pandoc
-
-    # Or download from https://pandoc.org/installing.html
-
-Development Tools
-~~~~~~~~~~~~~~~~~
-
-IDTrack uses the following tools for development:
-
-.. list-table::
-    :header-rows: 1
-    :widths: 20 40 40
-
-    * - Tool
-      - Purpose
-      - Installation
-    * - Poetry_
-      - Dependency management
-      - ``pip install poetry``
-    * - Nox_
-      - Test automation
-      - ``pip install nox``
-    * - nox-poetry_
-      - Nox + Poetry integration
-      - ``pip install nox-poetry``
-
-Install all development tools:
-
-.. code-block:: console
-
-    $ pip install poetry poetry-plugin-export nox nox-poetry
-
-    # Alternative: If you installed Poetry via pipx
-    $ pipx install poetry
-    $ pipx inject poetry poetry-plugin-export
-
-Setting Up the Project
-~~~~~~~~~~~~~~~~~~~~~~
-
-**Step 1: Fork and clone**
-
-.. code-block:: console
-
-    # Fork on GitHub, then clone your fork
-    $ git clone https://github.com/YOUR_USERNAME/idtrack.git
-    $ cd idtrack
-    $ git remote add upstream https://github.com/theislab/idtrack.git
-
-**Step 2: Install dependencies with Poetry**
-
-.. code-block:: console
-
-    $ make install
-
-This installs IDTrack in development mode with all dependencies.
-
-**Step 3: Verify your setup**
-
-.. code-block:: console
-
-    # Start an interactive Python session
-    $ poetry run python
-
-    # Or run the CLI
-    $ poetry run idtrack --help
-
-**Step 4: Install pre-commit hooks (recommended)**
-
-.. code-block:: console
-
-    $ nox --session=pre-commit -- install
-
-This automatically runs code formatting and linting checks before each commit.
-
-.. note::
-
-    See :doc:`installation` for additional requirements like HDF5 on Apple Silicon.
-
-
-Running Tests
--------------
-
-IDTrack uses pytest_ for testing and Nox_ for test automation.
-
-Run the Full Test Suite
-~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: console
-
-    $ nox
-
-This runs all tests, linting, and type checking.
-
-Run Specific Test Sessions
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-List available sessions:
-
-.. code-block:: console
-
-    $ nox --list-sessions
-
-Run the default test suite (everything except tests marked ``slow``; network-backed integration tests skip
-themselves when Ensembl is not reachable):
-
-.. code-block:: console
-
-    $ nox --session=tests
-
-Run tests with a specific Python version:
-
-.. code-block:: console
-
-    $ nox --session=tests --python=3.12
-
-Run Tests Directly with pytest
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-For faster iteration during development:
-
-.. code-block:: console
-
-    # Run all tests (slow-marked tests are skipped by default)
-    $ poetry run pytest
-
-    # Include slow tests
-    $ poetry run pytest --runslow
-
-    # Run a specific test file
-    $ poetry run pytest tests/unit/test_api.py
-
-    # Run the HTTPS-dump integration tests (they need only HTTPS access to Ensembl)
-    $ poetry run pytest --runslow tests/integration/test_ensembl_ftp_fallback.py
-
-    # Run tests matching a pattern
-    $ poetry run pytest -k "test_convert"
-
-    # Run with verbose output
-    $ poetry run pytest -v
-
-    # Run with coverage report
-    $ poetry run pytest --cov=idtrack --cov-report=xml --cov-report=term
-
-    # Run with coverage report (including slow tests)
-    $ poetry run pytest --runslow --cov=idtrack --cov-report=xml --cov-report=term
+Development Setup, Tests and Documentation
+------------------------------------------
+
+`SETUP.md <https://github.com/theislab/idtrack/blob/main/SETUP.md>`_ at the root of the repository holds every
+command, run as written: the development install (Poetry and nox, then ``make install``), the test suite
+(``make test``; tests marked ``slow`` need ``--runslow`` and the network), lint (``make lint``), the documentation
+(``make docs``, every warning an error; it needs `pandoc <https://pandoc.org/installing.html>`_), the checks of CI as
+nox sessions (``nox --list-sessions``), and the release. ``make`` lists the shortcuts.
 
 Test Organization
 ~~~~~~~~~~~~~~~~~
@@ -306,8 +137,8 @@ Tests are located in the ``tests/`` directory:
     ├── conftest.py               # Shared fixtures (among them the graphs of real organisms) and markers
     ├── _real_tables.py           # Serves real Ensembl tables, cut down to a few hundred genes, to DatabaseManager
     ├── data/real/                # Per organism: the cut tables, the gene list, the expected answers, the build script
-    ├── test_main.py              # Command-line entry point
-    ├── unit/                     # Offline tests, one file per module (test_api.py, ...) and test_real_*.py
+    ├── unit/                     # Offline tests, one file per module (test_api.py, test_main.py: the command line, ...)
+    │                             # and test_real_*.py
     └── integration/              # Network-backed tests against Ensembl (MySQL and HTTPS dumps)
 
 Markers: ``slow`` (skipped unless ``--runslow`` or ``IDTRACK_SKIP_SLOW=0``), ``network``, ``integration``,
@@ -334,48 +165,6 @@ It reads the tables from the local repository and downloads what the repository 
 ``tests/integration/test_real_tables_source.py`` (``--runslow``, network) fetches one release of each organism again
 and compares it with the stored file.
 
-
-Building Documentation
-----------------------
-
-IDTrack uses Sphinx_ with nbsphinx_ to build documentation from reStructuredText
-files and Jupyter notebooks.
-
-Install Documentation Dependencies
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: console
-
-    $ pip install -r docs/requirements.txt
-
-Build the Documentation
-~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: console
-
-    $ cd docs
-    $ make html
-
-The generated HTML files are in ``docs/_build/html/``. Open ``index.html`` in your browser.
-
-Live Preview During Editing
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-For automatic rebuilds while editing:
-
-.. code-block:: console
-
-    $ pip install sphinx-autobuild
-    $ cd docs
-    $ sphinx-autobuild . _build/html
-
-Then open http://localhost:8000 in your browser.
-
-.. note::
-
-    IDTrack itself must be installed for the API documentation to build correctly.
-    Notebooks are not executed during builds (``nbsphinx_execute = "never"``);
-    they are rendered with pre-existing outputs.
 
 Documentation Guidelines
 ------------------------
@@ -458,9 +247,11 @@ Use descriptive branch names:
 
 .. code-block:: console
 
-    $ nox
+    $ make test
+    $ make lint
 
-All tests and checks must pass before submitting.
+The workflows of the pull request run every check of CI (the nox sessions on Python 3.12 to 3.15, the tests of the
+built wheel and the documentation; SETUP.md says how to run each locally); all must pass.
 
 **Step 5: Push and create a pull request**
 
@@ -475,7 +266,7 @@ Pull Request Guidelines
 
 Your pull request should:
 
-- **Pass all tests** - The Nox test suite must pass without errors
+- **Pass all checks** - The workflows of the pull request must pass
 - **Include tests** - Add tests for bug fixes and new features
 - **Update documentation** - If your changes affect user-facing behavior
 - **Have a clear description** - Explain what the PR does and why
@@ -496,7 +287,7 @@ Pull Request Template
 
     ## Testing
     - [ ] Unit tests added/updated
-    - [ ] All tests pass locally (`nox`)
+    - [ ] Tests and lint pass locally (`make test`, `make lint`)
     - [ ] Documentation builds without errors
 
     ## Related Issues
@@ -517,13 +308,14 @@ IDTrack follows these conventions:
     * - **Formatting**
       - Black, line length 120, and isort (applied by the pre-commit hooks)
     * - **Linting**
-      - flake8 with flake8-docstrings, darglint, flake8-bugbear, flake8-bandit, flake8-rst-docstrings and pep8-naming
-        (``.flake8``), pyupgrade ``--py312-plus``
+      - flake8 with flake8-docstrings, flake8-bugbear, flake8-bandit, flake8-builtins, flake8-rst-docstrings and
+        pep8-naming (``.flake8``), pyupgrade ``--py312-plus``
     * - **Type hints**
       - Type annotations for public APIs; mypy (``nox --session=mypy``)
     * - **Docstrings**
-      - Google style (``docstring-convention = google``); every argument, return value and raised error documented
-        cross-references with the ``:py:meth:``, ``:py:class:`` ... roles
+      - Google style (``docstring-convention = google``): the arguments, the return value and the errors raised
+        documented; cross-references with the ``:py:meth:``, ``:py:class:`` ... roles, which the documentation build
+        checks (an ``idtrack`` name that resolves to nothing fails it)
 
 The pre-commit session (``nox --session=pre-commit``) runs all of these.
 
@@ -587,12 +379,29 @@ from it. Rhesus and cynomolgus macaque were added this way. The recipe:
 
 4. **Make the externals file.** Generate the template over every release and form
    (``DatabaseManager.create_database_content()`` and ``ExternalDatabases.create_template_yaml()`` of
-   :py:mod:`idtrack.build`), switch on the allowlisted databases with
-   :py:func:`idtrack.build.default_externals.apply_allowlist` (add the organism's allowlist to
-   ``DEFAULT_EXTERNALS`` there and to tutorial 02), and ship ``<organism>_externals_template.yml`` and
-   ``<organism>_externals_modified.yml`` in ``idtrack/default_config/``. See
-   :doc:`_notebooks/02_prepare_new_external_yaml`. When Ensembl publishes a new release, extend the shipped files
-   with ``ExternalDatabases.extend_modified_yaml`` instead of regenerating them.
+   :py:mod:`idtrack.build`; see :doc:`_notebooks/02_prepare_new_external_yaml`) and put it in
+   ``idtrack/default_config/`` as ``<organism>_externals_template.yml``. Add the organism's allowlist to
+   ``DEFAULT_EXTERNALS`` in ``idtrack/build/default_externals.py`` (and to tutorial 02), then write the shipped
+   selection, ``<organism>_externals_modified.yml``, from the template, from the root of the repository:
+
+   .. code-block:: python
+
+       import yaml
+
+       from idtrack.build.default_externals import DEFAULT_EXTERNALS, apply_allowlist
+       from idtrack.build.externals import write_externals_yaml
+
+       organism = "macaca_mulatta"
+       folder = "idtrack/default_config"
+       with open(f"{folder}/{organism}_externals_template.yml") as handle:
+           template = yaml.safe_load(handle)
+       modified, enabled, absent = apply_allowlist(template, organism, DEFAULT_EXTERNALS[organism])
+       write_externals_yaml(modified, f"{folder}/{organism}_externals_modified.yml")
+
+   The same code after a change of an allowlist writes the files again; the unit tests check that every shipped
+   modified file is what it writes, byte for byte. Both files are shipped: the template is the list of every
+   database a user can select from (tutorial 7 builds other selections from it). When Ensembl publishes a new release,
+   extend the shipped files with ``ExternalDatabases.extend_modified_yaml`` instead of regenerating them.
 
 5. **Teach the tests.** Add a row per assembly to ``EXPECTED_RANGES`` in
    ``tests/integration/test_ensembl_ftp_fallback.py`` and the organism's defaults (assembly, release window, seed
@@ -611,8 +420,7 @@ Getting Help
 
 If you have questions or need help:
 
-- **General questions**: Open a `GitHub Discussion <https://github.com/theislab/idtrack/discussions>`_
-- **Bug reports and features**: Use the `Issue Tracker`_
+- **Questions, bug reports and features**: Use the `Issue Tracker`_
 - **Direct contact**: See :doc:`authors`
 
 We appreciate all contributions, no matter how small. Thank you for helping make IDTrack better!
@@ -620,9 +428,3 @@ We appreciate all contributions, no matter how small. Thank you for helping make
 
 .. _BSD 3-Clause License: https://opensource.org/licenses/BSD-3-Clause
 .. _Issue Tracker: https://github.com/theislab/idtrack/issues
-.. _Poetry: https://python-poetry.org/
-.. _Nox: https://nox.thea.codes/
-.. _nox-poetry: https://nox-poetry.readthedocs.io/
-.. _pytest: https://pytest.readthedocs.io/
-.. _Sphinx: https://www.sphinx-doc.org/
-.. _nbsphinx: https://nbsphinx.readthedocs.io/

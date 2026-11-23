@@ -1,5 +1,5 @@
 # The documentation's own tools. The package itself is installed beside them, with its `harmonize` extra (autodoc
-# imports every module): `pip install ".[harmonize]" -r docs/requirements.txt` (.readthedocs.yml, publish_docs.yml).
+# imports every module): `pip install ".[harmonize]" -r docs/requirements.txt` (.readthedocs.yml, build_docs.yml).
 Sphinx>=4.0.1
 sphinx_rtd_theme>=0.5.2
 sphinx-design>=0.6.0

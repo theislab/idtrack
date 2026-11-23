@@ -46,9 +46,9 @@ IDTrack follows a simple three-step workflow for all identifier conversions:
       - Map identifiers with the loaded graph
 
 Building a graph is done once per organism and snapshot release: it downloads Ensembl's tables of every release and
-takes from about 6 minutes (cynomolgus) to 2 hours (human); see :ref:`time-and-memory`. Loading a graph that is on
-disk takes 1 to 5 seconds (up to 7 for the first read of the file), needs no network, and holds 0.26 GB (cynomolgus)
-to 1.14 GB (human) of memory.
+takes 12 to 14 minutes for cynomolgus (its download included) and 2.6 hours for human (besides the download of its
+tables); see :ref:`time-and-memory`. Loading a graph that is on disk takes 1 to 6 seconds, needs no network, and holds
+0.3 GB (cynomolgus) to 1.5 GB (human) of memory.
 
 
 Example 1: Convert a Human Gene Symbol
@@ -211,12 +211,13 @@ counts where they were compared), and ``result.decided_by`` names the criterion 
 runner-up (:py:data:`idtrack.results.CRITERIA`). Among the genes that carry a name at the release it is read at, the
 gene whose display name it is there (Ensembl's own statement of the gene's name, ``gene.display_xref_id``, whatever
 database it came from: ``Candidate.display_name``) ranks before the gene that more databases name with it
-(``Candidate.entry_support``): rhesus ``ATP6V0C`` at 69 is ENSMMUG00000019094, the gene Ensembl displays it for (from
-HGNC), not ENSMMUG00000005679, which NCBI and UniProt name with it (``decided_by="display_name"``). Two genes that
+(``Candidate.entry_support``): rhesus ``ATP6V0C`` at 69 (``convert("ATP6V0C", from_release=69, to_release=69)``) is
+ENSMMUG00000019094, the gene Ensembl displays it for (from HGNC), not ENSMMUG00000005679, which NCBI and UniProt name
+with it (``decided_by="display_name"``). Two genes that
 both display it are equal in it, and support decides between them as before (rhesus ``RPL31`` at 89, displayed for
 two genes). The display name holds for the string as you type it: where it has letters of both cases, only a display
-name that its database spelt so counts (mouse ``Foxl1`` at 70 is the gene MGI displays so, not the gene UniProt
-displays as ``FOXL1``); a string in one letter case says nothing of case, and where the organism's symbols are written
+name that its database spelt so counts (mouse ``Foxl1`` at 70, to release 70, is the gene MGI displays so, not the
+gene UniProt displays as ``FOXL1``); a string in one letter case says nothing of case, and where the organism's symbols are written
 in mixed case (mouse) the name authority's display name, read without case, ranks before another source's (mouse
 ``GAPDH`` is Gapdh; the gene UniProt displays as ``GAPDH`` follows it: ``Candidate.display_rank``). A symbol of a name
 authority against another gene's synonym is decided before both, when the string is
@@ -980,9 +981,11 @@ For complete AnnData harmonization workflows, see :doc:`_notebooks/05_tutorial_h
 Time and Memory
 ---------------
 
-Measured with this version for the five organisms, snapshot release 115, the window from each organism's first
-release, the shipped externals YAML files, on 2 cores of a Linux server, Python 3.13 (a graph built from nothing over
-HTTPS, so the build time is mostly download time and depends on the network):
+Measured for the five organisms, snapshot release 115, the window from each organism's first release, the shipped
+externals YAML files, on a Linux server. The build is one process, from tables already in the local repository (a first
+build also downloads them, which depends on the network: the cynomolgus graph took 12 to 14 minutes from nothing over
+HTTPS; the table sizes other than cynomolgus's were measured on repositories that also hold tables of earlier builds, so
+they are upper bounds); the load is a new Python process, ``import idtrack`` and :py:meth:`idtrack.API.load` together:
 
 .. list-table::
     :header-rows: 1
@@ -994,42 +997,42 @@ HTTPS, so the build time is mostly download time and depends on the network):
       - Cynomolgus
       - Mouse
       - Human
-    * - Build from nothing
-      - 15 min
+    * - Build (tables on disk)
+      - 13 min
       - 14 min
-      - 6 min
-      - 36 min
-      - 1 h 55 min
+      - 8 min
+      - 40 min
+      - 2 h 35 min
     * - Peak memory of the build
+      - 1.8 GB
+      - 1.7 GB
       - 1.1 GB
-      - 1.0 GB
-      - 0.6 GB
-      - 2.9 GB
-      - 4.5 GB
+      - 4.6 GB
+      - 6.8 GB
     * - Tables on disk
-      - 0.65 GB
-      - 0.66 GB
-      - 0.27 GB
-      - 2.1 GB
-      - 5.3 GB
+      - at most 1.1 GB
+      - at most 1.2 GB
+      - 0.24 GB
+      - at most 3.3 GB
+      - at most 9.3 GB
     * - Graph file
-      - 85 MB
-      - 69 MB
-      - 47 MB
-      - 228 MB
-      - 345 MB
+      - 40 MB
+      - 34 MB
+      - 22 MB
+      - 101 MB
+      - 156 MB
     * - Load (file in the system's cache)
-      - 1.3 s
       - 1.2 s
-      - 0.9 s
-      - 2.8 s
-      - 4.3 s
+      - 1.1 s
+      - 1.8 s
+      - 2.9 s
+      - 5.4 s
     * - Memory after load
-      - 0.38 GB
-      - 0.34 GB
-      - 0.26 GB
-      - 0.76 GB
-      - 1.14 GB
+      - 0.45 GB
+      - 0.42 GB
+      - 0.28 GB
+      - 0.95 GB
+      - 1.48 GB
     * - 5,000 mixed conversions
       - 7.4 s
       - 5.9 s
@@ -1043,7 +1046,9 @@ HTTPS, so the build time is mostly download time and depends on the network):
       - 0.26 / 50 ms
       - 0.25 / 67 ms
 
-The first load of a file on a machine reads it from disk and took up to 7 s. The conversions are a fixed, seeded
+The conversion times were measured with the development code of 12 November 2026 and its graphs, on 2 cores, Python
+3.13, and are not measured again for this version yet; the other rows with this version and the graphs it builds. The first load of a file on a machine reads
+it from disk and takes longer (cynomolgus 9.6 s once on a network file system). The conversions are a fixed, seeded
 mix of gene ids, ids without version, symbols and other external ids of every release of the window, converted to a
 release of the graph and partly to an external database. Each conversion has a budget
 (:py:class:`idtrack.settings.SearchSettings`: 200,000 search states and 30 s by default; ``API.load(path,

@@ -626,17 +626,20 @@ class TestShippedFiles:
             if f.endswith("_externals_template.yml")
         ),
     )
-    def test_modified_file_is_template_plus_allowlist(self, organism):
-        """Modified file is template plus allowlist."""
+    def test_modified_file_is_template_plus_allowlist(self, organism, temp_dir):
+        """The shipped modified file is what the contributor guide's code writes from the template, byte for byte."""
         from idtrack.build.default_externals import DEFAULT_EXTERNALS, apply_allowlist
+        from idtrack.build.externals import write_externals_yaml
 
         with open(os.path.join(DEFAULT_CONFIG_DIR, f"{organism}_externals_template.yml")) as handle:
             template = yaml.safe_load(handle)
-        with open(os.path.join(DEFAULT_CONFIG_DIR, f"{organism}_externals_modified.yml")) as handle:
-            modified = yaml.safe_load(handle)
         applied, enabled, _absent = apply_allowlist(template, organism, DEFAULT_EXTERNALS[organism])
         assert enabled > 0
-        assert applied == modified
+        written = os.path.join(temp_dir, f"{organism}_externals_modified.yml")
+        write_externals_yaml(applied, written)
+        with open(os.path.join(DEFAULT_CONFIG_DIR, f"{organism}_externals_modified.yml"), "rb") as shipped:
+            with open(written, "rb") as made:
+                assert made.read() == shipped.read()
 
     def test_every_shipped_modified_file_has_a_template_and_allowlist(self):
         """Every shipped modified file has a template and allowlist."""

@@ -2,7 +2,8 @@
 #
 
 # You can set these variables from the command line.
-SPHINXOPTS    =
+# Every warning is an error (-W), and the build reports all of them before it fails (--keep-going).
+SPHINXOPTS    ?= -W --keep-going
 SPHINXBUILD   = python -msphinx
 SPHINXPROJ    = idtrack
 SOURCEDIR     = .

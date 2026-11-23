@@ -50,7 +50,7 @@ What makes IDTrack different
 * **Snapshot boundary for reproducibility**: build a release-bounded graph snapshot; the same snapshot gives the same answers in every run.
 * **Explicit external database opt-in**: choose which external namespaces participate via a small, editable YAML contract.
 * **Transparency over coercion**: conversions are classified as **1→0** (no match), **1→1** (clean), or **1→n** (ambiguous); an answer shared by several equally supported genes is returned as a tie, and every result says how the identifier was read.
-* **Fast once built**: a graph built once loads from disk in 1 to 5 seconds into 0.26 to 1.14 GB of memory, without network, and a conversion takes 0.2 to 0.3 ms at the median (measured for the five supported organisms; see the Quickstart).
+* **Fast once built**: a graph built once loads from disk in 1 to 6 seconds into 0.3 to 1.5 GB of memory, without network, and a conversion takes about 0.2 to 0.3 ms at the median (measured for the five supported organisms; see the Quickstart's Time and Memory).
 
 Who is it for?
 --------------
@@ -70,8 +70,9 @@ Common use cases
 Installation and a first conversion
 -----------------------------------
 
-IDTrack runs on Python 3.12 to 3.15 and supports human, mouse, pig, rhesus macaque and cynomolgus macaque. Install it
-from GitHub (with the ``harmonize`` extra for harmonizing ``.h5ad`` datasets, which brings anndata and scipy):
+IDTrack runs on Python 3.12 to 3.15 (on 3.15, install HDF5 and a C compiler first: h5py has no wheels for it yet; see
+the installation page) and supports human, mouse, pig, rhesus macaque and cynomolgus macaque. Install it from GitHub
+(with the ``harmonize`` extra for harmonizing ``.h5ad`` datasets, which brings anndata and scipy):
 
 .. code-block:: console
 
@@ -79,7 +80,7 @@ from GitHub (with the ``harmonize`` extra for harmonizing ``.h5ad`` datasets, wh
     $ pip install "idtrack[harmonize] @ git+https://github.com/theislab/idtrack.git"
 
 The release on PyPI (``pip install idtrack``, version 0.0.5) is an older, different version with another API; use
-GitHub until version 0.1.0 is published on PyPI.
+GitHub until this version is published on PyPI.
 
 .. code-block:: python
 
@@ -88,7 +89,7 @@ GitHub until version 0.1.0 is published on PyPI.
     from idtrack import API
 
     os.makedirs("./idtrack_cache", exist_ok=True)  # the local repository: downloaded tables and graph files
-    # Built from Ensembl's tables the first time (about 2 hours for human), loaded from disk in seconds afterwards.
+    # Built from Ensembl's tables the first time (hours for human), loaded from disk in seconds afterwards.
     api = API.build("homo_sapiens", 115, "./idtrack_cache")
     # A graph file on disk loads without any network: api = API.load(API.graph_path("homo_sapiens", 115, "./idtrack_cache"))
 
@@ -97,6 +98,13 @@ GitHub until version 0.1.0 is published on PyPI.
     result = api.convert("ENSG00000141510", from_release=100, final_database="HGNC Symbol")
     print(result.targets())       # ('TP53',)
 
+The same from the command line (``idtrack --help`` says more):
+
+.. code-block:: console
+
+    $ idtrack build human 115 --repository idtrack_cache
+    $ idtrack convert idtrack_cache/graph_homo_sapiens_assembly38_min48_max115.npz TP53 BRCA1
+
 Documentation and tutorials
 ---------------------------
 
@@ -104,7 +112,11 @@ The documentation includes a **full tutorial suite** designed to be the primary 
 
 * Documentation: Documentation_
 * Tutorials: start from the “Tutorials” section in the docs (Part 0 → Part 7).
+* What this version does not do yet, with how often it matters: `Current Limitations`_.
+* Setting up, building and checking graphs, testing and releasing: `SETUP.md`_.
 
 .. _PyPI: https://pypi.org/
 .. _pip: https://pip.pypa.io/
 .. _Documentation: https://idtrack.readthedocs.io/
+.. _Current Limitations: https://idtrack.readthedocs.io/en/latest/usage.html#current-limitations
+.. _SETUP.md: https://github.com/theislab/idtrack/blob/main/SETUP.md

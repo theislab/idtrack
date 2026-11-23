@@ -59,7 +59,7 @@ copyright = "2025, Kemal Inecik"
 author = "Kemal Inecik"
 
 # The version of the installed package (the docs are built with idtrack installed: .readthedocs.yml, noxfile.py,
-# publish_docs.yml); `pyproject.toml` is its one source. |release| is the full version, |version| the short X.Y.
+# build_docs.yml); `pyproject.toml` is its one source. |release| is the full version, |version| the short X.Y.
 release = importlib.metadata.version("idtrack")
 version = ".".join(release.split(".")[:2])
 
@@ -182,3 +182,68 @@ html_css_files = [
 
 autoclass_content = "both"  # add init into the file class description
 add_module_names = False  # Prevent sphinx from displaying the full path to the class
+
+
+# -- Cross-references ----------------------------------------------------
+
+# Every reference must resolve (with -W, an unresolved one fails the build), except those to other packages and to
+# Python's own types (the build does not fetch their inventories, intersphinx, so that it needs no network) and those to
+# private names (a name with a leading underscore is not part of the reference, by design).
+nitpicky = True
+nitpick_ignore_regex = [(r"py:.*", r"(?!idtrack(\.|$)).*"), (r"py:.*", r"idtrack(\.\w+)*\._\w+(\.\w+)*")]
+
+
+def _documented_as(target: str) -> list[str]:
+    """Return the names under which the reference may document the object a dotted ``idtrack`` name means.
+
+    A docstring names an object as users reach it, the reference documents it once, under one name: an exported name
+    (``idtrack.API.convert``) is documented under its module (``idtrack.api.API.convert``, as ``idtrack._EXPORTS``
+    maps it); an object of a submodule that a package re-exports (``idtrack.graph.types.Place``) under the package
+    (``idtrack.graph.Place``); an attribute of a settings object (``idtrack.settings.ENSEMBL.access``) under its class
+    (``idtrack.settings.EnsemblSettings.access``).
+    """
+    import importlib
+
+    import idtrack
+
+    parts = target.split(".")
+    names = []
+    exported = {**idtrack._EXPORTS, **idtrack._EXTRA_EXPORTS}.get(parts[1]) if len(parts) > 1 else None
+    if exported is not None:
+        names.append(".".join([exported, *parts[1:]]))
+    for cut in range(len(parts) - 1, 0, -1):
+        try:
+            module = importlib.import_module(".".join(parts[:cut]))
+        except ImportError:
+            continue
+        obj = getattr(module, parts[cut], None)
+        if obj is None:
+            break
+        for depth in range(1, cut):  # the shortest package above the module that exposes the same object
+            package = importlib.import_module(".".join(parts[:depth]))
+            if getattr(package, parts[cut], None) is obj:
+                names.append(".".join([*parts[:depth], *parts[cut:]]))
+                break
+        kind = type(obj)
+        if cut + 1 < len(parts) and not isinstance(obj, type) and kind.__module__.startswith("idtrack"):
+            names.append(".".join([kind.__module__, kind.__qualname__, *parts[cut + 1 :]]))
+        break
+    return names
+
+
+def _resolve(app, env, node, contnode):
+    """Resolve a reference to an ``idtrack`` name by the name under which the reference documents it."""
+    target = node.get("reftarget", "")
+    if node.get("refdomain") != "py" or not target.startswith("idtrack."):
+        return None
+    domain = env.get_domain("py")
+    for name in _documented_as(target):
+        found = domain.resolve_xref(env, node["refdoc"], app.builder, node["reftype"], name, node, contnode)
+        if found is not None:
+            return found
+    return None
+
+
+def setup(app):
+    """Connect the resolver of the names that docstrings use for documented objects."""
+    app.connect("missing-reference", _resolve)
