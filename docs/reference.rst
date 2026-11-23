@@ -57,6 +57,13 @@ The graph's vocabulary
     :members:
 
 
+How an identifier is read
+-------------------------
+
+.. automodule:: idtrack.reading
+    :members:
+
+
 The graph and its file
 ----------------------
 
@@ -66,6 +73,9 @@ The graph and its file
     :show-inheritance:
 
 .. automodule:: idtrack.graph.files
+    :members:
+
+.. automodule:: idtrack.graph.genes
     :members:
 
 

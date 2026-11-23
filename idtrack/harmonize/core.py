@@ -15,7 +15,7 @@ import pandas as pd
 
 from idtrack import ids
 from idtrack.errors import IntegrityError
-from idtrack.results import ConversionResult
+from idtrack.results import REASONS, ConversionResult
 
 #: Status of an output feature (``var["idtrack_status"]``); see :py:class:`HarmonizeFeatures`.
 STATUSES = (
@@ -27,6 +27,7 @@ STATUSES = (
     "unconverted_ambiguous",
     "unconverted_no_conversion",
     "unconverted_not_in_graph",
+    "unconverted_missing_value",
     "unconverted_error",
 )
 
@@ -135,9 +136,10 @@ def feature_table(
     Returns:
         pandas.DataFrame: Indexed by the input names, in file order, with the columns ``status`` (one of
         ``"converted"``, ``"converted_no_final_id"``, ``"ambiguous"``, ``"no_conversion"``, ``"not_in_graph"``,
-        ``"error"``), ``reason`` (missing for ``"converted"``, unless the feature had to be read at another release
-        than the dataset's source release because the graph does not hold it there), ``ensembl_gene`` (the gene at
-        the target release
+        ``"missing_value"``, ``"error"``), ``reason`` (the text of the conversion's reason,
+        :py:data:`idtrack.results.REASONS`; for ``"converted"`` missing, unless the feature had to be read at another
+        release than the dataset's source release because the graph does not hold it there, or is a copy of another
+        feature made unique by a single-cell tool), ``ensembl_gene`` (the gene at the target release
         when there is exactly one), ``final_id`` (the gene's final-database name: the first in sorted order of
         *gene_names*), ``final_id_alternatives`` (the gene's other names, ``";"``-joined) and ``own`` (the input
         names the gene itself: its stable id, or one of its final-database names, compared without case).
@@ -155,12 +157,14 @@ def feature_table(
             "final_id_alternatives": None,
             "own": False,
         }
-        if m.error is not None:
+        if m.error is not None and m.error.type == "MissingValueError":
+            row.update(status="missing_value", reason=f"{m.error.message}")
+        elif m.error is not None:
             row.update(status="error", reason=f"{m.error.type}: {m.error.message}")
         elif m.graph_id is None:
-            row.update(status="not_in_graph", reason="not found in the graph")
+            row.update(status="not_in_graph", reason=REASONS[m.reason or "not_in_graph"])
         elif not m.candidates or not genes:
-            row.update(status="no_conversion", reason=f"no gene at release {m.to_release}")
+            row.update(status="no_conversion", reason=REASONS[m.reason or "no_path_to_target"])
         elif len(genes) > 1:
             row.update(status="ambiguous", reason=f"maps to {len(genes)} genes: {';'.join(genes)}")
         else:
@@ -173,8 +177,13 @@ def feature_table(
                 final_id_alternatives=";".join(names[1:]) or None,
                 own=resolved in {ids.stable_id_of(gene).casefold(), *(n.casefold() for n in names)},
             )
+            notes = []
+            copied = ids.NUMBERED_SUFFIX.match(name) if (m.match or "").startswith("copy:") else None
+            if copied is not None:
+                notes.append(f"a copy of the feature {copied.group(1)!r} made unique by a single-cell tool")
             if m.from_release_fallback:
-                row["reason"] = f"not in the graph at release {m.from_release_given}; read at release {m.from_release}"
+                notes.append(f"not in the graph at release {m.from_release_given}; read at release {m.from_release}")
+            row["reason"] = "; ".join(notes) or None
             if names:
                 row["status"] = "converted"
             else:
@@ -204,7 +213,8 @@ def output_plan(table: pd.DataFrame, merge: str, keep_unconverted: bool) -> pd.D
       input names as ``"unconverted_merge_partner"``; otherwise all stay under their input names as
       ``"unconverted_merge_partner"`` and the gene has no output feature.
     * Every other input feature stays under its input name (``"unconverted_ambiguous"``,
-      ``"unconverted_no_conversion"``, ``"unconverted_not_in_graph"``, ``"unconverted_error"``) when
+      ``"unconverted_no_conversion"``, ``"unconverted_not_in_graph"``, ``"unconverted_missing_value"``,
+      ``"unconverted_error"``) when
       *keep_unconverted*, and is left out otherwise; merge partners are always kept.
     * An input name kept unconverted that equals the name of a converted output feature is renamed
       ``"unconverted:<name>"``.

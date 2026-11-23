@@ -25,14 +25,40 @@ from typing import Any, cast
 
 from idtrack.errors import ArgumentTypeError, InvalidArgumentError
 
-#: External databases whose ids name a clone or a region rather than a gene; never a bridge between two genes.
-NON_BRIDGING_DATABASES: frozenset[str] = frozenset(
-    {
-        "Clone_based_ensembl_gene",
-        "Clone_based_vega_gene",
-        "Clone_based_ensembl_transcript",
-        "Clone_based_vega_transcript",
-    }
+#: The version of the rules by which identifiers are read and converted. It is raised with every change of the code
+#: that changes an answer (with the same graph), so that a store of answers (the result cache of
+#: :py:class:`idtrack.harmonize.HarmonizeFeatures`) is keyed by what decides its content: this number and the graph's
+#: content digest, not the package's version (decision 69).
+RULES_VERSION = 4
+
+#: External databases whose entries name a family of genes, by the database's own definition (Rfam: families of RNA):
+#: an accession of such a database says what kind of gene something is, not which gene, so it is never a bridge
+#: between two genes, and its labels name a gene only where the label is the gene's display name
+#: (:py:data:`idtrack.build.database_manager.DISPLAY_LABEL_ONLY`).
+FAMILY_DATABASES: frozenset[str] = frozenset({"RFAM"})
+
+#: The share of the pairs of consecutive releases of one link (an accession, one version of an Ensembl id, a database) in
+#: which the version that Ensembl's cross reference gives the accession differs, above which a database's number is an
+#: edit counter of its records and not a version of the sequence (decision 101;
+#: :py:meth:`idtrack.graph.TheGraph.edit_counter_databases`): a version of the sequence holds while the link holds, so
+#: that "the releases at which the accession had that version" are a stretch of time; a number that changes with nearly
+#: every release (UniProt's entry version, ``Q9TSV4.120``) identifies no state that a typed version could mean. Measured
+#: on the five graphs of Ensembl 115: RefSeq, CCDS, Havana and Vega 0 to 3.8 % of the pairs (human's Havana translations
+#: 14.6 %), UniProt's Swiss-Prot and TrEMBL 58 to 99.7 % (docs/usage.rst); one half lies in the gap between the two.
+VERSION_EDIT_COUNTER_SHARE = 0.5
+
+#: External databases whose ids name a clone or a region rather than a gene, or a family of genes
+#: (:py:data:`FAMILY_DATABASES`); never a bridge between two genes.
+NON_BRIDGING_DATABASES: frozenset[str] = (
+    frozenset(
+        {
+            "Clone_based_ensembl_gene",
+            "Clone_based_vega_gene",
+            "Clone_based_ensembl_transcript",
+            "Clone_based_vega_transcript",
+        }
+    )
+    | FAMILY_DATABASES
 )
 
 
@@ -60,8 +86,8 @@ class SearchSettings:
             :py:class:`idtrack.errors.SearchBudgetExceededError` is raised.
         budget_seconds (float): Longest time one conversion may take before the same error is raised.
         bridge_limit (int): Most bridges through external ids (or shared transcripts) one path may take.
-        non_bridging_databases (frozenset[str]): External databases whose ids are names of a clone or region rather
-            than of a gene; they are never used as a bridge between two genes.
+        non_bridging_databases (frozenset[str]): External databases whose ids are names of a clone or region, or of a
+            family of genes, rather than of a gene; they are never used as a bridge between two genes.
     """
 
     budget_states: int = 200_000
@@ -118,9 +144,11 @@ class GraphSettings:
     """How a loaded graph caches what it computes per node, and when an external id is too common to identify a gene.
 
     Attributes:
-        hyperconnective_threshold (int): An external identifier linked to more genes than this in one release is
-            hyper-connective (a family name, not an identity): it is never a bridge and is not counted as annotation
-            (:py:attr:`idtrack.graph.TheGraph.hyperconnective_nodes`).
+        hyperconnective_threshold (int): An external identifier linked to more genes than this in one release, or a
+            label (a display name, a symbol) that named more genes than this over its releases, is hyper-connective
+            (a family name, not an identity): it is never a bridge and is not counted as annotation
+            (:py:attr:`idtrack.graph.TheGraph.hyperconnective_nodes`; over the releases, genes as
+            :py:meth:`idtrack.graph.TheGraph.count_genes` counts them).
         cache_sizes (Mapping[str, int]): Upper bounds of the per-node caches (entries), per kind: ``adjacency``,
             ``node``, ``edges``, ``summary``, ``trios``, ``names``.
     """
@@ -295,8 +323,10 @@ def configure_ensembl(**values: Any) -> EnsemblSettings:
 
 
 __all__ = [
+    "VERSION_EDIT_COUNTER_SHARE",
     "ACCESS_MODES",
     "ENSEMBL",
+    "FAMILY_DATABASES",
     "NON_BRIDGING_DATABASES",
     "EnsemblSettings",
     "GraphSettings",

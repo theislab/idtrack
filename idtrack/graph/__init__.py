@@ -4,7 +4,18 @@
 :py:mod:`idtrack.graph.files` names and lists graph files.
 """
 
-from idtrack.graph.graph import GRAPH_FORMAT_VERSION, TheGraph
-from idtrack.graph.types import Connection, HistoryEdge, ReleaseSet, served_mask, serving_line
+from idtrack.graph.graph import TheGraph
+from idtrack.graph.record import GRAPH_FORMAT_VERSION, GraphRecord
+from idtrack.graph.types import Connection, HistoryEdge, Place, ReleaseSet, served_mask, serving_line
 
-__all__ = ["GRAPH_FORMAT_VERSION", "Connection", "HistoryEdge", "ReleaseSet", "TheGraph", "served_mask", "serving_line"]
+__all__ = [
+    "GRAPH_FORMAT_VERSION",
+    "Connection",
+    "GraphRecord",
+    "HistoryEdge",
+    "Place",
+    "ReleaseSet",
+    "TheGraph",
+    "served_mask",
+    "serving_line",
+]

@@ -24,15 +24,10 @@ macaca_fascicularis:
                 "6":
                     Ensembl release: 103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: true
-        NCBI gene:
-            Assembly:
-                "5":
-                    Ensembl release: 91,92,93,94,95,96,97,98,99
-                    Include: true
         NCBI gene (formerly Entrezgene):
             Assembly:
                 "5":
-                    Ensembl release: 100,101,102
+                    Ensembl release: 91,92,93,94,95,96,97,98,99,100,101,102
                     Include: true
                 "6":
                     Ensembl release: 103,104,105,106,107,108,109,110,111,112,113,114,115,116
@@ -41,6 +36,14 @@ macaca_fascicularis:
             Assembly:
                 "5":
                     Ensembl release: 91,92,93,94,95,96,97,98,99,100,101,102
+                    Include: true
+                "6":
+                    Ensembl release: 103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Include: true
+        RFAM label:
+            Assembly:
+                "5":
+                    Ensembl release: 91,98,99,100,101,102
                     Include: true
                 "6":
                     Ensembl release: 103,104,105,106,107,108,109,110,111,112,113,114,115,116
@@ -85,20 +88,23 @@ macaca_fascicularis:
                 "6":
                     Ensembl release: 103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
+        WikiGene label:
+            Assembly:
+                "5":
+                    Ensembl release: 91,92,93,94,95,96,97,98,99,100,101,102
+                    Include: false
+                "6":
+                    Ensembl release: 103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Include: false
         synonym_id::HGNC Symbol:
             Assembly:
                 "5":
                     Ensembl release: 91,92,93,94,95,96,97,98
                     Include: true
-        synonym_id::NCBI gene:
-            Assembly:
-                "5":
-                    Ensembl release: 91,92,93,94,95,96,97,98,99
-                    Include: true
         synonym_id::NCBI gene (formerly Entrezgene):
             Assembly:
                 "5":
-                    Ensembl release: 100,101,102
+                    Ensembl release: 91,92,93,94,95,96,97,98,99,100,101,102
                     Include: true
                 "6":
                     Ensembl release: 103,104,105,106,107,108,109,110,111,112,113,114,115,116
@@ -143,11 +149,6 @@ macaca_fascicularis:
                     Include: false
                 "6":
                     Ensembl release: 103,104,105,106,107,108,109,110,111,112,113,114,115,116
-                    Include: false
-        HGNC transcript name:
-            Assembly:
-                "5":
-                    Ensembl release: 91,92,93,94,95,96,97
                     Include: false
         HGNC_trans_name:
             Assembly:
@@ -232,7 +233,7 @@ macaca_fascicularis:
         Transcript name:
             Assembly:
                 "5":
-                    Ensembl release: 98,99,100,101,102
+                    Ensembl release: 91,92,93,94,95,96,97,98,99,100,101,102
                     Include: false
                 "6":
                     Ensembl release: 103,104,105,106,107,108,109,110,111,112,113,114,115,116

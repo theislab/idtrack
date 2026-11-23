@@ -15,6 +15,7 @@ import logging
 import os
 import re
 import time
+from collections.abc import Callable, Collection, Iterable, Mapping
 from contextlib import contextmanager
 from functools import cached_property
 from typing import Any, SupportsIndex
@@ -24,8 +25,9 @@ import pandas as pd
 import pymysql
 
 import idtrack.build.tables as hs
-from idtrack import _arguments, ids, organisms, settings
+from idtrack import _arguments, ids, organisms, reading, settings
 from idtrack._atomic import write_text
+from idtrack.build import assembly_chain, continuity
 from idtrack.build.ensembl_access import (
     EnsemblDownloadError,
     ensembl_access_mode,
@@ -47,10 +49,208 @@ from idtrack.errors import (
     UnknownOrganismError,
     UnknownReleaseError,
 )
+from idtrack.graph.genes import CHROMOSOME, MITOCHONDRIAL, SCAFFOLD
 
 #: The code of the attribute by which Ensembl's core databases mark a sequence region that is not part of the
 #: reference sequence of an assembly (``attrib_type.code``: an alternative locus, an assembly patch or an LRG record).
 NON_REFERENCE_ATTRIBUTE = "non_ref"
+#: Ensembl's names that say what a sequence region is (:py:attr:`idtrack.graph.types.Place.kind`): the coordinate
+#: system of the chromosomes (``coord_system.name``), the attribute by which Ensembl ranks a region in the organism's
+#: karyotype (the chromosomes of an assembly loaded with one level of sequences, whose coordinate system is
+#: ``primary_assembly``), and the attribute of a region translated with an alternate genetic code (in a vertebrate
+#: core database, the mitochondrial genome alone).
+CHROMOSOME_COORD_SYSTEM = "chromosome"
+KARYOTYPE_ATTRIBUTE = "karyotype_rank"
+MITOCHONDRIAL_ATTRIBUTE = "codon_table"
+
+# What two external databases' entries mean. The cross-reference tables idtrack reads (``external_db``, ``xref``,
+# ``object_xref``) say which database an entry belongs to, not whether its labels are family names or whether an entry
+# stands for one gene; these are the definitions of the databases themselves (Rfam: families of RNA; miRBase: one
+# precursor hairpin per entry), kept here, in one place, for the databases the shipped organisms select. Measured
+# effects: docs/changes.rst ("What the graph holds of the external databases"). Any other database is read as Ensembl
+# gives it.
+
+#: Databases whose labels name a gene only where the label is the gene's display name (``gene.display_xref_id``): the
+#: label of a family (``5S_rRNA``, ``U6``, ``SNORD115``) is Ensembl's name of the genes that have no better name, not a
+#: name of every member of the family. They are the databases of families (:py:data:`idtrack.settings.FAMILY_DATABASES`),
+#: whose accessions are no bridge between genes either.
+DISPLAY_LABEL_ONLY: frozenset[str] = settings.FAMILY_DATABASES
+
+#: Databases whose identifiers are kept only on genes of the given biotypes: a miRBase name is the name of the miRNA
+#: gene, not of the protein-coding gene that hosts it.
+BIOTYPE_RESTRICTED: dict[str, frozenset[str]] = {"miRBase": frozenset({"miRNA"})}
+
+#: Databases whose entries link a gene only where Ensembl gives the entry to one gene over all the releases of a graph:
+#: a miRBase entry that Ensembl attaches to genes at several loci, at once (copies of one precursor at several loci)
+#: or one after the other (an accession moved to a gene at another locus), is no evidence of which gene it is; as a
+#: link it ties those genes, and carries retired ids and old names to the others. An entry is left out only where the
+#: graph shows two loci, by the package's one rule (:py:func:`idtrack.graph.genes.count_genes`): two genes that live
+#: at one release at places that do not overlap (a split of one id into two that live side by side is two genes), or
+#: genes one after the other at places apart on one assembly or on chromosomes of different names; ids that Ensembl's
+#: history carried one to the other where they follow one another, or whose places overlap, are one gene, a copy
+#: outside the reference sequence adds none, and holders on two assemblies that nothing compares (no history link, no
+#: comparable place) are no evidence of two loci (:py:meth:`idtrack.build.GraphMaker.construct_graph`). A link on a
+#: transcript or a translation counts for the gene that holds it at the releases of the link.
+ONE_GENE_ONLY: frozenset[str] = frozenset({"miRBase"})
+
+#: Ensembl files the names it derives from an external database for genes under a database of their own, named after
+#: it: ``<db_name>_gene_name`` (``miRBase_gene_name``: the names of miRBase that Ensembl displays on genes at releases 61
+#: and 62, ``RFAM_gene_name``). Such a name is a name of the database it is derived from, and that database's
+#: definitions (:py:data:`BIOTYPE_RESTRICTED`, :py:data:`ONE_GENE_ONLY`) hold for it whatever name it is filed under
+#: (:py:func:`rules_database`). Ensembl's names of transcripts (``<db_name>_trans_name``: the gene's name and a number,
+#: ``FZD5-201``) are Ensembl's own names, not names of that database.
+DERIVED_GENE_NAME_SUFFIX = "_gene_name"
+
+
+def rules_database(database: str) -> str:
+    """Return the database whose definitions hold for a database's rows: itself, or the one its gene names come from.
+
+    Args:
+        database: A database's ``db_name``.
+
+    Returns:
+        str: ``miRBase`` for ``miRBase_gene_name`` (:py:data:`DERIVED_GENE_NAME_SUFFIX`); the name itself otherwise.
+    """
+    if database.endswith(DERIVED_GENE_NAME_SUFFIX) and len(database) > len(DERIVED_GENE_NAME_SUFFIX):
+        return database[: -len(DERIVED_GENE_NAME_SUFFIX)]
+    return database
+
+
+def entries_of_several_genes(
+    links: Iterable[tuple[str, str]], count_genes: Callable[[Collection[str]], int]
+) -> set[str]:
+    """Return the entries that name more than one gene (the rule of :py:data:`ONE_GENE_ONLY`).
+
+    Args:
+        links: ``(entry, Ensembl stable gene id without version)`` for every link of the judged databases over every
+            release and assembly of a graph (accessions, labels and synonyms together, as the graph names its nodes).
+        count_genes: The number of genes some stable ids name (:py:func:`idtrack.graph.genes.count_genes` with the
+            graph's places, marks and history).
+
+    Returns:
+        set[str]: The entries, in lower case (the graph keeps one node for spellings that differ in case only), whose
+        stable ids are more than one gene.
+    """
+    genes: dict[str, set[str]] = {}
+    for entry, stable_id in links:
+        genes.setdefault(entry.lower(), set()).add(stable_id)
+    return {entry for entry, of in genes.items() if len(of) > 1 and count_genes(of) > 1}
+
+
+#: Columns of the ``gene`` table that say what a gene is and where it lies.
+GENE_ANNOTATION_COLUMNS = [
+    "gene_id",
+    "biotype",
+    "display_xref_id",
+    "seq_region_id",
+    "seq_region_start",
+    "seq_region_end",
+    "seq_region_strand",
+]
+
+#: The columns of Ensembl's ``assembly_exception`` table that idtrack reads (:py:meth:`DatabaseManager.create_assembly_exceptions`).
+ASSEMBLY_EXCEPTION_COLUMNS = [
+    "seq_region_id",
+    "seq_region_start",
+    "seq_region_end",
+    "exc_type",
+    "exc_seq_region_id",
+    "exc_seq_region_start",
+    "exc_seq_region_end",
+]
+
+#: The columns of Ensembl's ``xref`` table that idtrack reads: the entry, its database, its accession and label, and the
+#: version of the accession that the cross reference attaches (``xref.version``; ``0`` where the database gives none).
+XREF_COLUMNS = ["xref_id", "external_db_id", "dbprimary_acc", "display_label", "version"]
+
+#: Version of the rules that derive the tables of cross references from Ensembl's raw tables; a stored table derived
+#: under other rules is derived again.
+EXTERNAL_RULES_VERSION = 10
+
+_ALPHANUMERIC = r"[0-9A-Za-z]"
+# UniProt writes the evidence of a name inside the name field as ``{ECO:<evidence code>|<source>}`` (the Evidence and
+# Conclusion Ontology tag of UniProt's flat files); a synonym that carries it is evidence text, not a name.
+_EVIDENCE_TEXT = "{ECO:"
+
+
+def _in_total_order(rows: pd.DataFrame) -> pd.DataFrame:
+    """Return the rows of a table of cross references in a total order (database, Ensembl id, identifier, the rest).
+
+    The order does not depend on the order of the input rows; the identities are compared as float64 (pandas cannot
+    sort by float16 columns).
+    """
+    identities = ["ensembl_identity", "xref_identity"]
+    keys = ["name_db", "graph_id", "id_db", *identities, "version", "is_label", "is_display"]
+    rows = rows.astype({identities[0]: np.float64, identities[1]: np.float64})
+    rows = rows.sort_values(by=[k for k in keys if k in rows.columns], kind="stable", na_position="last")
+    return rows.astype({identities[0]: np.float16, identities[1]: np.float16}).reset_index(drop=True)
+
+
+def label_names_of_databases(rows: Iterable[tuple[int, str, str | None, frozenset[str]]]) -> dict[str, str]:
+    """Return the one name that every database's label rows take at every release of a window.
+
+    One database name means one kind of identifier at every release. Ensembl names a database's label rows by its
+    display name (``external_db.db_display_name``), which changes over the releases for some databases and is, at some
+    releases, also the name of a database's accessions (a ``db_name`` of the release: the labels and the accessions of
+    ``EntrezGene`` share that name up to release 87, ``RFAM``'s always). The labels of a database are named, at every
+    release, by its display name at the newest release of the window at which that display name is not the name of
+    accessions; a database whose display name always is takes ``<db_name> label``.
+
+    Args:
+        rows: ``(release, db_name, db_display_name, the db_name of every database of that release)`` for every
+            database of every release (and assembly) of the window.
+
+    Returns:
+        dict[str, str]: ``{db_name: name of its label rows}``.
+    """
+    newest: dict[str, tuple[int, str]] = {}
+    names: set[str] = set()
+    for release, name, display, names_of_release in rows:
+        names.add(name)
+        if display is not None and display not in names_of_release:
+            if name not in newest or int(release) >= newest[name][0]:
+                newest[name] = (int(release), display)
+    return {name: newest[name][1] if name in newest else label_name(name) for name in names}
+
+
+def label_name(database: str, names: Mapping[str, str] | None = None) -> str:
+    """Return the name of a database's label rows: its name in ``names``, else ``<database> label``.
+
+    Args:
+        database: The database's ``db_name``.
+        names: The names of the label rows of a window (:py:func:`label_names_of_databases`); a database that no
+            ``external_db`` of the window has is not in it.
+
+    Returns:
+        str: The name of the database's label rows.
+    """
+    if names is not None and database in names:
+        return names[database]
+    return f"{database} label"
+
+
+def _read_values(values: pd.Series) -> pd.Series:
+    """Return external values read as a typed identifier is read, a synonym's prefix kept.
+
+    The reading is :py:func:`idtrack.reading.normalise_unicode`, then :py:func:`idtrack.reading.strip_punctuation`.
+
+    Args:
+        values: The values, synonyms with :py:data:`idtrack.ids.SYNONYM_PREFIX`.
+
+    Returns:
+        pandas.Series: The values read; the same object when none changes.
+    """
+    prefix = ids.SYNONYM_PREFIX
+    changed: dict[str, str] = {}
+    for value in pd.unique(values.astype(object)).tolist():
+        text = str(value)
+        head = prefix if text.startswith(prefix) else ""
+        read = head + reading.strip_punctuation(reading.normalise_unicode(text[len(head) :]))
+        if read != text:
+            changed[text] = read
+    if not changed:
+        return values
+    return values.astype(object).map(lambda text: changed.get(text, text)).astype(values.dtype)
 
 
 class DatabaseManager:
@@ -93,6 +293,10 @@ class DatabaseManager:
 
     # Keyed by (organism, assembly key, organisms.table_version()) so that `organisms.register_organism` invalidates it.
     _core_db_index_cache: dict[tuple[str, int, int], dict[str, Any]] = {}
+    # Keyed by (organism, first release, snapshot release, local repository): :py:meth:`label_names`.
+    _label_names_cache: dict[tuple[str, int, int | None, str], dict[str, str]] = {}
+    # The filing of the selected databases (decision 104), per organism, window, repository and selection.
+    _filing_cache: dict[tuple, continuity.Filing] = {}
     _ftp_schema_cache: dict[str, dict[str, list[tuple[str, str]]]] = {}
     # (latest release, time.monotonic() of the answer)
     _ensembl_latest_release_cache: tuple[int, float] | None = None
@@ -227,12 +431,21 @@ class DatabaseManager:
 
     @classmethod
     def _ftp_mysql_root_candidates(cls, *, organism: str, assembly: int, release: int) -> tuple[str, ...]:
-        """Return candidate HTTPS roots to search for an Ensembl core DB directory."""
-        base = f"https://{settings.ENSEMBL.https_host}/pub/release-{int(release)}/mysql/"
-        # GRCh37 became a separate archive once GRCh38 became the primary assembly (Ensembl release 76).
-        if organism == "homo_sapiens" and int(assembly) == 37 and int(release) >= 76:
-            grch37 = f"https://{settings.ENSEMBL.https_host}/pub/grch37/release-{int(release)}/mysql/"
-            return (grch37, base)
+        """Return candidate HTTPS roots to search for an Ensembl core DB directory.
+
+        An assembly that Ensembl keeps beside its successor (the organism table gives it a release at which an assembly
+        of higher priority is the organism's primary one: GRCh37 from release 76) is served from an archive folder of
+        its own, named by the assembly in lower case (``/pub/grch37/release-<r>/mysql/``), which is searched first.
+        """
+        host = settings.ENSEMBL.https_host
+        base = f"https://{host}/pub/release-{int(release)}/mysql/"
+        try:
+            beside = organisms.primary_assembly(organism, int(release)) != int(assembly)
+        except UnknownReleaseError:
+            beside = False
+        name = organisms.assembly_name(organism, int(assembly)) if beside else None
+        if name:
+            return (f"https://{host}/pub/{name.lower()}/release-{int(release)}/mysql/", base)
         return (base,)
 
     @classmethod
@@ -2263,17 +2476,22 @@ class DatabaseManager:
                 * ``"all"`` - return **every** mapping found in MySQL, no post-filtering applied.
                 * ``"relevant"`` - return only mappings whose external database is marked *Include: true* in the
                     :py:meth:`ExternalDatabases.give_list_for_case` YAML configuration.
-                * ``"database"`` - return a two-column summary (``name_db``, ``count``) for **all** external databases.
+                * ``"database"`` - return a two-column summary (``name_db``, ``count``) for **all** external databases
+                    (the content of the externals template: what a YAML can select).
                 * ``"relevant-database"`` - as above, but restricted to databases flagged *Include: true*.
+                    The counts are of the databases' cross references: the genes' display names, which a graph holds
+                    whatever the YAML selects (:py:meth:`_with_display_names`), are no entry a YAML selects and are
+                    not counted.
                     The special values ``"relevant"`` and ``"relevant-database"`` implicitly consult the cached
                     :py:attr:`external_inst` to honour the user's curated allow-list.
 
         Returns:
             pandas.DataFrame:
-                * For ``"all"`` / ``"relevant"`` - six-column frame
-                    ``["release", "graph_id", "id_db", "name_db", "ensembl_identity", "xref_identity"]`` holding one
-                    row per Ensembl→external identifier edge. ``graph_id`` is the Ensembl stable ID (+version), while
-                    the two *identity* columns store Smith-Waterman percent identities (*float16*) for QC.
+                * For ``"all"`` / ``"relevant"`` - seven-column frame
+                    ``["release", "graph_id", "id_db", "name_db", "ensembl_identity", "xref_identity", "is_label"]``
+                    holding one row per Ensembl→external identifier edge. ``graph_id`` is the Ensembl stable ID
+                    (+version), the two *identity* columns store Smith-Waterman percent identities (*float16*) for QC,
+                    and ``is_label`` says whether the row is a label (a display name) rather than an accession.
                 * For ``"database"`` / ``"relevant-database"`` - two-column frame
                     ``["name_db", "count"]`` giving the number of rows of each external database (most rows first,
                     ties by name). ``count`` is an ``int64``.
@@ -2301,83 +2519,399 @@ class DatabaseManager:
                 f"filter_mode must be 'all', 'relevant', 'database', or 'relevant-database', got {filter_mode!r}."
             )
         relevant = filter_mode in ("relevant", "relevant-database")
-        prefix = ids.SYNONYM_PREFIX
-        identities = ["ensembl_identity", "xref_identity"]
-        db_id, db_name, id_graph = "id_db", "name_db", "graph_id"
+        isin_list: list[str] = list(self.external_inst.give_list_for_case(give_type="db")) if relevant else []
+        filing = self.database_filing() if relevant else None
+        selection = self._selection() if relevant else []
+        ed, x, ox, ix = self._cross_reference_tables(selection if relevant else None)
+        res = self._external_rows(ed, x, ox, ix)
+        if relevant:
+            if self.external_inst.settings_release() == int(self.release):
+                self._check_selection(res, isin_list)
+            else:  # the settings of an earlier release: a database it enables that this release lacks is left out
+                absent = sorted(set(isin_list) - set(res["name_db"].unique()))
+                if absent:
+                    self.log.warning(
+                        f"{self.organism} {self.form}, assembly {self.assembly}, release {self.release} takes "
+                        f"the externals settings of release {self.external_inst.settings_release()}; it has no cross "
+                        f"references of {absent}."
+                    )
+            res = res[res["name_db"].isin(selection)]
+        if filter_mode not in ("all", "relevant"):
+            # the template's content (what a YAML selects): display names are held whatever it selects, and a link is
+            # one cross reference whatever versions of the accession Ensembl attached to it
+            links = res.drop(columns=["version", "is_display"]).drop_duplicates(ignore_index=True)
+            return self._count_databases(links)
+        if self.form == ids.BACKBONE_FORM:
+            res = self._with_display_names(res)
+        if filing is not None:
+            res = self._filed(res, filing)
+        return res.reset_index(drop=True)
 
-        # Tables loaded via HTTPS/FTP dumps can contain join-key columns as strings. Some older releases also include
-        # malformed/continuation lines that shift text into numeric ID columns. Pandas refuses merges when dtypes
-        # disagree (e.g. int64 vs object), so normalise here.
-        def _coerce_numeric_key(df: pd.DataFrame, col: str, table_name: str) -> pd.DataFrame:
-            if col not in df.columns or pd.api.types.is_numeric_dtype(df[col]):
-                return df
-            numeric = pd.to_numeric(df[col], errors="coerce")
-            bad = numeric.isna() & df[col].notna()
-            if bad.any():
-                example = df.loc[bad, col].iloc[0]
-                self.log.warning(
-                    "Dropping %d malformed rows from `%s` where `%s` is not numeric (e.g. %r).",
-                    int(bad.sum()),
-                    table_name,
-                    col,
-                    example,
-                )
-                df = df.loc[~bad].copy()
-                numeric = numeric.loc[~bad]
-            df[col] = numeric
-            return df
+    # ------------------------------------------------------------------------------------------------------------
+    # Which of Ensembl's databases a selected database is at each release (decision 104, idtrack.build.continuity)
 
-        # External databases first: with `relevant`, everything below is restricted to the enabled databases before
-        # any join (the result is the same; the join of all cross references is never built).
+    def _release_links(self) -> pd.DataFrame:
+        """Return every cross reference of the release as a link: database name, identifier, gene (every form).
+
+        Read from the raw tables (``xref``, ``object_xref``, ``external_db`` and the ids of the three forms); an
+        accession is named by its database's name, a label by the name of its database's labels (:py:meth:`label_names`);
+        synonyms are left out (they follow their entry). The gene of a transcript or a translation is its gene.
+
+        Returns:
+            pandas.DataFrame: ``name``, ``form`` (the Ensembl form the identifier is attached to), ``identifier``,
+            ``gene`` (the gene's stable id).
+        """
         m = {"save_after_calculation": self.store_raw_always}
-        ed = self.get_table("external_db", usecols=["external_db_id", "db_name", "db_display_name"], **m)
-        ed = _coerce_numeric_key(ed, "external_db_id", "external_db")
-        isin_list: list[str] = []
-        if relevant:
-            isin_list = list(self.external_inst.give_list_for_case(give_type="db"))
-            # A database is named by `db_name` (accession rows) or `db_display_name` (label rows), with the synonym
-            # prefix for synonym rows; keep the external_db rows that can produce one of the enabled names.
-            bare = {n[len(prefix) :] if n.startswith(prefix) else n for n in isin_list}
-            ed = ed[ed["db_name"].isin(bare) | ed["db_display_name"].isin(bare)]
+        ed = self._numeric_key(self._external_databases_named(), "external_db_id", "external_db")
+        x = self._numeric_key(self.get_table("xref", usecols=list(XREF_COLUMNS), **m), "external_db_id", "xref")
+        ox = self.get_table(
+            "object_xref", usecols=["ensembl_id", "ensembl_object_type", "xref_id", "object_xref_id"], **m
+        )
+        genes = self.get_db(f"idsraw_{ids.BACKBONE_FORM}")
+        stable_of_gene = dict(zip(genes["gene_id"].astype(np.int64).tolist(), genes["gene_stable_id"].astype(str)))
+        gene_of: dict[str, dict[int, str]] = {"gene": stable_of_gene}
+        if "transcript" in self.available_form_of_interests:
+            t = self.get_db("idsraw_transcript")
+            gene_of["transcript"] = {
+                int(k): stable_of_gene.get(int(v), "")
+                for k, v in zip(t["transcript_id"].tolist(), t["gene_id"].tolist())
+            }
+            if "translation" in self.available_form_of_interests:
+                p = self.get_db("idsraw_translation")
+                gene_of["translation"] = {
+                    int(k): gene_of["transcript"].get(int(v), "")
+                    for k, v in zip(p["translation_id"].tolist(), p["transcript_id"].tolist())
+                }
+        form = ox["ensembl_object_type"].astype(str).str.lower().to_numpy(dtype=object)
+        objects = pd.to_numeric(ox["ensembl_id"], errors="coerce").fillna(-1).astype(np.int64).tolist()
+        gene = np.asarray([gene_of.get(f, {}).get(i, "") for f, i in zip(form.tolist(), objects)], dtype=object)
+        ox = pd.DataFrame({"xref_id": pd.to_numeric(ox["xref_id"], errors="coerce"), "form": form, "gene": gene})
+        ox = ox[ox["gene"] != ""].dropna(subset=["xref_id"])
+        x = x.assign(xref_id=pd.to_numeric(x["xref_id"], errors="coerce")).dropna(subset=["xref_id"])
+        joined = ox.merge(x, on="xref_id").merge(ed[["external_db_id", "db_name", "label_name"]], on="external_db_id")
+        parts = [
+            pd.DataFrame(
+                {"name": joined[name], "form": joined["form"], "identifier": joined[value], "gene": joined["gene"]}
+            )
+            for name, value in (("db_name", "dbprimary_acc"), ("label_name", "display_label"))
+        ]
+        return pd.concat(parts, ignore_index=True)
 
-        x = self.get_table("xref", usecols=["xref_id", "external_db_id", "dbprimary_acc", "display_label"], **m)
-        x = _coerce_numeric_key(x, "external_db_id", "xref")
-        if relevant:
+    def _serving_manager(self, release: int) -> "DatabaseManager":
+        """Return the manager of the release on the assembly that serves it (the manager's own where it has the release)."""
+        if int(release) in {int(r) for r in self.available_releases}:
+            return self.change_release(int(release))
+        return self.change_release_auto_assembly(int(release))
+
+    def database_filing(self) -> continuity.Filing:
+        """Return which of Ensembl's database names each database the externals YAML selects holds (decision 104).
+
+        The selected databases are the ``(form, name)`` pairs the YAML enables anywhere (any assembly or release; a
+        synonym's name by its entry's). The links of every release of the window are read on the assembly that serves it
+        (:py:meth:`_release_links`) and compared between adjacent releases (:py:func:`idtrack.build.continuity.
+        database_filing`). Computed once per process and window; a graph holds what it found
+        (:py:attr:`idtrack.graph.GraphRecord.database_names`).
+
+        Returns:
+            idtrack.build.continuity.Filing: The names and where they go.
+        """
+        selected = self.external_inst.selected_units()
+        snapshot = None if np.isinf(self.snapshot_release) else int(self.snapshot_release)
+        key = (
+            self.organism,
+            int(self.first_release),
+            snapshot,
+            os.path.realpath(self.local_repository),
+            tuple(sorted(selected)),
+        )
+        found = DatabaseManager._filing_cache.get(key)
+        if found is None:
+            found = DatabaseManager._filing_cache[key] = self._stored_filing(selected)
+        return found
+
+    def _stored_filing(self, selected: set[tuple[str, str]]) -> continuity.Filing:
+        """Return the filing from the repository's stored tables, computing and storing it where none is stored.
+
+        Stored with the tables of the window's last release (on the assembly that serves it, whichever manager asks),
+        keyed by the window, the selection, the names of the labels and the version and bounds of the rule
+        (:py:mod:`idtrack.build.continuity`).
+        """
+        last = max(int(r) for r in self.available_releases_all_assemblies if int(r) <= self.snapshot_release)
+        manager = self.change_form(ids.BACKBONE_FORM)._serving_manager(last)
+        digest = hashlib.sha256(json.dumps(sorted(selected)).encode("utf-8")).hexdigest()[:16]
+        params: dict[str, Any] = {
+            "selection": sorted(f"{f}:{n}" for f, n in selected),
+            "first_release": int(self.first_release),
+            "snapshot": None if np.isinf(self.snapshot_release) else int(self.snapshot_release),
+            "labels": self._label_names_digest(),
+            "share": continuity.CONTINUITY_SHARE,
+            "scheme_share": continuity.SCHEME_SHARE,
+            "rules": continuity.FILING_RULES_VERSION,
+        }
+        decided_path = manager.table_path(f"databasefiling-decided__sel={digest}")
+        links_path = manager.table_path(f"databasefiling-links__sel={digest}")
+        decided = hs.load_table(
+            decided_path, manager._table_params(f"databasefiling-decided__sel={digest}", **params), logger=self.log
+        )
+        links = hs.load_table(
+            links_path, manager._table_params(f"databasefiling-links__sel={digest}", **params), logger=self.log
+        )
+        if decided is not None and links is not None:
+            return continuity.Filing.from_tables(decided, links)
+        found = self._compute_filing(selected)
+        decided, links = found.to_tables()
+        if os.access(self.local_repository, os.W_OK):
+            manager._store(
+                decided_path, decided, manager._table_params(f"databasefiling-decided__sel={digest}", **params)
+            )
+            manager._store(links_path, links, manager._table_params(f"databasefiling-links__sel={digest}", **params))
+        return found
+
+    def _compute_filing(self, selected: set[tuple[str, str]]) -> continuity.Filing:
+        """Compute the filing (:py:meth:`database_filing`) from the links of every release of the window."""
+        names = self.label_names()
+        database_of: dict[str, set[str]] = {name: {name} for name in names}
+        for database, label in names.items():
+            database_of.setdefault(label, set()).add(database)
+        releases = sorted(int(r) for r in self.available_releases_all_assemblies if int(r) <= self.snapshot_release)
+        self.log.info(f"The databases of {self.organism} are being read across its releases (decision 104).")
+        return continuity.database_filing(
+            lambda release: self.change_form(ids.BACKBONE_FORM)._serving_manager(release)._release_links(),
+            releases,
+            selected,
+            database_of,
+        )
+
+    def _selection(self) -> list[str]:
+        """Return the names whose rows the manager's ``external_relevant`` table holds (decision 104).
+
+        The databases the externals YAML enables for the manager's form, assembly and release, and every database that
+        continues one of them (:py:meth:`database_filing`; a selected database's name on a form the YAML does not hold
+        it on, where its links there continue it), with its synonyms where the YAML enables the selected database's.
+
+        Returns:
+            list[str]: The names, sorted.
+        """
+        prefix = ids.SYNONYM_PREFIX
+        chosen = set(self.external_inst.give_list_for_case(give_type="db"))
+        filing = self.database_filing()
+        synonyms = self.external_inst.selected_names() if filing.renamed else set()
+        for unit, forms in filing.renamed.items():
+            name, _, form = unit.partition("@")
+            if form and form != self.form:
+                continue  # a selected name on another form than the manager's
+            chosen.add(name)
+            if any(prefix + target in synonyms for target in forms.values()):
+                chosen.add(prefix + name)
+        return sorted(chosen)
+
+    def _filed(self, rows: pd.DataFrame, filing: continuity.Filing) -> pd.DataFrame:
+        """Return rows of cross references filed under the selected database each is (decision 104).
+
+        A row of a database that continues a selected one is filed under it (by its identifier's form; a selected
+        name on a form the YAML does not hold it on, in the runs of releases that continue it), and dropped where it
+        continues none (an identifier of another form than the continuation's scheme, a release outside those runs),
+        but for a gene's display name, which is a name of its gene whatever database holds it; a row of a selected
+        database whose identifier has the scheme of another selected database, and whose link that one holds at some
+        release, is filed under that one (:py:mod:`idtrack.build.continuity`). Synonym rows follow their entry.
+
+        Args:
+            rows: Rows of :py:meth:`_external_rows` (and :py:meth:`_with_display_names`) of the manager's form.
+            filing: :py:meth:`database_filing`.
+
+        Returns:
+            pandas.DataFrame: The rows, the column ``name_db`` changed and rows left out where the rule says, without
+            duplicates.
+        """
+        if not len(rows) or not (filing.renamed or filing.schemes):
+            return rows
+        prefix = ids.SYNONYM_PREFIX
+        names = rows["name_db"].astype(str).tolist()
+        values = rows["id_db"].astype(str).tolist()
+        shown = rows["is_display"].to_numpy(dtype=bool) if "is_display" in rows.columns else np.zeros(len(rows), bool)
+        bare_names = [n[len(prefix) :] if n.startswith(prefix) else n for n in names]
+        bare_values = [v[len(prefix) :] if v.startswith(prefix) else v for v in values]
+        forms = [continuity.identifier_form(v) for v in bare_values]
+        release = int(self.release)
+        own = {n for f, n in self.external_inst.selected_units() if f == self.form}
+        filed: list[str | None] = []
+        for name, form, display in zip(bare_names, forms, shown.tolist()):
+            if name in own or not (
+                name in filing.renamed or continuity.unit_of_form(name, self.form) in filing.renamed
+            ):
+                filed.append(name)
+                continue
+            target = filing.continued(name, form, self.form, release)
+            filed.append(target if target is not None else name if display else None)
+        scheme_forms = set(filing.schemes.values())
+        candidates = [
+            i
+            for i, f in enumerate(forms)
+            if f in scheme_forms and filed[i] is not None and not names[i].startswith(prefix)
+        ]
+        if candidates:
+            genes = self._genes_of_rows(rows["graph_id"].astype(str).iloc[candidates].tolist())
+            hashed, gene_hashes = continuity.link_hashes([bare_values[i] for i in candidates], genes)
+            for j, i in enumerate(candidates):
+                other = filing.scheme_of(str(filed[i]), forms[i], int(hashed[j]), int(gene_hashes[j]), release)
+                if other is not None:
+                    filed[i] = other
+        keep = np.fromiter((f is not None for f in filed), dtype=bool, count=len(filed))
+        new = [(prefix if n.startswith(prefix) else "") + (f or "") for n, f in zip(names, filed)]
+        if new == names:
+            return rows
+        rows = rows.assign(name_db=pd.Series(new, index=rows.index, dtype=rows["name_db"].dtype))[keep]
+        return _in_total_order(rows.drop_duplicates(ignore_index=True))
+
+    def _genes_of_rows(self, graph_ids: list[str]) -> list[str]:
+        """Return the gene stable id of each Ensembl id ``<id>.<version>`` of the manager's form (its gene's)."""
+        if self.form == ids.BACKBONE_FORM:
+            return [ids.split(g)[0] if ids.is_versioned_name(g) else g for g in graph_ids]
+        relation = self.get_db("relationcurrent")
+        gene_of = dict(zip(relation[self.form].astype(str).tolist(), relation[ids.BACKBONE_FORM].astype(str).tolist()))
+        return [
+            ids.split(gene_of[g])[0] if g in gene_of and ids.is_versioned_name(gene_of[g]) else "" for g in graph_ids
+        ]
+
+    def _with_display_names(self, rows: pd.DataFrame) -> pd.DataFrame:
+        """Return the cross references of the genes with every gene's display name of the release among them.
+
+        A gene's display name at a release (``gene.display_xref_id``) is a name of the gene at that release, whatever
+        database Ensembl filed it under and whether or not the externals YAML selects that database: Ensembl gave the
+        display names of pig and macaque genes before release 61 from HGNC's projections (``HGNC_curated_gene``,
+        ``HGNC_automatic_gene``), those of mouse genes before 52 from MGI under other names, and those of genes without
+        a better name from UniProt's entry names, RefSeq or Rfam, often through a transcript or a translation. A
+        display name that the gene's rows (of the gene form, selected) do not give it already as an identifier of some
+        database is added as a label of the gene, under the name of the labels of the database it came from
+        (:py:meth:`label_names`), so that the source of every name is kept (a projection is told from the authority's
+        own name by its database). It is read as every value is read (:py:func:`_read_values`); a value without a letter
+        or a digit is no name. The definitions of the databases hold for display names as for every row
+        (:py:data:`BIOTYPE_RESTRICTED`: a miRBase name that Ensembl displays on a gene of another biotype, the host or
+        antisense gene of the miRNA, is the name of the miRNA, not of that gene), whatever database Ensembl filed it
+        under (:py:func:`rules_database`: ``miRBase_gene_name`` is miRBase's). Every row of a gene whose identifier is
+        the gene's display name, added or held, is marked so (``is_display``): Ensembl's own statement of the gene's
+        name at that release, which ranks a gene first among the genes that carry the name then
+        (:py:meth:`idtrack.TheGraph.displays`).
+
+        Args:
+            rows: The cross references of the gene form (:py:meth:`_external_rows`, restricted to the selection).
+
+        Returns:
+            pandas.DataFrame: The rows with the display names added and marked, in the total order of
+            :py:meth:`_external_rows`.
+        """
+        genes = self._gene_annotation()
+        shown = genes.dropna(subset=["display_xref_id"])
+        if not len(shown):
+            return rows
+        ids_of = self.get_db(f"idsraw_{self.form}")
+        names = pd.Series(
+            self.id_ver_from_df(ids_of[self._identifiers].reset_index(drop=True)),
+            index=ids_of[f"{self.form}_id"].astype(int).to_numpy(),
+        )
+        m = {"save_after_calculation": self.store_raw_always}
+        x = self.get_table("xref", usecols=list(XREF_COLUMNS), **m)
+        x = self._numeric_key(x, "external_db_id", "xref")
+        x = x[pd.to_numeric(x["xref_id"], errors="coerce").isin(pd.to_numeric(shown["display_xref_id"]))]
+        ed = self._external_databases_named()
+        ed = self._numeric_key(ed, "external_db_id", "external_db")
+        label_of = dict(zip(ed["external_db_id"].tolist(), ed["label_name"].tolist()))
+        name_of = dict(zip(ed["external_db_id"].tolist(), ed["db_name"].tolist()))
+        biotype_of = dict(zip(shown["gene_id"].astype(int).tolist(), shown["biotype"].tolist()))
+        xref_of = {
+            int(xref_id): (label_of.get(database), label, name_of.get(database))
+            for xref_id, database, label in zip(
+                pd.to_numeric(x["xref_id"], errors="coerce").tolist(),
+                x["external_db_id"].tolist(),
+                x["display_label"].tolist(),
+            )
+            if xref_id == xref_id  # not NaN
+        }
+        found = []
+        for gene_id, xref_id in zip(
+            shown["gene_id"].astype(int).tolist(), pd.to_numeric(shown["display_xref_id"], errors="coerce").tolist()
+        ):
+            if xref_id != xref_id or gene_id not in names.index:
+                continue
+            database, label, db_name = xref_of.get(int(xref_id), (None, None, None))
+            if database is None or label is None or label != label:
+                continue
+            rules = None if db_name is None else rules_database(db_name)
+            if rules in BIOTYPE_RESTRICTED and biotype_of.get(gene_id) not in BIOTYPE_RESTRICTED[rules]:
+                continue
+            found.append((names[gene_id], str(label).strip(), str(database)))
+        if not found:
+            return rows
+        display = pd.DataFrame(found, columns=["graph_id", "id_db", "name_db"])
+        display["id_db"] = _read_values(display["id_db"].astype(object))
+        display = display[display["id_db"].astype(str).str.contains(_ALPHANUMERIC, regex=True)]
+        shown_pairs = set(zip(display["graph_id"].astype(str).tolist(), display["id_db"].astype(str).tolist()))
+        pairs = list(zip(rows["graph_id"].astype(str).tolist(), rows["id_db"].astype(str).tolist()))
+        rows = rows.assign(
+            is_display=np.fromiter((pair in shown_pairs for pair in pairs), dtype=bool, count=len(pairs))
+        )
+        held = set(pairs)
+        display = display[[(g, i) not in held for g, i in zip(display["graph_id"], display["id_db"])]]
+        if not len(display):
+            return rows
+        display = display.drop_duplicates(ignore_index=True)
+        display = display.assign(
+            release=np.full(len(display), self.release, dtype=np.uint8),
+            ensembl_identity=np.full(len(display), np.nan, dtype=np.float16),
+            xref_identity=np.full(len(display), np.nan, dtype=np.float16),
+            is_label=np.ones(len(display), dtype=bool),
+            version=np.zeros(len(display), dtype=np.int32),
+            is_display=np.ones(len(display), dtype=bool),
+        )[list(rows.columns)]
+        res = pd.concat([rows, display.astype({"id_db": rows["id_db"].dtype, "name_db": rows["name_db"].dtype})])
+        return _in_total_order(res)
+
+    def _cross_reference_tables(
+        self, selection: list[str] | None
+    ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+        """Return the raw cross-reference tables of the release for the manager's form, restricted to a selection.
+
+        With a selection, the raw tables are restricted to the databases it can produce before any join (the result
+        of :py:meth:`create_external_db` is the same; the join of all cross references is never built). External ids
+        and synonyms are stripped of surrounding white space, and the synonyms are appended to the ``xref`` rows as
+        further rows whose label is the synonym with :py:data:`ids.SYNONYM_PREFIX`.
+
+        Args:
+            selection: The database names of the externals YAML (``None``: every database).
+
+        Returns:
+            ``external_db``, ``xref`` (with the synonym rows), ``object_xref`` of the form, and ``identity_xref`` (with
+            the identity columns ``ensembl_identity`` and ``xref_identity``).
+
+        Raises:
+            EnsemblSchemaError: If ``identity_xref`` lacks columns other than its identity columns.
+        """
+        prefix = ids.SYNONYM_PREFIX
+        m = {"save_after_calculation": self.store_raw_always}
+        ed = self._external_databases_named()
+        ed = self._numeric_key(ed, "external_db_id", "external_db")
+        if selection is not None:
+            # A database is named by `db_name` (accession rows) or by the name of its labels, with the synonym prefix
+            # for synonym rows; keep the external_db rows that can produce one of the enabled names.
+            bare = {n[len(prefix) :] if n.startswith(prefix) else n for n in selection}
+            ed = ed[ed["db_name"].isin(bare) | ed["label_name"].isin(bare)]
+
+        x = self.get_table("xref", usecols=list(XREF_COLUMNS), **m)
+        x = self._numeric_key(x, "external_db_id", "xref")
+        if selection is not None:
             x = x[x["external_db_id"].isin(ed["external_db_id"])]
-        es = self.get_table("external_synonym", usecols=["xref_id", "synonym"], **m)
-        if relevant:
+        es = self._numeric_key(
+            self.get_table("external_synonym", usecols=["xref_id", "synonym"], **m), "xref_id", "synonym"
+        )
+        if selection is not None:
             es = es[es["xref_id"].isin(x["xref_id"])]
         ox = self.get_table(
             "object_xref", usecols=["ensembl_id", "ensembl_object_type", "xref_id", "object_xref_id"], **m
         )
         ox = ox[ox["ensembl_object_type"].str.lower() == self.form.lower()]
-        if relevant:
+        if selection is not None:
             ox = ox[ox["xref_id"].isin(x["xref_id"])]
-        # Handle column name changes in identity_xref table across Ensembl releases.
-        # Old releases (e.g., release 48) use: target_identity, query_identity
-        # New releases use: ensembl_identity, xref_identity
-        try:
-            ix = self.get_table("identity_xref", usecols=["ensembl_identity", "xref_identity", "object_xref_id"], **m)
-        except EnsemblSchemaError as e:
-            if not ({"ensembl_identity", "xref_identity"} & set(e.missing_columns)):
-                raise
-            self.log.info(
-                "Using legacy column names (target_identity, query_identity) for identity_xref table "
-                f"in Ensembl release {self.release}."
-            )
-            try:
-                ix = self.get_table(
-                    "identity_xref", usecols=["target_identity", "query_identity", "object_xref_id"], **m
-                )
-                ix = ix.rename(columns={"target_identity": "ensembl_identity", "query_identity": "xref_identity"})
-            except EnsemblSchemaError:
-                self.log.warning(
-                    f"identity_xref table missing identity columns for Ensembl release {self.release}. "
-                    "Using NaN values for ensembl_identity and xref_identity."
-                )
-                ix = self.get_table("identity_xref", usecols=["object_xref_id"], **m)
-                ix["ensembl_identity"] = np.nan
-                ix["xref_identity"] = np.nan
+        ix = self._identity_table()
         ix = ix[ix["object_xref_id"].isin(ox["object_xref_id"])]
 
         # External ids and synonyms without surrounding white space (Ensembl stores some synonyms with a trailing
@@ -2391,8 +2925,197 @@ class DatabaseManager:
         es = es.drop(columns=["display_label"]).rename(columns={"synonym": "display_label"})
         es["display_label"] = prefix + es["display_label"].str.strip()
         x = pd.concat([x, es], ignore_index=True)
-        del es
+        return ed, x, ox, ix
 
+    def _external_db(self) -> pd.DataFrame:
+        """Return the release's ``external_db`` (``external_db_id``, ``db_name``, ``db_display_name``)."""
+        return self.get_table(
+            "external_db",
+            usecols=["external_db_id", "db_name", "db_display_name"],
+            save_after_calculation=self.store_raw_always,
+        )
+
+    def label_names(self) -> dict[str, str]:
+        """Return the name of every database's label rows in the manager's window (:py:func:`label_names_of_databases`).
+
+        Read from the ``external_db`` table of every release of every assembly of the organism in the window (small
+        tables, read once per window and process).
+
+        Returns:
+            dict[str, str]: ``{db_name: name of its label rows}``.
+        """
+        snapshot = None if np.isinf(self.snapshot_release) else int(self.snapshot_release)
+        key = (self.organism, int(self.first_release), snapshot, os.path.realpath(self.local_repository))
+        found = DatabaseManager._label_names_cache.get(key)
+        if found is None:
+            rows: list[tuple[int, str, str | None, frozenset[str]]] = []
+            for assembly in organisms.assemblies_by_priority(self.organism):
+                index = self._get_core_db_index(
+                    organism=self.organism, assembly=int(assembly), **self._core_index_kwargs
+                )
+                releases = [int(r) for r in index["releases"] if self.first_release <= int(r) <= self.snapshot_release]
+                if not releases:
+                    continue
+                manager = self.change_assembly(assembly, last_possible_release=True)
+                for release in releases:
+                    ed = manager.change_release(release)._external_db()
+                    names_of_release = frozenset(ed["db_name"].dropna().astype(str))
+                    rows.extend(
+                        (release, str(name), None if pd.isna(display) else str(display), names_of_release)
+                        for name, display in zip(ed["db_name"].tolist(), ed["db_display_name"].tolist())
+                        if not pd.isna(name)
+                    )
+            found = DatabaseManager._label_names_cache[key] = label_names_of_databases(rows)
+        return found
+
+    def one_gene_only_names(self) -> set[str]:
+        """Return the database names of the accessions and labels of :py:data:`ONE_GENE_ONLY` in the window.
+
+        A database whose gene names are derived from one of them (:py:func:`rules_database`: ``miRBase_gene_name``)
+        is judged with it.
+        """
+        names = self.label_names()
+        judged = set(ONE_GENE_ONLY) | {database for database in names if rules_database(database) in ONE_GENE_ONLY}
+        return judged | {label_name(database, names) for database in judged}
+
+    def _label_names_digest(self) -> str:
+        """Return a short digest of :py:meth:`label_names` (part of the key of a stored table of cross references)."""
+        text = json.dumps(sorted(self.label_names().items()))
+        return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
+
+    def renamed_label_names(self) -> dict[str, str]:
+        """Return the names that Ensembl gives a database's labels in the window and idtrack does not, with idtrack's.
+
+        The same holds for their synonyms, with the synonym prefix. A name that is also a database's own name
+        (``db_name``) is not listed (it names that database's accessions), nor is a name Ensembl gave the labels of
+        several databases.
+
+        Returns:
+            dict[str, str]: ``{name Ensembl used: name of the label rows}``.
+        """
+        label_names = self.label_names()
+        renamed: dict[str, set[str]] = {}
+        for assembly in organisms.assemblies_by_priority(self.organism):
+            index = self._get_core_db_index(organism=self.organism, assembly=int(assembly), **self._core_index_kwargs)
+            releases = [int(r) for r in index["releases"] if self.first_release <= int(r) <= self.snapshot_release]
+            if not releases:
+                continue
+            manager = self.change_assembly(assembly, last_possible_release=True)
+            for release in releases:
+                ed = manager.change_release(release)._external_db()
+                for name, display in zip(ed["db_name"].tolist(), ed["db_display_name"].tolist()):
+                    if pd.isna(name) or pd.isna(display) or str(display) == label_names.get(str(name)):
+                        continue
+                    renamed.setdefault(str(display), set()).add(label_names[str(name)])
+        # A name Ensembl gave the labels of several databases says nothing about which one is meant: not listed.
+        unique = {old: next(iter(new)) for old, new in renamed.items() if len(new) == 1}
+        own = set(label_names) | set(label_names.values())
+        prefix = ids.SYNONYM_PREFIX
+        result = {old: new for old, new in unique.items() if old not in own}
+        result.update({f"{prefix}{old}": f"{prefix}{new}" for old, new in unique.items()})
+        return dict(sorted(result.items()))
+
+    def _external_databases_named(self) -> pd.DataFrame:
+        """Return the release's ``external_db`` with the name of every database's label rows.
+
+        The name of a database's label rows is the same at every release of the window (:py:meth:`label_names`).
+
+        Returns:
+            pandas.DataFrame: ``external_db_id``, ``db_name``, ``db_display_name``, ``label_name``.
+        """
+        ed = self._external_db()
+        names = self.label_names()
+        return ed.assign(label_name=[label_name(str(name), names) for name in ed["db_name"].tolist()])
+
+    def _numeric_key(self, df: pd.DataFrame, col: str, table_name: str) -> pd.DataFrame:
+        """Return *df* with a join key as numbers, without the rows whose key is not a number (logged).
+
+        Tables loaded via HTTPS/FTP dumps can contain join-key columns as strings. Some older releases also include
+        malformed/continuation lines that shift text into numeric ID columns. Pandas refuses merges when dtypes
+        disagree (e.g. int64 vs object), so the key is normalised here.
+        """
+        if col not in df.columns or pd.api.types.is_numeric_dtype(df[col]):
+            return df
+        numeric = pd.to_numeric(df[col], errors="coerce")
+        bad = numeric.isna() & df[col].notna()
+        if bad.any():
+            example = df.loc[bad, col].iloc[0]
+            self.log.warning(
+                "Dropping %d malformed rows from `%s` where `%s` is not numeric (e.g. %r).",
+                int(bad.sum()),
+                table_name,
+                col,
+                example,
+            )
+            df = df.loc[~bad].copy()
+            numeric = numeric.loc[~bad]
+        df[col] = numeric
+        return df
+
+    def _identity_table(self) -> pd.DataFrame:
+        """Return ``identity_xref`` with the columns ``ensembl_identity``, ``xref_identity`` and ``object_xref_id``.
+
+        Old releases (e.g. 48) name the identity columns ``target_identity`` and ``query_identity``; a release whose
+        table has neither gets ``NaN`` identities.
+
+        Raises:
+            EnsemblSchemaError: If the table lacks columns other than its identity columns.
+        """
+        m = {"save_after_calculation": self.store_raw_always}
+        try:
+            return self.get_table("identity_xref", usecols=["ensembl_identity", "xref_identity", "object_xref_id"], **m)
+        except EnsemblSchemaError as e:
+            if not ({"ensembl_identity", "xref_identity"} & set(e.missing_columns)):
+                raise
+        self.log.info(
+            "Using legacy column names (target_identity, query_identity) for identity_xref table "
+            f"in Ensembl release {self.release}."
+        )
+        try:
+            ix = self.get_table("identity_xref", usecols=["target_identity", "query_identity", "object_xref_id"], **m)
+            return ix.rename(columns={"target_identity": "ensembl_identity", "query_identity": "xref_identity"})
+        except EnsemblSchemaError:
+            self.log.warning(
+                f"identity_xref table missing identity columns for Ensembl release {self.release}. "
+                "Using NaN values for ensembl_identity and xref_identity."
+            )
+            ix = self.get_table("identity_xref", usecols=["object_xref_id"], **m)
+            ix["ensembl_identity"] = np.nan
+            ix["xref_identity"] = np.nan
+            return ix
+
+    def _external_rows(self, ed: pd.DataFrame, x: pd.DataFrame, ox: pd.DataFrame, ix: pd.DataFrame) -> pd.DataFrame:
+        """Join the cross-reference tables to the ids of the form: one row per (Ensembl id, external id, database).
+
+        Accessions are named by the database's name, labels by the one name of its labels in the window
+        (:py:meth:`label_names`; a label that repeats its accession is no row of its own where Ensembl names the labels
+        like the accessions); a synonym row's database name carries :py:data:`ids.SYNONYM_PREFIX`. The labels of
+        :py:data:`DISPLAY_LABEL_ONLY` are kept where they are the gene's display name, the identifiers of
+        :py:data:`BIOTYPE_RESTRICTED` on genes of those biotypes (those of :py:data:`ONE_GENE_ONLY` are judged by the
+        graph, over all its releases). Every value is read as a typed identifier is read (decisions 83 and 84:
+        ``A1BG;`` is ``A1BG``). An identifier without a letter or a digit (``.``, ``-``) is no identifier, nor is a
+        synonym that carries UniProt's evidence text (``{ECO:...}``). Rows without an Ensembl id, a database or an
+        identifier are dropped. The rows are in a total order (database, Ensembl id, external id, identities), without
+        duplicates.
+
+        Args:
+            ed: ``external_db``.
+            x: ``xref`` with the synonym rows (:py:meth:`_cross_reference_tables`).
+            ox: ``object_xref`` of the form.
+            ix: ``identity_xref``.
+
+        The version of an accession (``xref.version``, Ensembl's version of the sequence the cross reference attaches)
+        is kept on the rows whose identifier is the accession (``version``; a label that is the accession itself
+        carries it too); labels, synonyms and the accessions of a database that gives no version carry ``0``.
+        ``is_display`` is ``False`` here (:py:meth:`_with_display_names` marks the genes' display names).
+
+        Returns:
+            pandas.DataFrame: ``release``, ``graph_id``, ``id_db``, ``name_db``, ``ensembl_identity``,
+            ``xref_identity``, ``is_label``, ``version``, ``is_display``.
+        """
+        prefix = ids.SYNONYM_PREFIX
+        identities = ["ensembl_identity", "xref_identity"]
+        db_id, db_name, id_graph = "id_db", "name_db", "graph_id"
         a = self.get_db(f"idsraw_{self.form}")
         comb = pd.merge(
             a,
@@ -2402,21 +3125,28 @@ class DatabaseManager:
             right_on="ensembl_id",
             validate="one_to_many",
         )
-        del ox
         comb = comb.merge(x, how="left", on="xref_id", validate="many_to_many")
-        del x
         comb = comb.merge(ed, how="left", on="external_db_id", validate="many_to_one")
         comb = comb.merge(ix, how="left", on="object_xref_id", validate="many_to_one")
-        del ix
 
         # Node name "ID.Version" once per id of the form, then attached by the internal key.
         names = pd.Series(self.id_ver_from_df(a[self._identifiers].reset_index(drop=True)), index=a[f"{self.form}_id"])
         graph_ids = comb[f"{self.form}_id"].map(names)
         del a
+        label_kept, kept = self._cross_reference_masks(comb)
+        # The version of the accession the cross reference attaches: digits, ``0`` where the database gives none (a
+        # synonym row carries the version of its entry and is no accession).
+        written = comb["version"].astype(object).where(comb["version"].notna(), "").astype(str).str.strip()
+        version = pd.to_numeric(written.where(written.str.fullmatch(r"[0-9]{1,9}"), "0"), errors="coerce")
+        version = np.array(version.fillna(0).astype(np.int32).to_numpy(), dtype=np.int32)
+        version[comb["display_label"].astype(object).str.startswith(prefix, na=False).to_numpy(dtype=bool)] = 0
+        label_is_accession = (comb["display_label"] == comb["dbprimary_acc"]).to_numpy(dtype=bool)
 
-        # One row per (Ensembl id, external id, database): labels with the display name, accessions with the name.
+        # One row per (Ensembl id, external id, database): labels with the name of the labels, accessions with the
+        # database's name.
         parts = []
-        for id_col, name_col in (("display_label", "db_display_name"), ("dbprimary_acc", "db_name")):
+        for id_col, name_col, mask in (("display_label", "label_name", label_kept), ("dbprimary_acc", "db_name", kept)):
+            is_label = id_col == "display_label"
             part = pd.DataFrame(
                 {
                     id_graph: graph_ids.to_numpy(),
@@ -2424,9 +3154,12 @@ class DatabaseManager:
                     db_name: comb[name_col].to_numpy(),
                     identities[0]: comb[identities[0]].to_numpy(),
                     identities[1]: comb[identities[1]].to_numpy(),
+                    "is_label": np.full(len(comb), is_label, dtype=bool),
+                    "version": np.where(label_is_accession, version, 0) if is_label else version,
+                    "is_display": np.zeros(len(comb), dtype=bool),
                 }
             )
-            parts.append(part)
+            parts.append(part[mask])
         del comb, graph_ids
         res = pd.concat(parts, axis=0, ignore_index=True)
         del parts
@@ -2434,41 +3167,98 @@ class DatabaseManager:
             ~res[db_id].astype(object).str.startswith(prefix, na=False), res[db_id].str[len(prefix) :]
         )
         res = res[~(res[id_graph].isna() | res[db_name].isna() | res[db_id].isna()) & (bare_id != "")]
+        # A value is read as a typed string is read (decisions 83 and 84: Unicode's invisible characters, forms and
+        # dashes; the punctuation that ends a sentence, quotation marks around it), so that the graph holds the name a
+        # database wrote with the punctuation of the text it came from (UniProt's ``A1BG;``) as the name.
+        res[db_id] = _read_values(res[db_id])
+        # An identifier is written with a letter or a digit; a synonym is not UniProt's evidence for one.
+        bare_id = res[db_id].where(
+            ~res[db_id].astype(object).str.startswith(prefix, na=False), res[db_id].str[len(prefix) :]
+        )
+        is_identifier = bare_id.astype(str).str.contains(_ALPHANUMERIC, regex=True) & ~(
+            res[db_id].astype(str).str.startswith(prefix)
+            & res[db_id].astype(str).str.contains(_EVIDENCE_TEXT, regex=False)
+        )
+        res = res[is_identifier.to_numpy(dtype=bool)]
 
-        # A total order (all columns, stable), so that the table does not depend on the order of the input rows; the
-        # identities are compared as float64 (pandas cannot sort by float16 columns).
-        res = res.astype({identities[0]: np.float64, identities[1]: np.float64})
-        res = res.sort_values(by=[db_name, id_graph, db_id, *identities], kind="stable", na_position="last")
-        # Convert some columns type for convenience.
-        res = res.astype({identities[0]: np.float16, identities[1]: np.float16})
-        # Drop duplicates if exists. Note that it is not trivial, there are many duplicated lines after adding
-        # these columns as rows. Because, for some of them, comb_X_columns are actually the same.
-        res = res.drop_duplicates(ignore_index=True)
+        # Labels and accessions that are equal, and a synonym equal to its label, give the same row twice.
+        res = _in_total_order(res).drop_duplicates(ignore_index=True)
         res.insert(0, "release", np.full(len(res), self.release, dtype=np.uint8))
 
-        # Change the synonym IDs' database name
+        # A synonym row's database is the database name with the synonym prefix: a synonym is not the identifier it
+        # stands beside, and the search uses it as a bridge only.
         is_synonym = res[db_id].astype(object).str.startswith(prefix).to_numpy(dtype=bool)
         res[db_name] = np.where(is_synonym, prefix, "").astype(object) + res[db_name].astype(object)
         res[db_name] = res[db_name].astype(pd.Series(["a"]).dtype)
-        # Unless you specifically look at synonyms, they will not mean the same thing as the counterparts.
-        # They will be used as the bridging point in the pathfinder algorithm only.
+        return res
 
-        if relevant:
-            available_databases = set(res[db_name].unique())
-            missing_databases = sorted(d for d in isin_list if d not in available_databases)
-            if missing_databases:
-                raise ExternalsError(
-                    f"The externals YAML enables {missing_databases} for {self.organism} {self.form}, assembly "
-                    f"{self.assembly}, release {self.release}, but Ensembl's tables of that release have "
-                    f"no such cross references. Correct the YAML "
-                    f"({self.external_inst.file_name_modified_yaml(location='configured')!r})."
-                )
-            res = res[res[db_name].isin(isin_list)]
+    def _cross_reference_masks(self, comb: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
+        """Return which joined rows give a label row and which give an accession row (see :py:meth:`_external_rows`).
 
-        res = res.reset_index(drop=True)
-        if filter_mode in ("all", "relevant"):
-            return res
-        return self._count_databases(res)
+        Args:
+            comb: The cross references of the form joined to its ids (``xref_id``, ``db_name``,
+                ``display_label``, ``dbprimary_acc`` and the form's internal id).
+
+        Returns:
+            The masks of the label rows and of the accession rows.
+        """
+        kept = np.ones(len(comb), dtype=bool)
+        # Naming the labels changes the name of rows, never their number: where Ensembl names a database's labels like
+        # its accessions (display name equal to the database's name at that release), a label that repeats its
+        # accession was one row with it and stays so; elsewhere both rows are kept as Ensembl gives them.
+        same_name = (comb["db_display_name"] == comb["db_name"]).to_numpy(dtype=bool)
+        label_kept = ~(same_name & (comb["display_label"] == comb["dbprimary_acc"]).to_numpy(dtype=bool))
+        # the database whose definitions hold for each row: its own, or the one its gene names are derived from
+        rules = comb["db_name"].map(lambda name: rules_database(name) if isinstance(name, str) else name)
+        restricted = (rules.isin(set(BIOTYPE_RESTRICTED)) | comb["db_name"].isin(DISPLAY_LABEL_ONLY)).to_numpy(
+            dtype=bool
+        )
+        if not restricted.any():
+            return label_kept, kept
+        genes = self._gene_annotation()
+        gene_of = self._gene_of_form(comb)
+        biotype = gene_of.map(dict(zip(genes["gene_id"], genes["biotype"])))
+        display = gene_of.map(dict(zip(genes["gene_id"], genes["display_xref_id"])))
+        for database, biotypes in BIOTYPE_RESTRICTED.items():
+            outside = (rules == database).to_numpy(dtype=bool) & ~biotype.isin(biotypes).to_numpy(dtype=bool)
+            kept &= ~outside
+            label_kept &= ~outside
+        for database in DISPLAY_LABEL_ONLY:
+            not_display = (comb["db_name"] == database).to_numpy(dtype=bool) & ~(
+                pd.to_numeric(comb["xref_id"], errors="coerce").to_numpy()
+                == pd.to_numeric(display, errors="coerce").to_numpy()
+            )
+            label_kept &= ~not_display
+        return label_kept, kept
+
+    def _gene_of_form(self, comb: pd.DataFrame) -> pd.Series:
+        """Return the internal gene id of every joined row of the manager's form (a transcript's or translation's gene)."""
+        if self.form in ("gene", "transcript"):
+            return comb["gene_id"]
+        transcripts = self.get_db("idsraw_transcript")
+        return comb["transcript_id"].map(dict(zip(transcripts["transcript_id"], transcripts["gene_id"])))
+
+    def _gene_annotation(self) -> pd.DataFrame:
+        """Return what every gene of the release is and where it lies: :py:data:`GENE_ANNOTATION_COLUMNS` of ``gene``."""
+        return self.get_table(
+            "gene", usecols=list(GENE_ANNOTATION_COLUMNS), save_after_calculation=self.store_raw_always
+        )
+
+    def _check_selection(self, res: pd.DataFrame, selection: list[str]) -> None:
+        """Refuse a selection of the externals YAML that names databases the release's tables do not have.
+
+        Raises:
+            ExternalsError: If an enabled database has no cross references at the release.
+        """
+        available_databases = set(res["name_db"].unique())
+        missing_databases = sorted(d for d in selection if d not in available_databases)
+        if missing_databases:
+            raise ExternalsError(
+                f"The externals YAML enables {missing_databases} for {self.organism} {self.form}, assembly "
+                f"{self.assembly}, release {self.release}, but Ensembl's tables of that release have "
+                f"no such cross references. Correct the YAML "
+                f"({self.external_inst.file_name_modified_yaml(location='configured')!r})."
+            )
 
     def create_database_content(self) -> pd.DataFrame:
         """Retrieve external-database metadata for every assembly, release, and form.
@@ -2550,35 +3340,40 @@ class DatabaseManager:
         return dbm_the_ids
 
     def create_gene_region(self) -> pd.DataFrame:
-        """Tell for every gene of the release whether it lies on the reference sequence of the assembly.
+        """Tell for every gene of the release where it lies, and whether that is on the reference sequence.
 
         Ensembl annotates genes on the chromosomes and scaffolds of an assembly (its reference sequence) and also on
         sequence regions beside it: alternative loci (haplotypes), assembly patches and LRG records. A gene on such a
         region is a copy of, or an alternative to, a gene of the reference sequence and has a stable id of its own.
         The core database marks these regions with the attribute :py:data:`NON_REFERENCE_ATTRIBUTE`
         (``seq_region_attrib`` joined to ``attrib_type``), in every release and for every kind of region; the table
-        ``assembly_exception`` lists only some of them and is empty in recent human releases, so it is not read.
+        ``assembly_exception`` lists only the patches and haplotypes among them (not the LRG records), so it does not
+        say which genes lie outside the reference sequence; it says which region of the reference a patch or a
+        haplotype stands for (:py:meth:`create_assembly_exceptions`).
 
-        The table is a function of three raw tables of the release (``gene`` with its sequence region,
-        ``seq_region_attrib`` and ``attrib_type``) and of the gene ids (``idsraw_gene``).
+        The place of a gene is its sequence region (by name), its start and end (1-based, inclusive, as Ensembl
+        counts) and its strand on the assembly of the release, and what the region is (its kind, one of
+        :py:data:`idtrack.graph.genes.PLACE_KINDS`): the mitochondrial genome where the region carries
+        :py:data:`MITOCHONDRIAL_ATTRIBUTE`, else a chromosome where its coordinate system is
+        :py:data:`CHROMOSOME_COORD_SYSTEM` or the region carries :py:data:`KARYOTYPE_ATTRIBUTE`, else a scaffold (or
+        another sequence below a chromosome).
+
+        The table is a function of five raw tables of the release (``gene`` with its sequence region and place,
+        ``seq_region``, ``coord_system``, ``seq_region_attrib`` and ``attrib_type``) and of the gene ids
+        (``idsraw_gene``).
 
         Returns:
             pandas.DataFrame: One row per gene of the release: ``gene_stable_id``, ``gene_version`` (as in the ``ids``
-            table of the gene form) and ``non_reference`` (``True`` for a gene on a region outside the reference
-            sequence). A release whose core database defines no such attribute or marks no region has ``False``
-            throughout.
+            table of the gene form), ``non_reference`` (``True`` for a gene on a region outside the reference
+            sequence; a release whose core database defines no such attribute or marks no region has ``False``
+            throughout), ``seq_region`` (the region's name), ``start``, ``end``, ``strand`` and ``kind``.
 
         Raises:
             ValueError: If a gene of the id table has no sequence region in the ``gene`` table.
         """
         gene_ids = self.get_db(f"idsraw_{ids.BACKBONE_FORM}")
-        raw = {"save_after_calculation": self.store_raw_always}
-        regions = self.get_table("gene", usecols=["gene_id", "seq_region_id"], **raw)
-        attributes = self.get_table("attrib_type", usecols=["attrib_type_id", "code"], **raw)
-        marks = self.get_table("seq_region_attrib", usecols=["seq_region_id", "attrib_type_id"], **raw)
-
-        codes = attributes.loc[attributes["code"] == NON_REFERENCE_ATTRIBUTE, "attrib_type_id"]
-        beside = {int(i) for i in marks.loc[marks["attrib_type_id"].isin(codes), "seq_region_id"].dropna().unique()}
+        regions = self._gene_annotation()
+        names, beside, kind_of = self._sequence_regions()
         region_of = dict(zip(regions["gene_id"].astype(int), regions["seq_region_id"]))
         gene_regions = gene_ids["gene_id"].astype(int).map(region_of)
         missing = gene_regions.isna().to_numpy()
@@ -2589,33 +3384,174 @@ class DatabaseManager:
             )
         result = gene_ids[["gene_stable_id", "gene_version"]].copy()
         result["non_reference"] = gene_regions.astype(np.int64).isin(beside).to_numpy(dtype=bool)
+        name_of = dict(zip(names["seq_region_id"].astype(int), names["name"].astype(str)))
+        result["seq_region"] = gene_regions.astype(np.int64).map(name_of).to_numpy()
+        if result["seq_region"].isna().any():
+            raise TableFormatError(
+                f"Genes of {self.organism} release {self.release} lie on sequence regions that the `seq_region` table "
+                f"does not have, e.g. {result['gene_stable_id'][result['seq_region'].isna()].iloc[0]!r}."
+            )
+        genes = gene_ids["gene_id"].astype(int)
+        for column, source in (
+            ("start", "seq_region_start"),
+            ("end", "seq_region_end"),
+            ("strand", "seq_region_strand"),
+        ):
+            result[column] = genes.map(
+                dict(zip(regions["gene_id"].astype(int), regions[source].astype(int)))
+            ).to_numpy()
+        result["kind"] = [kind_of(region) for region in gene_regions.astype(np.int64).tolist()]
         return result.drop_duplicates(ignore_index=True)
 
-    def create_external_all(self, narrow_external: bool = True) -> pd.DataFrame:
+    def _sequence_regions(self) -> tuple[pd.DataFrame, set[int], Callable[[int], str]]:
+        """Return the release's sequence regions, those outside the reference sequence, and what each region is.
+
+        Read from ``seq_region``, ``coord_system``, ``seq_region_attrib`` and ``attrib_type``: a region outside the
+        reference sequence carries :py:data:`NON_REFERENCE_ATTRIBUTE`; its kind (one of
+        :py:data:`idtrack.graph.genes.PLACE_KINDS`) is the mitochondrial genome where it carries
+        :py:data:`MITOCHONDRIAL_ATTRIBUTE`, else a chromosome where its coordinate system is
+        :py:data:`CHROMOSOME_COORD_SYSTEM` or it carries :py:data:`KARYOTYPE_ATTRIBUTE`, else a scaffold.
+
+        Returns:
+            tuple: ``seq_region`` (``seq_region_id``, ``name``, ``coord_system_id``), the ids of the regions outside
+            the reference sequence, and the kind of a region by its id.
+        """
+        raw = {"save_after_calculation": self.store_raw_always}
+        names = self.get_table("seq_region", usecols=["seq_region_id", "name", "coord_system_id"], **raw)
+        systems = self.get_table("coord_system", usecols=["coord_system_id", "name"], **raw)
+        attributes = self.get_table("attrib_type", usecols=["attrib_type_id", "code"], **raw)
+        marks = self.get_table("seq_region_attrib", usecols=["seq_region_id", "attrib_type_id"], **raw)
+
+        def marked(code: str) -> set[int]:
+            codes = attributes.loc[attributes["code"] == code, "attrib_type_id"]
+            return {int(i) for i in marks.loc[marks["attrib_type_id"].isin(codes), "seq_region_id"].dropna().unique()}
+
+        beside = marked(NON_REFERENCE_ATTRIBUTE)
+        mitochondrial = marked(MITOCHONDRIAL_ATTRIBUTE)
+        chromosome_systems = {
+            int(i) for i in systems.loc[systems["name"] == CHROMOSOME_COORD_SYSTEM, "coord_system_id"].dropna()
+        }
+        chromosomes = marked(KARYOTYPE_ATTRIBUTE) | {
+            int(region)
+            for region, system in zip(names["seq_region_id"].tolist(), names["coord_system_id"].tolist())
+            if not pd.isna(system) and int(system) in chromosome_systems
+        }
+
+        def kind_of(region: int) -> str:
+            return MITOCHONDRIAL if region in mitochondrial else CHROMOSOME if region in chromosomes else SCAFFOLD
+
+        return names, beside, kind_of
+
+    def create_assembly_exceptions(self) -> pd.DataFrame:
+        """Return Ensembl's assembly exceptions of the release: which region of the reference each other sequence takes.
+
+        An assembly patch, a haplotype (an alternative locus) or a pseudoautosomal region is, in Ensembl's core
+        database, a sequence region of its own whose bases stand for a region of the reference sequence: the table
+        ``assembly_exception`` gives, per such region, its bases (``seq_region_start`` to ``seq_region_end``), the
+        region of the reference they stand for (``exc_seq_region_id`` from ``exc_seq_region_start`` to
+        ``exc_seq_region_end``) and the type of the exception (``exc_type``: ``PATCH_FIX``, ``PATCH_NOVEL``, ``HAP``,
+        ``PAR``). A gene on a patch or a haplotype is a copy of, or an alternative to, a gene of that reference region
+        (:py:func:`idtrack.graph.genes.relation`); the Y copy of a gene of a pseudoautosomal region lies at the place of
+        its X gene (:py:attr:`idtrack.TheGraph.repeated_regions`). An LRG record has no exception.
+
+        The table is a function of five raw tables of the release (``assembly_exception``, ``seq_region``,
+        ``coord_system``, ``seq_region_attrib`` and ``attrib_type``).
+
+        Returns:
+            pandas.DataFrame: One row per exception: ``seq_region`` (the name of the region), ``start``, ``end``,
+            ``type``, ``ref_region`` (the name of the reference region), ``ref_start``, ``ref_end``, ``ref_kind``
+            (its kind, one of :py:data:`idtrack.graph.genes.PLACE_KINDS`), sorted.
+        """
+        raw = {"save_after_calculation": self.store_raw_always}
+        columns = ASSEMBLY_EXCEPTION_COLUMNS
+        rows = self.get_table("assembly_exception", usecols=list(columns), **raw)
+        names, _, kind_of = self._sequence_regions()
+        name_of = dict(zip(names["seq_region_id"].astype(np.int64).tolist(), names["name"].astype(str).tolist()))
+        out = []
+        for region, start, end, kind, ref, ref_start, ref_end in zip(*(rows[c].tolist() for c in columns)):
+            if any(pd.isna(v) for v in (region, start, end, ref, ref_start, ref_end)):
+                continue
+            mine, theirs = name_of.get(int(region)), name_of.get(int(ref))
+            if mine is None or theirs is None:
+                raise TableFormatError(
+                    f"An assembly exception of {self.organism} release {self.release} names a sequence region that "
+                    f"the `seq_region` table does not have ({int(region)} or {int(ref)})."
+                )
+            out.append((mine, int(start), int(end), str(kind), theirs, int(ref_start), int(ref_end), kind_of(int(ref))))
+        frame = pd.DataFrame(
+            sorted(set(out)),
+            columns=["seq_region", "start", "end", "type", "ref_region", "ref_start", "ref_end", "ref_kind"],
+        )
+        return frame.astype({"start": np.int64, "end": np.int64, "ref_start": np.int64, "ref_end": np.int64})
+
+    def assembly_chain(self, earlier: int, later: int) -> tuple[pd.DataFrame, dict[str, Any]] | None:
+        """Return Ensembl's mapping of one assembly of the organism onto another, where Ensembl publishes one.
+
+        Ensembl's chain file of the pair (``<name>_to_<name>.chain.gz`` in the ``assembly_chain`` folder of a release,
+        :py:mod:`idtrack.build.assembly_chain`) is looked for in the folders of the window's releases, newest first,
+        downloaded once into the local repository and kept there (raw downloads are never removed).
+
+        Args:
+            earlier: The assembly key of the assembly mapped.
+            later: The assembly key of the assembly it is mapped onto.
+
+        Returns:
+            tuple | None: The aligned blocks (:py:data:`idtrack.build.assembly_chain.BLOCK_COLUMNS`) and what a graph's
+            record says of the file (``from``, ``to``, ``release``, ``sha256``, ``file``); ``None`` where Ensembl
+            publishes no such file in those folders.
+        """
+        first, second = organisms.assembly_name(self.organism, int(earlier)), organisms.assembly_name(
+            self.organism, int(later)
+        )
+        if not first or not second:
+            return None
+        names = (first, second)
+        last = int(self.release) if np.isinf(self.snapshot_release) else int(self.snapshot_release)
+        releases = range(int(self.first_release), last + 1)
+        path, release = assembly_chain.fetch_chain(self.local_repository, self.organism, names[0], names[1], releases)
+        if path is None or release is None:
+            return None
+        with open(path, "rb") as handle:
+            digest = hashlib.sha256(handle.read()).hexdigest()
+        info = {
+            "file": assembly_chain.chain_file_name(*names),
+            "from": int(earlier),
+            "to": int(later),
+            "release": int(release),
+            "sha256": digest,
+        }
+        return assembly_chain.read_chain(path), info
+
+    def create_external_all(self, all_external: bool = False) -> pd.DataFrame:
         """Download and collate cross-reference mappings from every supported genome assembly.
 
         The manager cycles through every genome assembly recognised for the current organism (ordered by
         :py:data:`idtrack.organisms.ORGANISM_TABLE`), fetches either the filtered
-        *external_relevant* mapping table (when ``narrow_external=True``) or the full *external* mapping table
-        (when ``narrow_external=False``) for each via :py:meth:`~DatabaseManager.get_db`, labels every row with
+        *external_relevant* mapping table (when ``all_external=False``) or the full *external* mapping table
+        (when ``all_external=True``) for each via :py:meth:`~DatabaseManager.get_db`, labels every row with
         its source assembly, and concatenates the tables, keeping one copy of every unique
         ``(release, graph_id, id_db, name_db, ensembl_identity, xref_identity, assembly)`` combination (duplicates
         are resolved within each assembly only). It bypasses the :py:meth:`~DatabaseManager.get_db` caching layer
         and never writes the result to the local repository.
 
         Args:
-            narrow_external (bool): If ``True`` (default), restrict results to databases enabled in the external
-                YAML configuration (``external_relevant``). If ``False``, include all external databases provided by
-                the Ensembl MySQL server (``external``).
+            all_external (bool): If ``False`` (default), restrict results to databases enabled in the externals
+                YAML configuration (``external_relevant``). If ``True``, include all external databases of Ensembl
+                (``external``).
 
         Returns:
             pandas.DataFrame: The cross-reference table with the columns ``release``, ``graph_id``, ``id_db``,
-            ``name_db``, ``ensembl_identity``, ``xref_identity`` and ``assembly``.
+            ``name_db``, ``ensembl_identity``, ``xref_identity``, ``is_label`` and ``assembly``.
         """
-        ass = self.external_inst.give_list_for_case(give_type="assembly")
-        table_key = "external_relevant" if narrow_external else "external"
+        ass = set(self.external_inst.give_list_for_case(give_type="assembly"))
+        table_key = "external" if all_external else "external_relevant"
 
         cfg = organisms.ORGANISM_TABLE[self.organism]
+        if not all_external:
+            # The genes' display names are held whatever the YAML selects (:py:meth:`_with_display_names`), and the
+            # databases that continue a selected one at releases at which the YAML lists nothing for a form are read
+            # with it (:py:meth:`database_filing`): every assembly with a core database at the release is read.
+            ass |= set(cfg)
         ass_sorted = sorted({int(a) for a in ass if int(a) in cfg}, key=lambda a: cfg[a]["Priority"])
         frames: list[pd.DataFrame] = []
         for i in ass_sorted:  # sort according to per-organism priority (1 = newest)
@@ -2661,8 +3597,10 @@ class DatabaseManager:
         * Not stored, because they are cheap functions of stored tables: ``idsraw_<form>`` (raw ids of *form*,
           :py:meth:`create_ids`), ``ids`` (ids and versions of the manager's form, :py:meth:`create_release_id`),
           ``generegion`` (which genes of the release lie outside the reference sequence,
-          :py:meth:`create_gene_region`). The content of Ensembl's external databases and the list of the available
-          ones are methods of their own (:py:meth:`create_database_content`, :py:meth:`create_available_databases`).
+          :py:meth:`create_gene_region`), ``assemblyexception`` (which region of the reference each patch, haplotype
+          and pseudoautosomal region stands for, :py:meth:`create_assembly_exceptions`). The content of Ensembl's
+          external databases and the list of the available ones are methods of their own
+          (:py:meth:`create_database_content`, :py:meth:`create_available_databases`).
 
         Args:
             table_key (str): One of the indicators above.
@@ -2704,15 +3642,30 @@ class DatabaseManager:
         if main_ind == "generegion" and param1_ind is None:
             return self.create_gene_region()
 
+        if main_ind == "assemblyexception" and param1_ind is None:
+            return self.create_assembly_exceptions()
+
         if main_ind == "external" and param1_ind in (None, "database"):
             name = f"external{'-database' if param1_ind else ''}_{self.form}"
-            return cached(name, lambda: self.create_external_db(filter_mode=param1_ind or "all"))
+            return cached(
+                name,
+                lambda: self.create_external_db(filter_mode=param1_ind or "all"),
+                rules=EXTERNAL_RULES_VERSION,
+                labels=self._label_names_digest(),
+            )
 
         if main_ind == "external" and param1_ind in ("relevant", "relevant-database"):
-            selection = sorted(self.external_inst.give_list_for_case(give_type="db"))
+            selection = self._selection()
             digest = hashlib.sha256(json.dumps(selection).encode("utf-8")).hexdigest()[:16]
             name = f"external-relevant_{self.form}__dbs={digest}"
-            rows = cached(name, lambda: self.create_external_db(filter_mode="relevant"), databases=selection)
+            rows = cached(
+                name,
+                lambda: self.create_external_db(filter_mode="relevant"),
+                databases=selection,
+                rules=EXTERNAL_RULES_VERSION,
+                labels=self._label_names_digest(),
+                filing=self.database_filing().digest(),
+            )
             return rows if param1_ind == "relevant" else self._count_databases(rows)
 
         if main_ind == "idhistory" and param1_ind in (None, "narrow"):

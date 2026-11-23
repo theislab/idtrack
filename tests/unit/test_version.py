@@ -1,10 +1,15 @@
-"""The commit of a source checkout, read from its ``.git`` folder without git (:py:func:`idtrack._version._git_commit`)."""
+"""The commit of a source checkout and the version a graph records.
+
+The commit is read from the checkout's ``.git`` folder without git (:py:func:`idtrack._version._git_commit`); the
+version a graph records is :py:func:`idtrack._version.build_version`.
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from idtrack._version import _git_commit
+from idtrack import _version
+from idtrack._version import SOURCE_FOLDER_BUILD, _git_commit, build_version
 
 COMMIT = "0123456789abcdef0123456789abcdef01234567"
 OTHER = "fedcba9876543210fedcba9876543210fedcba98"
@@ -61,3 +66,20 @@ def test_no_checkout_has_no_commit(tmp_path):
     git = _repository(other, loose=True)
     (git / "HEAD").write_text("ref: refs/heads/missing\n")
     assert _git_commit(str(other)) is None
+
+
+def test_a_graph_built_from_a_source_folder_says_so(monkeypatch):
+    """I138: code that is not the installed idtrack has no version; a graph records that plainly, not ``unknown``.
+
+    Fails if a source-folder build records ``unknown`` (a graph that cannot tell what built it), or if an installed
+    version is not recorded as it is.
+    """
+    monkeypatch.setattr(_version, "_distribution", lambda: None)
+    assert build_version() == SOURCE_FOLDER_BUILD and "source folder" in SOURCE_FOLDER_BUILD
+    assert _version.package_version() == "unknown"  # idtrack.__version__ of such code is unchanged
+
+    class Installed:
+        version = "0.1.0"
+
+    monkeypatch.setattr(_version, "_distribution", lambda: Installed())
+    assert build_version() == "0.1.0"

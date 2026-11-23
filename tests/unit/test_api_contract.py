@@ -2,6 +2,7 @@
 
 import json
 import logging
+import re
 import subprocess  # noqa: S404
 import sys
 
@@ -14,14 +15,14 @@ from tests.unit._fake_engine import fake_api
 
 ANSWERS = {
     # a symbol whose candidate genes mix a gene with an HGNC symbol and one without
-    "MIXED": {"ENSG01.2": {"HGNC Symbol": ["SYM1"]}, "ENSG02.1": {}},
+    "MIXED": {"ENSG00000000001.2": {"HGNC Symbol": ["SYM1"]}, "ENSG00000000002.1": {}},
     # a gene split into two, both scored equally
-    "ENSG09.1": {"ENSG09.2": {"HGNC Symbol": ["NINE"]}, "ENSG10.1": {"HGNC Symbol": ["TEN"]}},
-    "QSER1": {"ENSG03.4": {"HGNC Symbol": ["QSER1"]}},
-    "ENSG03": {"ENSG03.4": {"HGNC Symbol": ["QSER1"]}},
+    "ENSG00000000009.1": {"ENSG00000000009.2": {"HGNC Symbol": ["NINE"]}, "ENSG10.1": {"HGNC Symbol": ["TEN"]}},
+    "QSER1": {"ENSG00000000003.4": {"HGNC Symbol": ["QSER1"]}},
+    "ENSG00000000003": {"ENSG00000000003.4": {"HGNC Symbol": ["QSER1"]}},
     "NOGENE": {},
-    "ENSG01.2": {"ENSG01.2": {"HGNC Symbol": ["SYM1"]}},
-    "ENSG02.1": {"ENSG02.1": {}},
+    "ENSG00000000001.2": {"ENSG00000000001.2": {"HGNC Symbol": ["SYM1"]}},
+    "ENSG00000000002.1": {"ENSG00000000002.1": {}},
 }
 
 
@@ -40,24 +41,26 @@ def test_candidates_with_mixed_fallbacks_are_the_genuine_targets(api):
     """api_harmonize-1: one candidate without an id in the database does not raise; it is listed apart."""
     r = api.convert("MIXED", final_database="HGNC Symbol")
     assert r.targets("all") == ("SYM1",)
-    assert pairs(r, "all") == [("ENSG01.2", "SYM1")]
+    assert pairs(r, "all") == [("ENSG00000000001.2", "SYM1")]
     assert r.final_database == "HGNC Symbol" and r.no_target is False and r.status == "converted"
-    assert r.no_target_genes == ("ENSG02.1",)
-    only_fallback = api.convert("ENSG02.1", final_database="HGNC Symbol")
+    assert r.no_target_genes == ("ENSG00000000002.1",)
+    only_fallback = api.convert("ENSG00000000002.1", final_database="HGNC Symbol")
     assert only_fallback.no_target is True and only_fallback.final_database == "ensembl_gene"
-    assert only_fallback.targets("all") == ("ENSG02.1",) and only_fallback.status == "no_target"
+    assert only_fallback.targets("all") == ("ENSG00000000002.1",) and only_fallback.status == "no_target"
 
 
 def test_tied_best_targets_are_flagged_and_keep_the_order_of_the_engine(tmp_path):
     """api_harmonize-2, -3: several tied targets are an explicit tuple in the engine's order, never a set's."""
-    a = fake_api(tmp_path, ANSWERS).convert("ENSG09.1", final_database="HGNC Symbol")
+    a = fake_api(tmp_path, ANSWERS).convert("ENSG00000000009.1", final_database="HGNC Symbol")
     assert a.tie is True and a.status == "tie" and a.targets() == ("NINE", "TEN")
-    assert pairs(a) == [("ENSG09.2", "NINE"), ("ENSG10.1", "TEN")]
+    assert pairs(a) == [("ENSG00000000009.2", "NINE"), ("ENSG10.1", "TEN")]
     assert [t for _, t in pairs(a)] == list(a.targets())
     # the engine's ranking (best first) is the order of the result, whatever the ids are
-    ranking = {"ENSG09.1": {"ENSG10.1": {"HGNC Symbol": ["TEN"]}, "ENSG09.2": {"HGNC Symbol": ["NINE"]}}}
-    ranked = fake_api(tmp_path, ranking).convert("ENSG09.1", final_database="HGNC Symbol")
-    assert pairs(ranked, "all") == [("ENSG10.1", "TEN"), ("ENSG09.2", "NINE")] and ranked.targets("all") == (
+    ranking = {
+        "ENSG00000000009.1": {"ENSG10.1": {"HGNC Symbol": ["TEN"]}, "ENSG00000000009.2": {"HGNC Symbol": ["NINE"]}}
+    }
+    ranked = fake_api(tmp_path, ranking).convert("ENSG00000000009.1", final_database="HGNC Symbol")
+    assert pairs(ranked, "all") == [("ENSG10.1", "TEN"), ("ENSG00000000009.2", "NINE")] and ranked.targets("all") == (
         "TEN",
         "NINE",
     )
@@ -81,7 +84,7 @@ def test_result_says_how_the_identifier_was_read(api):
     assert unknown.status == "not_found" and unknown.reason == "not_in_graph" and unknown.from_release_inferred is True
     assert api.reason_text(unknown) and api.reason_text(exact) is None
     # an id without version that has no node of its own is read as its version
-    assert api.convert("ENSG01").status != "not_found"
+    assert api.convert("ENSG00000000001").status != "not_found"
 
 
 @pytest.mark.parametrize(
@@ -130,7 +133,7 @@ def test_identifier_that_is_not_a_string_is_an_error_naming_the_argument(api):
 
 def test_identifier_input_is_checked_and_stripped(api):
     """api_harmonize-13: white space is ignored, an empty string is a missing value naming the argument."""
-    assert api.convert(" QSER1 ").targets() == ("ENSG03.4",)
+    assert api.convert(" QSER1 ").targets() == ("ENSG00000000003.4",)
     assert api.convert(" QSER1 ").query_id == " QSER1 "
     with pytest.raises(errors.MissingValueError, match="empty"):
         api.convert("  ")
@@ -146,30 +149,33 @@ def test_releases_are_those_of_the_graph(tmp_path):
 
 def test_batch_validates_first_converts_each_id_once_and_keeps_per_item_errors(tmp_path):
     """api_harmonize-7: a bad item fails before any work; an error of one identifier does not lose the batch."""
-    inactive = InactiveAtReleaseError("ENSG03", 100, [[101, 101]])
-    api = fake_api(tmp_path, ANSWERS, errors={("ENSG03", 100): inactive})
+    inactive = InactiveAtReleaseError("ENSG00000000003", 100, [[101, 101]])
+    api = fake_api(tmp_path, ANSWERS, errors={("ENSG00000000003", 100): inactive})
     with pytest.raises(errors.ArgumentTypeError, match=r"positions \[1\]"):
-        api.convert_many(["QSER1", None, "NOGENE"])
-    with pytest.raises(errors.MissingValueError, match=r"empty strings, at positions \[2\]"):
-        api.convert_many(["QSER1", "NOGENE", ""])
+        api.convert_many(["QSER1", 7, "NOGENE"])
     with pytest.raises(errors.ArgumentTypeError, match="sequence of strings"):
         api.convert_many("QSER1")
     assert api.engine.calls == []
-    out = api.convert_many(["QSER1", "ENSG03", "QSER1", "zzz"], from_release=100)
-    assert [r.query_id for r in out] == ["QSER1", "ENSG03", "QSER1", "zzz"]
+    # decisions 81 and 46 (g): an empty string or a missing value is that item's error; the batch goes on
+    refused = api.convert_many(["", "nan", None, "NOGENE"])
+    assert [r.error.type for r in refused[:3]] == ["MissingValueError"] * 3
+    assert all(r.status == "error" and r.error.input_error for r in refused[:3]) and refused[3].error is None
+    api.engine.calls.clear()
+    out = api.convert_many(["QSER1", "ENSG00000000003", "QSER1", "zzz"], from_release=100)
+    assert [r.query_id for r in out] == ["QSER1", "ENSG00000000003", "QSER1", "zzz"]
     assert out[0] == out[2]
     assert out[3].status == "not_found"
-    # an id that the graph does not hold at the release given is read where the graph holds it, and flagged
+    # an id that the graph does not hold at the release given is read where the graph holds it, and flagged: the
+    # graph's readings decide where (API._read_where), so the engine converts it once, without the release given
     assert [(c["identifier"], c["from_release"]) for c in api.engine.calls] == [
         ("QSER1", 100),
-        ("ENSG03", 100),
-        ("ENSG03", None),
+        ("ENSG00000000003", None),
     ]
-    assert out[1].error is None and out[1].targets() == ("ENSG03.4",)
+    assert out[1].error is None and out[1].targets() == ("ENSG00000000003.4",)
     assert out[1].from_release_fallback is True and out[1].from_release_given == 100
     assert out[1].from_release == 101 and out[1].from_release_inferred is True
     assert out[0].from_release_fallback is False and out[0].from_release == 100
-    single = api.convert("ENSG03", from_release=100)
+    single = api.convert("ENSG00000000003", from_release=100)
     assert single == out[1]
 
 
@@ -178,18 +184,18 @@ def test_batch_accepts_any_sequence_of_strings(api):
     import numpy as np
     import pandas as pd
 
-    expected = [r.targets() for r in api.convert_many(["QSER1", "ENSG03"])]
-    assert [r.targets() for r in api.convert_many(np.array(["QSER1", "ENSG03"]))] == expected
-    assert [r.targets() for r in api.convert_many(pd.Index(["QSER1", "ENSG03"]))] == expected
+    expected = [r.targets() for r in api.convert_many(["QSER1", "ENSG00000000003"])]
+    assert [r.targets() for r in api.convert_many(np.array(["QSER1", "ENSG00000000003"]))] == expected
+    assert [r.targets() for r in api.convert_many(pd.Index(["QSER1", "ENSG00000000003"]))] == expected
 
 
 def test_every_error_of_one_identifier_is_kept_per_item(tmp_path):
     """web_setup-11: a search over its budget, and any other error of one identifier, are that item's answer."""
     over = SearchBudgetExceededError("QSER1", 10, 0.5, 10, 30.0)
-    out = fake_api(tmp_path, ANSWERS, errors={"QSER1": over}).convert_many(["QSER1", "ENSG03"])
+    out = fake_api(tmp_path, ANSWERS, errors={"QSER1": over}).convert_many(["QSER1", "ENSG00000000003"])
     assert out[0].error.type == "SearchBudgetExceededError" and "budget: 10 states" in out[0].error.message
     assert out[0].error.input_error is False and out[0].status == "error" and out[0].reason == "error"
-    assert out[0].graph_id == "QSER1" and out[1].error is None and out[1].targets() == ("ENSG03.4",)
+    assert out[0].graph_id == "QSER1" and out[1].error is None and out[1].targets() == ("ENSG00000000003.4",)
     for other, is_input in ((errors.UnknownIdentifierError("not a database"), True), (RuntimeError("broken"), False)):
         item = fake_api(tmp_path, ANSWERS, errors={"QSER1": other}).convert_many(["QSER1"])[0]
         assert item.error.type == type(other).__name__ and item.error.input_error is is_input
@@ -199,18 +205,18 @@ def test_every_error_of_one_identifier_is_kept_per_item(tmp_path):
 
 def test_unknown_version_is_answered_with_nothing_and_the_versions_that_exist(api):
     """An id with a version the graph does not hold is not converted; the result names the versions that exist."""
-    result = api.convert("ENSG01.7")
+    result = api.convert("ENSG00000000001.7")
     assert result.candidates == () and result.status == "unknown_version" and result.reason == "unknown_version"
-    assert result.known_versions == ("ENSG01.2",) and result.graph_id is None and result.error is None
+    assert result.known_versions == ("ENSG00000000001.2",) and result.graph_id is None and result.error is None
     assert api.engine.calls == []
-    assert api.convert("ENSG01.2").known_versions == ()
+    assert api.convert("ENSG00000000001.2").known_versions == ()
     assert api.convert("zzz.7").known_versions == ()
     assert issubclass(UnknownVersionError, ValueError)
 
 
 def test_results_are_strict_json_and_read_back_equal(api):
     """api_harmonize-8: every result survives a strict JSON round trip unchanged, with and without explain."""
-    for identifier in ("MIXED", "ENSG09.1", "QSER1", "NOGENE", "zzz"):
+    for identifier in ("MIXED", "ENSG00000000009.1", "QSER1", "NOGENE", "zzz"):
         for explain in (False, True):
             r = api.convert(identifier, final_database="HGNC Symbol", explain=explain)
             data = json.loads(json.dumps(r.to_dict(), allow_nan=False))
@@ -219,16 +225,16 @@ def test_results_are_strict_json_and_read_back_equal(api):
     r = api.convert("MIXED", final_database="HGNC Symbol", explain=True)
     first = r.candidates[0]
     assert (first.gene, first.target, first.entry_gene, first.bridges, first.score) == (
-        "ENSG01.2",
+        "ENSG00000000001.2",
         "SYM1",
-        "ENSG01.2",
+        "ENSG00000000001.2",
         0,
         1.0,
     )
     steps = [r.path.steps[i] for i in first.path + first.final_path]
     assert [(s.kind, s.source, s.target, s.release) for s in steps] == [
-        ("entry", "MIXED", "ENSG01.2", 101),
-        ("final", "ENSG01.2", "SYM1", 101),
+        ("entry", "MIXED", "ENSG00000000001.2", 101),
+        ("final", "ENSG00000000001.2", "SYM1", 101),
     ]
     assert api.convert("MIXED").path is None
 
@@ -261,7 +267,7 @@ def test_infer_source_names_every_tied_origin_and_rejects_nothing_to_infer(api):
         api.infer_source(["QSER1"], mode="best")
     with pytest.raises(errors.ArgumentTypeError, match="sequence of strings"):
         api.infer_source("QSER1")
-    assert api.infer_source(["QSER1", "ENSG03"]) == [[38, 100], [38, 101]]
+    assert api.infer_source(["QSER1", "ENSG00000000003"]) == [[38, 100], [38, 101]]
     assert api.infer_source(["QSER1"], mode="release", report_only_winner=False) == [[100, 1], [101, 1]]
 
 
@@ -281,12 +287,14 @@ def test_list_methods_return_copies(api):
 
 def test_classify_counts_a_query_that_maps_to_itself_as_unchanged(api):
     """api_harmonize-12: 'changed' compares with the resolved id, without version or case."""
-    results = api.convert_many(["ENSG03", "qser1", "MIXED"])
+    results = api.convert_many(["ENSG00000000003", "qser1", "MIXED"])
     bins = api.classify(results)
-    assert len(bins["matching_1_to_1"]) == 2  # ENSG03 -> ENSG03.4, qser1 -> ENSG03.4 (QSER1's gene)
+    assert (
+        len(bins["matching_1_to_1"]) == 2
+    )  # ENSG00000000003 -> ENSG00000000003.4, qser1 -> ENSG00000000003.4 (QSER1's gene)
     assert [r.query_id for r in bins["changed_only_1_to_1"]] == ["qser1"]  # a symbol becomes a gene id
-    by_symbol = api.classify(api.convert_many(["qser1", "ENSG03"], final_database="HGNC Symbol"))
-    assert [r.query_id for r in by_symbol["changed_only_1_to_1"]] == ["ENSG03"]
+    by_symbol = api.classify(api.convert_many(["qser1", "ENSG00000000003"], final_database="HGNC Symbol"))
+    assert [r.query_id for r in by_symbol["changed_only_1_to_1"]] == ["ENSG00000000003"]
     assert len(bins["matching_1_to_n"]) == 1 and bins["changed_only_1_to_n"][0].query_id == "MIXED"
     assert "Total processed: 3" in api.classification_summary(bins)
     with pytest.raises(errors.InvalidArgumentError):
@@ -308,11 +316,27 @@ def test_conversions_from_threads_equal_serial_ones(api):
     """api_harmonize-46: conversions only read the graph; threads give the serial answers."""
     from concurrent.futures import ThreadPoolExecutor
 
-    identifiers = ["MIXED", "ENSG09.1", "QSER1", "ENSG03", "NOGENE", "zzz"] * 20
+    identifiers = ["MIXED", "ENSG00000000009.1", "QSER1", "ENSG00000000003", "NOGENE", "zzz"] * 20
     serial = [api.convert(i) for i in identifiers]
     with ThreadPoolExecutor(4) as pool:
         threaded = list(pool.map(api.convert, identifiers))
     assert threaded == serial
+
+
+def test_a_renamed_database_is_an_error_that_names_its_new_name(api):
+    """Decision 53: a name Ensembl gave a database's labels and the graph does not is an error naming the graph's name.
+
+    The names come from the graph (its record's ``renamed_databases``, read from Ensembl's tables when it was built),
+    not from a list in the package.
+    """
+    api.engine.graph.renamed_databases = {"NCBI gene": "NCBI gene (formerly Entrezgene)"}
+    with pytest.raises(errors.UnknownDatabaseError, match=re.escape("It is named 'NCBI gene (formerly Entrezgene)'")):
+        api.convert("QSER1", final_database="NCBI gene")
+    with pytest.raises(errors.UnknownDatabaseError, match=re.escape("It is named 'NCBI gene (formerly Entrezgene)'")):
+        api.convert("QSER1", from_database="NCBI gene")
+    with pytest.raises(errors.UnknownDatabaseError) as error:
+        api.convert("QSER1", final_database="nope")
+    assert "It is named" not in str(error.value)
 
 
 def test_from_database_is_validated_and_passed_to_the_engine(api):

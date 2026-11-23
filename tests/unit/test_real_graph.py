@@ -15,12 +15,21 @@ import lzma
 
 import pytest
 
-from idtrack import ids
+from idtrack import ids, organisms
 from idtrack.errors import EnsemblSchemaError
-from tests._real_tables import ORGANISMS, SNAPSHOT, RealTables, read_genes, read_truth, tables_path, truth_path
+from tests._real_tables import (
+    ORGANISMS,
+    SNAPSHOT,
+    RealTables,
+    read_as_typed,
+    read_genes,
+    read_truth,
+    tables_path,
+    truth_path,
+)
 
 pytestmark = pytest.mark.parametrize("organism", [o for o in ORGANISMS if tables_path(o).is_file()])
-SIZE_LIMIT = 500 * 1024  # bytes per table file, as tests/data/real/build_real_tables.py enforces
+SIZE_LIMIT = 600 * 1024  # bytes per table file: the repository's size check, as build_real_tables.py says why
 SYNONYM = ids.SYNONYM_PREFIX
 
 
@@ -84,7 +93,7 @@ def test_replay_answers_as_ensembl_does_and_never_makes_a_table_up(organism):
     old = tables.table(assembly, first, "gene_stable_id", ["gene_id", "stable_id", "version"])
     assert list(old.columns) == ["gene_id", "stable_id", "version"] and len(old) > 0
     with pytest.raises(AssertionError, match="rebuild"):
-        tables.table(assembly, first, "gene", ["gene_id", "biotype"])
+        tables.table(assembly, first, "gene", ["gene_id", "description"])
     with pytest.raises(AssertionError, match="rebuild"):
         tables.table(assembly, first, "karyotype", None)
     with pytest.raises(AssertionError, match="rebuild"):
@@ -98,9 +107,9 @@ def test_build_reads_only_the_cut_tables_and_the_file_gives_the_same_graph(organ
 
     assert world.tables_served > 500
     assert built is not loaded
-    assert loaded.manifest == built.manifest
-    assert loaded.manifest["organism"] == organism and loaded.manifest["releases"] == sorted(world.backbone)
-    assert {int(r): a for r, a in loaded.manifest["backbone_assembly"].items()} == world.backbone
+    assert loaded.record == built.record
+    assert loaded.record.organism == organism and list(loaded.record.releases) == sorted(world.backbone)
+    assert loaded.record.serving_assembly == world.backbone
     assert list(loaded.nodes) == list(built.nodes)
     if truth_path(organism).is_file():
         for query in read_truth(organism):
@@ -136,7 +145,7 @@ def test_gene_ids_of_every_release_are_those_of_ensembls_tables(organism, real_w
     changed = changed[changed["old_stable_id"] != changed["new_stable_id"]]
     impossible = changed[changed["new_release"] <= changed["old_release"]]
     recorded = {(int(a), int(b)) for a, b in zip(impossible["old_release"], impossible["new_release"])}
-    corrections = {tuple(c["recorded"]): tuple(c["used"]) for c in graph.manifest["history"]["corrections"]}
+    corrections = {tuple(c["recorded"]): tuple(c["used"]) for c in graph.record.history["corrections"]}
     assert set(corrections) == recorded
     assert corrections == {"sus_scrofa": {(106, 104): (106, 107)}, "homo_sapiens": {(114, 114): (114, 115)}}[organism]
 
@@ -155,7 +164,7 @@ def test_external_ids_of_every_release_are_those_of_ensembls_tables(organism, re
         if graph.node_type(node) == ids.EXTERNAL:
             for database, assembly, release in graph.trios(node):
                 in_graph[(database, assembly, release)].add(node.lower())
-    misplaced = {name.lower() for name in graph.graph["misplaced_external_entry"]}
+    misplaced = {name.lower() for name in graph.misplaced_external_entries}
 
     in_tables: dict[tuple[str, int, int], set[str]] = collections.defaultdict(set)
     for assembly in sorted(set(world.backbone.values()) | {int(a) for a in world.tables.indices}):
@@ -169,6 +178,76 @@ def test_external_ids_of_every_release_are_those_of_ensembls_tables(organism, re
     assert set(in_graph) == set(in_tables)
     for key in sorted(in_graph):
         assert in_graph[key] == in_tables[key], key
+
+
+def test_mirbase_entries_left_out_are_those_of_genes_at_several_loci(organism, real_world):
+    """Decision 73 by the tables: the entries the build leaves out are those that name genes at several loci.
+
+    The oracle counts loci from the tables alone (:py:meth:`tests._real_tables.Ensembl.one_locus_count`: a copy on a
+    ``non_ref`` region adds none, the ids of one locus over time are one, a pseudoautosomal region of Y is read on the
+    region of X it repeats), apart from the package's rule. The cut tables hold entries of several stable ids that
+    are one gene (pig: successive ids joined by Ensembl's history; human: a gene and its copies on patches, ids at
+    overlapping places, and the X and Y copies of the pseudoautosomal ``MIR3690`` and ``MIR6089``) and, in pig,
+    entries of genes at several loci, so that counting genes by stable id fails here.
+    """
+    world = real_world(organism)
+    oracle = world.ensembl
+    linked: dict[str, set[str]] = collections.defaultdict(set)
+    for assembly, release, name in world.tables.tables:
+        if name == "xref" and int(release) <= SNAPSHOT:
+            for gene, database, value, kind, _form in oracle._links_of_release(assembly, release):
+                if database in oracle._mirbase_names():
+                    linked[(value if kind == "id" else SYNONYM + value).lower()].add(gene)
+            for gene, database, value in oracle.display_names(assembly, release):  # I129: display names are held
+                if database in oracle._mirbase_names():
+                    linked[value.lower()].add(gene)
+    several = {value for value, genes in linked.items() if len(genes) > 1}
+    left_out = {value for value in several if oracle.one_locus_count(linked[value]) > 1}
+
+    assert world.api.graph.entries_of_several_genes == left_out
+    assert several - left_out and bool(left_out) is (organism == "sus_scrofa"), (sorted(several), sorted(left_out))
+
+
+def test_ncbi_gene_symbols_are_an_authority_by_the_name_the_tables_give_them(organism, real_world):
+    """Decision 94 reads NCBI's symbols as an authority under the name decision 53 gives them, not a typed name.
+
+    The graph names the label rows of Ensembl's ``EntrezGene`` as the oracle reads the tables' ``external_db``
+    (:py:meth:`tests._real_tables.Ensembl.label_names`), and that name is among the graph's authority databases. Fails
+    if the authority keeps a typed name that the tables do not give.
+    """
+    world = real_world(organism)
+    graph = world.api.graph
+    name = world.ensembl.label_names()["EntrezGene"]
+    assert graph.label_names["EntrezGene"] == name
+    assert name in graph.available_external_databases
+    assert graph.authority_databases == frozenset(organisms.SYMBOL_DATABASES[organism]) | {name}
+
+
+def test_external_values_are_read_as_a_typed_identifier_is_read(organism, real_world):
+    """Decision 83 on the side of the tables: the graph holds the name a database wrote with punctuation, as the name.
+
+    The cut tables hold UniProt's gene names written with a semicolon (pig ``ACYP1;``, human ``ABCF1;``); the graph has
+    no external id that ends in the punctuation of a sentence, and such values are in the graph as the plain names
+    (which ids each database has at each release, read alike by the oracle, is
+    :py:func:`test_external_ids_of_every_release_are_those_of_ensembls_tables`). Fails if the builder keeps the values
+    as written (a typed ``A1BG;`` was read one way and the graph's value another).
+    """
+    world = real_world(organism)
+    graph = world.api.graph
+    punctuated: set[tuple[str, str]] = set()
+    for assembly, release, name in world.tables.tables:
+        if name != "xref" or int(release) > SNAPSHOT:
+            continue
+        xref = world.ensembl._frame(assembly, release, "xref")
+        for value in set(xref["display_label"].dropna().astype(str)) | set(xref["dbprimary_acc"].dropna().astype(str)):
+            text = value.strip()
+            if text and text[-1] in "!,.:;?":
+                punctuated.add((text, read_as_typed(text)))
+    assert punctuated
+    externals = [node for node in graph.nodes if graph.node_type(node) == ids.EXTERNAL]
+    assert not [n for n in externals if n.removeprefix(SYNONYM)[-1] in "!,.:;?"]
+    lower = {node.lower() for node in externals}
+    assert {plain.lower() for _text, plain in punctuated} & lower
 
 
 def test_genes_outside_the_reference_sequence_are_those_ensembl_marks(organism, real_world):
@@ -201,7 +280,7 @@ def test_ids_of_a_database_and_the_releases_two_ids_share_are_those_of_the_table
     """
     world = real_world(organism)
     graph = world.api.graph
-    misplaced = {name.lower() for name in graph.graph["misplaced_external_entry"]}
+    misplaced = {name.lower() for name in graph.misplaced_external_entries}
     ids: dict[str, set[str]] = collections.defaultdict(set)
     for assembly in sorted({int(a) for a in world.tables.indices}):
         for release in world.ensembl.releases(assembly):

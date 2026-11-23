@@ -21,12 +21,23 @@ What it does:
 The cut. A gene is kept when its stable id is in the gene list, at every assembly and release; transcripts and
 translations are kept with their gene; cross references (``object_xref``, ``xref``, ``external_synonym``,
 ``identity_xref``, ``external_db``) are kept for the kept genes, transcripts and translations and for the external
-databases that the organism's externals selection names at some release, form or assembly; of the id history, the
+databases that the organism's externals selection names at some release, form or assembly, by the names the graph
+gives them (a database's accessions by its ``db_name``, its labels by the one name of its label rows,
+:py:func:`idtrack.build.database_manager.label_names_of_databases`, whatever Ensembl's display name at the release); of
+the id history, the
 gene events are kept, and both sides of every kept event must be in the gene list (the script stops and names the
-genes to add otherwise, so the list is always closed under Ensembl's id history); ``mapping_session`` is kept
-whole; of ``seq_region_attrib`` the rows of the kept genes' sequence regions that say ``toplevel`` or
-``non_ref``. The surrogate keys of a core database (``gene_id``, ``transcript_id``, ``translation_id``,
-``xref_id``, ``object_xref_id``, ``seq_region_id``) mean nothing outside it and differ in every release; they are
+genes to add otherwise, so the list is always closed under Ensembl's id history); ``mapping_session`` and
+``coord_system`` are kept whole; of ``assembly_exception`` the rows of the kept genes' sequence regions (with the
+reference regions they stand for among the kept regions); of Ensembl's chain files the blocks over the kept genes'
+places and those reference regions (``assembly_chain`` entries of the file); of ``external_db`` and the cross
+references also the databases whose links continue a selected one (decision 104, found on the complete tables); of
+``seq_region_attrib`` the rows of the kept genes' sequence regions that say
+``toplevel``, ``non_ref``, ``karyotype_rank`` or ``codon_table`` (what a region is); of ``seq_region`` the kept genes'
+regions (their names and coordinate systems); the display name of every kept gene is kept with its cross reference
+and database, whatever the selection (a gene's display name is a name of it in the graph), and of ``gene`` the
+display name only where it is a kept cross reference. The surrogate keys of a core database (``gene_id``,
+``transcript_id``, ``translation_id``, ``xref_id``, ``object_xref_id``, ``seq_region_id``) mean nothing outside it and
+differ in every release; they are
 renumbered from 1: genes, transcripts and translations in the order of their stable ids, cross references in the
 order in which these objects refer to them, so that the tables of consecutive releases are equal where Ensembl's
 data are and the keys are runs of consecutive numbers (the file stores them as differences). Stable ids, versions,
@@ -38,10 +49,13 @@ organism table, or of the tables a graph build reads. The snapshot release is fi
 answers of ``<organism>.truth.jsonl`` are answers for that release; for a later snapshot the truth has to be
 derived again from Ensembl's files of that release.
 
-Size: a table file must stay under 500 kB, the limit of the repository's pre-commit hook for an added file
-(``check-added-large-files``); the script fails above it, and so does a test. About 700 bytes per pig gene and
-release history, more for human: shorten the gene list when the limit is reached (``--check-only`` verifies an
-existing file and prints its size).
+Size: a table file must stay under 600 kB, the limit of the repository's pre-commit hook for an added file
+(``check-added-large-files --maxkb=600``); the script fails above it, and so does a test. The limit bounds what a clone
+of the repository carries: the test tables are not part of the package's distributions (its source distribution and
+wheel hold ``idtrack/`` only). It was 500 kB until the tables held the versions of the accessions (``xref.version``),
+which cost 32 kB of the human file (530 kB; pig 249 kB): the limit was raised rather than the coverage lowered to fit a
+size. About 750 bytes per pig gene and release history, more for human: shorten the gene list only when the limit is
+reached by more genes (``--check-only`` verifies an existing file and prints its size).
 """
 
 from __future__ import annotations
@@ -64,11 +78,20 @@ sys.path.insert(0, str(ROOT))
 
 from idtrack import ids, organisms, settings  # noqa: E402
 from idtrack.build.builder import GraphMaker  # noqa: E402
-from idtrack.build.database_manager import NON_REFERENCE_ATTRIBUTE, DatabaseManager  # noqa: E402
+from idtrack.build.database_manager import (  # noqa: E402
+    ASSEMBLY_EXCEPTION_COLUMNS,
+    GENE_ANNOTATION_COLUMNS,
+    KARYOTYPE_ATTRIBUTE,
+    MITOCHONDRIAL_ATTRIBUTE,
+    NON_REFERENCE_ATTRIBUTE,
+    XREF_COLUMNS,
+    DatabaseManager,
+    label_name,
+)
 from idtrack.errors import EnsemblSchemaError  # noqa: E402
-from tests._real_tables import RealTables, read_genes, tables_path  # noqa: E402
+from tests._real_tables import CHAIN_INFO_TABLE, CHAIN_TABLE, RealTables, read_genes, tables_path  # noqa: E402
 
-SIZE_LIMIT = 500 * 1024  # bytes per table file: the limit of the pre-commit hook check-added-large-files
+SIZE_LIMIT = 600 * 1024  # bytes per table file: the repository's size check for added files (why 600 kB: the docstring)
 OBJECT_TABLES = {
     "gene": "gene",
     "gene_stable_id": "gene",
@@ -77,15 +100,17 @@ OBJECT_TABLES = {
     "translation": "translation",
     "translation_stable_id": "translation",
 }
-REGION_CODES = ("toplevel", NON_REFERENCE_ATTRIBUTE)
+REGION_CODES = ("toplevel", NON_REFERENCE_ATTRIBUTE, KARYOTYPE_ATTRIBUTE, MITOCHONDRIAL_ATTRIBUTE)
 FORMS = ["gene", "transcript", "translation"]
 ROW_ORDER = {
+    "assembly_exception": ["seq_region_id", "seq_region_start"],
     "object_xref": ["object_xref_id"],
     "identity_xref": ["object_xref_id"],
     "xref": ["xref_id"],
     "external_synonym": ["xref_id"],
     "gene": ["gene_id"],
     "gene_stable_id": ["gene_id"],
+    "seq_region": ["seq_region_id"],
     "transcript": ["transcript_id"],
     "transcript_stable_id": ["transcript_id"],
     "translation": ["translation_id"],
@@ -135,6 +160,14 @@ class Cutter:
             }
             prefix = ids.SYNONYM_PREFIX
             self._relevant = {name[len(prefix) :] if name.startswith(prefix) else name for name in names}
+            # and the databases whose links continue a selected one (decision 104), found on the complete tables
+            filing = DatabaseManager(
+                organism=self.organism,
+                form=ids.BACKBONE_FORM,
+                local_repository=self.source_repository,
+                snapshot_release=self.snapshot,
+            ).database_filing()
+            self._relevant |= set(filing.renamed)
         return self._relevant
 
     def keys_of(self, manager: DatabaseManager) -> dict:
@@ -158,7 +191,15 @@ class Cutter:
 
         regions = source.get_table("gene", usecols=["gene_id", "seq_region_id"])
         regions = regions[regions["gene_id"].isin(list(number["gene"]))]
-        number["seq_region"] = {int(k): i for i, k in enumerate(sorted(set(regions["seq_region_id"].astype(int))), 1)}
+        kept_regions = set(regions["seq_region_id"].astype(int))
+        # the assembly exceptions of the kept genes' regions, with the reference regions they stand for (I148)
+        exceptions = source.get_table("assembly_exception", usecols=list(ASSEMBLY_EXCEPTION_COLUMNS))
+        exceptions = exceptions[exceptions["seq_region_id"].astype(int).isin(kept_regions)]
+        number["assembly_exception"] = set(
+            zip(exceptions["seq_region_id"].astype(int), exceptions["exc_seq_region_id"].astype(int))
+        )
+        kept_regions |= set(exceptions["exc_seq_region_id"].astype(int))
+        number["seq_region"] = {int(k): i for i, k in enumerate(sorted(kept_regions), 1)}
         attributes = source.get_table("attrib_type", usecols=["attrib_type_id", "code"])
         number["attrib_type"] = {
             int(k) for k in attributes.loc[attributes["code"].isin(REGION_CODES), "attrib_type_id"].tolist()
@@ -166,10 +207,22 @@ class Cutter:
 
         external_db = source.get_table("external_db", usecols=["external_db_id", "db_name", "db_display_name"])
         relevant = self.relevant_databases(manager)
-        keep_db = external_db["db_name"].isin(relevant) | external_db["db_display_name"].isin(relevant)
+        # The names the graph gives a database's rows: its accessions' db_name and its label rows' one name over the
+        # window (Ensembl's display name of this release is not one when the database was renamed later).
+        label_names = source.label_names()
+        keep_db = external_db["db_name"].isin(relevant) | external_db["db_name"].map(
+            lambda name: label_name(str(name), label_names) in relevant
+        ).astype(bool)
         database_ids = set(pd.to_numeric(external_db.loc[keep_db, "external_db_id"]).astype(int))
-        xref = source.get_table("xref", usecols=["xref_id", "external_db_id", "dbprimary_acc", "display_label"])
-        xref = xref[pd.to_numeric(xref["external_db_id"], errors="coerce").isin(database_ids)]
+        complete_xref = source.get_table("xref", usecols=list(XREF_COLUMNS))  # the build reads these
+        xref = complete_xref[pd.to_numeric(complete_xref["external_db_id"], errors="coerce").isin(database_ids)]
+        # The display names of the kept genes, whatever their databases (the graph holds them all).
+        annotation = source.get_table("gene", usecols=list(GENE_ANNOTATION_COLUMNS))  # the build reads these
+        annotation = annotation[annotation["gene_id"].isin(list(number["gene"]))]
+        annotation = annotation.assign(order=[number["gene"][int(k)] for k in annotation["gene_id"]]).sort_values(
+            "order"
+        )
+        shown = [int(k) for k in pd.to_numeric(annotation["display_xref_id"], errors="coerce").dropna()]
         object_xref = source.get_table(
             "object_xref", usecols=["ensembl_id", "ensembl_object_type", "xref_id", "object_xref_id"]
         )
@@ -180,7 +233,10 @@ class Cutter:
             kept |= ((kinds == form) & object_xref["ensembl_id"].isin(list(number[form]))).to_numpy()
         object_xref = object_xref[kept].assign(kind=kinds[kept])
         xref = xref[xref["xref_id"].isin(object_xref["xref_id"])]
-        number["external_db"] = set(pd.to_numeric(xref["external_db_id"]).astype(int))
+        display_xref = complete_xref[complete_xref["xref_id"].isin(shown)]
+        number["external_db"] = set(pd.to_numeric(xref["external_db_id"]).astype(int)) | set(
+            pd.to_numeric(display_xref["external_db_id"], errors="coerce").dropna().astype(int)
+        )
         # Cross references are numbered in the order in which the kept objects refer to them (genes, then
         # transcripts, then translations, each in the order of its new number; within an object by database and
         # accession), and the rows of `object_xref` in that same order: both keys are then runs of consecutive
@@ -203,6 +259,10 @@ class Cutter:
         number["xref"] = {}
         for old in references["old_xref"].tolist():
             number["xref"].setdefault(int(old), len(number["xref"]) + 1)
+        present = set(pd.to_numeric(complete_xref["xref_id"]).astype(int))
+        for old in shown:  # display names that no kept object refers to, in the order of their genes
+            if old in present:
+                number["xref"].setdefault(int(old), len(number["xref"]) + 1)
         number["object_xref"] = {}
         for key in references["key"].tolist():
             number["object_xref"].setdefault(int(key), len(number["object_xref"]) + 1)
@@ -219,7 +279,7 @@ class Cutter:
 
     def cut(self, manager: DatabaseManager, table_key: str, table: pd.DataFrame) -> pd.DataFrame:
         """Return a complete raw table restricted to the kept rows, surrogate keys renumbered, rows in a fixed order."""
-        if table_key == "mapping_session":
+        if table_key in ("mapping_session", "coord_system"):
             return table
         if table_key == "stable_id_event":
             events = table[table["type"] == "gene"]
@@ -253,6 +313,14 @@ class Cutter:
                 ("translation_id", "translation"),
             ):
                 table = self._renumber(table, column, number[kind])
+            if "display_xref_id" in table.columns:  # a display name of a database that is not kept is none
+                kept = number["xref"]
+                table = table.assign(
+                    display_xref_id=[
+                        float(kept[int(k)]) if pd.notna(k) and int(k) in kept else np.nan
+                        for k in table["display_xref_id"]
+                    ]
+                )
             return self._renumber(table, "seq_region_id", number["seq_region"])
         if table_key == "object_xref":
             # by the object as well as by the key: some old core databases use a key for more than one row
@@ -278,6 +346,15 @@ class Cutter:
             return table[pd.to_numeric(table["external_db_id"], errors="coerce").isin(number["external_db"])]
         if table_key == "attrib_type":
             return table[table["attrib_type_id"].isin(number["attrib_type"])]
+        if table_key == "seq_region":
+            table = table[table["seq_region_id"].isin(list(number["seq_region"]))]
+            return self._renumber(table, "seq_region_id", number["seq_region"])
+        if table_key == "assembly_exception":
+            pairs = list(zip(table["seq_region_id"].astype(int), table["exc_seq_region_id"].astype(int)))
+            table = table.loc[np.fromiter((pair in number["assembly_exception"] for pair in pairs), bool, len(pairs))]
+            return self._renumber(
+                self._renumber(table, "seq_region_id", number["seq_region"]), "exc_seq_region_id", number["seq_region"]
+            )
         if table_key == "seq_region_attrib":
             table = table[table["seq_region_id"].isin(list(number["seq_region"]))]
             table = table[table["attrib_type_id"].isin(number["attrib_type"])]
@@ -319,15 +396,65 @@ class Cutter:
             raise ValueError(f"The columns of {where} were cut to different rows: {sorted(lengths)}.")
         return table.copy()
 
+    def chain(self, manager: DatabaseManager, earlier: int, later: int):
+        """Answer ``assembly_chain``: the complete mapping for the source repository, cut and recorded otherwise.
+
+        The blocks kept are those of a region of the earlier assembly that holds a kept gene or the reference region of
+        a kept assembly exception, and that overlap such a place or region (decision 103: what the build carries).
+        """
+        found = self.original_chain(self.source(manager), earlier, later)  # the source repository keeps the file
+        if os.path.realpath(manager.local_repository) == self.source_repository or found is None:
+            return found
+        blocks, info = found
+        wanted: dict[str, list[tuple[int, int]]] = {}
+        source = self.source(manager).change_assembly(int(earlier), last_possible_release=True)
+        for release in source.available_releases:
+            if int(release) > self.snapshot:
+                continue
+            at = source.change_release(int(release))
+            genes = at.get_db("idsraw_gene")
+            annotation = at.get_table("gene", usecols=list(GENE_ANNOTATION_COLUMNS))
+            annotation = annotation[
+                annotation["gene_id"].isin(genes.loc[genes["gene_stable_id"].isin(self.genes), "gene_id"])
+            ]
+            names = at.get_table("seq_region", usecols=["seq_region_id", "name"])
+            name_of = dict(zip(names["seq_region_id"].astype(int), names["name"].astype(str)))
+            for region, start, end in zip(
+                annotation["seq_region_id"], annotation["seq_region_start"], annotation["seq_region_end"]
+            ):
+                wanted.setdefault(name_of[int(region)], []).append((int(start) - 1, int(end)))
+            for row in at.get_db("assemblyexception").itertuples(index=False):
+                wanted.setdefault(str(row.ref_region), []).append((int(row.ref_start) - 1, int(row.ref_end)))
+        keep = [
+            any(a < int(e) and int(s) < b for a, b in wanted.get(str(r), ()))
+            for r, s, e in zip(blocks["region"], blocks["start"], blocks["end"])
+        ]
+        cut = blocks[keep].sort_values(["region", "start"], kind="stable").reset_index(drop=True)
+        self.record[(int(earlier), int(later), CHAIN_TABLE)] = {
+            "columns": [[c, "text" if c in ("region", "onto") else "number"] for c in cut.columns],
+            "data": [[_plain(v, c not in ("region", "onto")) for v in cut[c].tolist()] for c in cut.columns],
+            "absent": [],
+        }
+        self.record[(int(earlier), int(later), CHAIN_INFO_TABLE)] = {
+            "columns": [["file", "text"], ["release", "number"], ["sha256", "text"]],
+            "data": [[info["file"]], [int(info["release"])], [info["sha256"]]],
+            "absent": [],
+        }
+        return cut, info
+
     def install(self, monkeypatch) -> None:
         """Route every download of ``DatabaseManager`` through this cutter."""
         cutter = self
+        self.original_chain = DatabaseManager.assembly_chain
         monkeypatch.setattr(settings.ENSEMBL, "access", "https")
         monkeypatch.setattr(DatabaseManager, "_core_db_index_cache", {})
         monkeypatch.setattr(
             DatabaseManager,
             "download_table",
             lambda self, table_key, usecols=None: cutter.download(self, table_key, usecols),
+        )
+        monkeypatch.setattr(
+            DatabaseManager, "assembly_chain", lambda self, earlier, later: cutter.chain(self, earlier, later)
         )
 
 
@@ -426,12 +553,12 @@ def main() -> int:
         finally:
             shutil.rmtree(scratch, ignore_errors=True)
         RealTables(organism, snapshot, genes, indices, cutter.record).save(out)
-        digest = graph.manifest["content_digest"]
-        print(f"cut: {len(genes)} genes, {len(cutter.record)} tables, graph of {graph.manifest['counts']}")
+        digest = graph.record.content_digest
+        print(f"cut: {len(genes)} genes, {len(cutter.record)} tables, graph of {graph.record.counts}")
     again = replay(organism, out, snapshot)
     size = os.path.getsize(out)
-    print(f"replayed from {out}: {size} bytes, graph content {again.manifest['content_digest']}")
-    if not arguments.check_only and again.manifest["content_digest"] != digest:
+    print(f"replayed from {out}: {size} bytes, graph content {again.record.content_digest}")
+    if not arguments.check_only and again.record.content_digest != digest:
         print("The graph built from the written file differs from the graph built while cutting.", file=sys.stderr)
         return 1
     if size > SIZE_LIMIT:

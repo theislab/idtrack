@@ -1,7 +1,8 @@
 """The array store of a graph and the pieces of its file format.
 
 A frozen graph keeps its content in :py:class:`_Store`: node names and types, edge arrays, a table of distinct
-connections, the genes outside the reference sequence, the name indices and the per-release spellings of external ids.
+connections, the genes outside the reference sequence, the name indices, the per-release spellings of external ids, the
+versions of accessions per link and the display names of the genes (:py:class:`_LinkMarks`).
 """
 
 from __future__ import annotations
@@ -16,25 +17,29 @@ import numpy as np
 
 from idtrack import ids
 from idtrack.errors import IntegrityError
+from idtrack.graph.genes import PLACE_KINDS, SCAFFOLD
 from idtrack.graph.types import (
     _INF,
     _KIND_HISTORY,
     _KIND_OTHER,
     _KIND_XREF,
     _NAN,
+    AssemblyException,
     Connection,
     HistoryEdge,
+    Place,
     ReleaseSet,
     _assembly_label,
     _has_id_and_version,
-    _is_assembly_gene,
     _is_release,
     _stable_hash,
 )
 
 _NAME_SEPARATOR = "\x00"
-_FOLD_SEPARATORS = str.maketrans("-.", "__")
-_SEPARATORS = "-_."
+_SCAFFOLD_CODE = PLACE_KINDS.index(SCAFFOLD)
+# The separators of a name (:py:data:`idtrack.ids.SEPARATORS`), each read as ``_`` by the step "separator".
+_SEPARATORS = ids.SEPARATORS
+_FOLD_SEPARATORS = str.maketrans({separator: "_" for separator in _SEPARATORS})
 
 
 class _Store:
@@ -97,17 +102,27 @@ class _Store:
         self.backbone_code = node_types.index(_backbone_type()) if _backbone_type() in node_types else -1
         self.external_code = node_types.index(ids.EXTERNAL) if ids.EXTERNAL in node_types else -1
         self.type_has_version = [_has_id_and_version(t) for t in node_types]
-        self.type_is_assembly_gene = [_is_assembly_gene(t) for t in node_types]
 
         self.lower_hash: np.ndarray | None = None
         self.lower_idx: np.ndarray | None = None
         self.separator_hash: np.ndarray | None = None
         self.separator_idx: np.ndarray | None = None
         self.globals: dict[str, Any] = {}
-        self.spellings: dict[tuple[int, str], tuple[str, tuple[tuple[int, str], ...]]] = {}
+        # {(external node, Ensembl node, database): (spelling at the link's latest release, ((mask, spelling), ...))}
+        self.spellings: dict[tuple[int, int, str], tuple[str, tuple[tuple[int, str], ...]]] = {}
         self.non_reference: dict[int, ReleaseSet] = {}
         # The node names in sorted order, made at the first lookup by prefix (:py:meth:`names_with_prefix`).
         self.sorted_names: list[str] | None = None
+        self.places: _Places = _Places.empty()
+        # The places on the reference sequence carried onto later assemblies by Ensembl's mapping of the assemblies
+        # (decision 103): a table of places whose assembly is the later one and whose releases are those of the place
+        # carried; and Ensembl's assembly exceptions of every release (:py:class:`AssemblyException`).
+        self.carried: _Places = _Places.empty()
+        self.exceptions: tuple[AssemblyException, ...] = ()
+        # The version each link of an accession attaches at each release (`xref.version`), and the links that are a
+        # gene's display name at a release (:py:class:`_LinkMarks`).
+        self.versions: _LinkMarks = _LinkMarks.empty()
+        self.displays: _LinkMarks = _LinkMarks.empty()
 
     # ------------------------------------------------------------------ construction
 
@@ -416,16 +431,19 @@ class _Store:
         return sorted(found, key=lambda j: self.names[j]) if len(found) > 1 else found
 
     def respelled(self) -> tuple[frozenset[int], frozenset[str]]:
-        """Return the nodes that some database writes otherwise than they are named, and their names in lower case.
+        """Return the nodes that some link spells otherwise than they are named, and their names in lower case.
 
-        These are the nodes of :py:attr:`spellings`; for every other node the name is its one spelling.
+        These are the sources of :py:attr:`spellings`; for every other node the name is its one spelling.
         """
-        numbers = frozenset(number for number, _database in self.spellings)
+        numbers = frozenset(number for number, _target, _database in self.spellings)
         return numbers, frozenset(self.names[number].lower() for number in numbers)
 
-    def spelling(self, number: int, database: str, release: int | None) -> str:
-        """Return how a database writes a node at a release (``None``, or a release without it: at its latest)."""
-        found = self.spellings.get((number, database))
+    def link_spelling(self, number: int, target: int, database: str, release: int | None) -> str:
+        """Return how the link of a node to a target in a database spells the node at a release.
+
+        ``None``, or a release without the link: its spelling at its latest release.
+        """
+        found = self.spellings.get((number, target, database))
         if found is None:
             return self.names[number]
         latest, otherwise = found
@@ -447,6 +465,22 @@ class _Store:
                 break
             found.append(name)
         return found
+
+    def spelt_mask(self, number: int, target: int, database: str, mask: int, text: str) -> int:
+        """Return the releases of ``mask`` at which the link of a node to a target in a database spells ``text``."""
+        found = self.spellings.get((number, target, database))
+        if found is None:
+            return mask if self.names[number] == text else 0
+        latest, otherwise = found
+        elsewhere = 0
+        spelt = 0
+        for other_mask, other_text in otherwise:
+            elsewhere |= other_mask
+            if other_text == text:
+                spelt |= other_mask
+        if latest == text:
+            spelt |= ~elsewhere
+        return mask & spelt
 
     def lower_candidates(self, lower: str) -> list[int]:
         if self.lower_hash is None:
@@ -474,6 +508,185 @@ class _Store:
         return found
 
 
+class _Places:
+    """The places of the genes of a graph, as arrays sorted by node (:py:class:`idtrack.graph.types.Place`)."""
+
+    def __init__(
+        self,
+        node: np.ndarray,
+        assembly: np.ndarray,
+        region: np.ndarray,
+        start: np.ndarray,
+        end: np.ndarray,
+        strand: np.ndarray,
+        masks: np.ndarray,
+        regions: list[str],
+        kind: np.ndarray | None = None,
+    ):
+        self.node = np.ascontiguousarray(node, dtype=np.int32)
+        self.assembly = np.ascontiguousarray(assembly, dtype=np.int32)
+        self.region = np.ascontiguousarray(region, dtype=np.int32)
+        self.start = np.ascontiguousarray(start, dtype=np.int64)
+        self.end = np.ascontiguousarray(end, dtype=np.int64)
+        self.strand = np.ascontiguousarray(strand, dtype=np.int8)
+        # The kind of each place's region, as its index in `genes.PLACE_KINDS` (a scaffold where none is given).
+        self.kind = np.ascontiguousarray(
+            np.full(len(self.node), _SCAFFOLD_CODE) if kind is None else kind, dtype=np.int8
+        )
+        masks = np.ascontiguousarray(masks, dtype=np.uint64)
+        self.masks = masks.reshape(len(self.node), -1) if masks.size else np.zeros((len(self.node), 1), np.uint64)
+        self.regions = regions
+        if len(self.node) and np.any(np.diff(self.node) < 0):
+            raise IntegrityError("The places of a graph must be ordered by node.")
+        if len(self.kind) != len(self.node) or (
+            len(self.kind) and not 0 <= int(self.kind.min()) <= int(self.kind.max()) < len(PLACE_KINDS)
+        ):
+            raise IntegrityError("The kinds of the places of a graph must be one per place, of the known kinds.")
+
+    @classmethod
+    def empty(cls) -> _Places:
+        """Return the places of a graph that has none (a graph made in memory)."""
+        nothing = np.zeros(0, dtype=np.int64)
+        return cls(nothing, nothing, nothing, nothing, nothing, nothing, np.zeros((0, 1), dtype=np.uint64), [])
+
+    @classmethod
+    def of(cls, places: dict[tuple, int]) -> _Places:
+        """Make the table from ``{(node, assembly, region, start, end, strand[, kind]): release mask}``.
+
+        The kind of the region is one of :py:data:`idtrack.graph.genes.PLACE_KINDS`; a key without one is a scaffold.
+        """
+        full = {(*key[:6], key[6] if len(key) > 6 else SCAFFOLD): mask for key, mask in places.items()}
+        keys = sorted(full)
+        regions = sorted({key[2] for key in keys})
+        code = {name: i for i, name in enumerate(regions)}
+        columns = list(zip(*keys)) if keys else [()] * 7
+        return cls(
+            np.asarray(columns[0], dtype=np.int64),
+            np.asarray(columns[1], dtype=np.int64),
+            np.asarray([code[name] for name in columns[2]], dtype=np.int64),
+            np.asarray(columns[3], dtype=np.int64),
+            np.asarray(columns[4], dtype=np.int64),
+            np.asarray(columns[5], dtype=np.int64),
+            _masks_to_words([full[key] for key in keys]) if keys else np.zeros((0, 1), dtype=np.uint64),
+            regions,
+            np.asarray([PLACE_KINDS.index(kind) for kind in columns[6]], dtype=np.int64),
+        )
+
+    def __len__(self) -> int:
+        return len(self.node)
+
+    def of_node(self, i: int) -> tuple[Place, ...]:
+        """Return the places of node ``i``, in the stored order (assembly, region, start, end, strand)."""
+        key = np.int32(i)  # a Python int makes numpy cast the whole node array for every search (about 0.2 ms)
+        a = int(np.searchsorted(self.node, key, side="left"))
+        b = int(np.searchsorted(self.node, key, side="right"))
+        if a == b:
+            return ()
+        masks = _words_to_masks(self.masks[a:b])
+        return tuple(
+            Place(
+                int(self.assembly[j]),
+                self.regions[int(self.region[j])],
+                int(self.start[j]),
+                int(self.end[j]),
+                int(self.strand[j]),
+                ReleaseSet.from_mask(masks[j - a]),
+                PLACE_KINDS[int(self.kind[j])],
+            )
+            for j in range(a, b)
+        )
+
+    def digest_bytes(self) -> bytes:
+        """Return the content of the table as bytes, for a graph's content digest."""
+        parts = [self.node, self.assembly, self.region, self.start, self.end, self.strand, self.masks, self.kind]
+        return b"".join(np.ascontiguousarray(part).tobytes() for part in parts) + "\x00".join(self.regions).encode()
+
+
+class _LinkMarks:
+    """A value per link of an external node and the releases at which the link carries it, as arrays sorted by link.
+
+    A row is ``(external node, Ensembl node, database, value, release mask)``: for the versions of the accessions
+    (:py:attr:`_Store.versions`) the value is the version a link of a database attaches at those releases; for the
+    display names of the genes (:py:attr:`_Store.displays`) the database is the one the display name's row is filed
+    under in the graph, the value is 0, and the mask says at which releases the external node is the gene's display
+    name. A link may carry several values at one release (two
+    cross references of one accession with two versions).
+    """
+
+    def __init__(
+        self,
+        source: np.ndarray,
+        target: np.ndarray,
+        database: np.ndarray,
+        value: np.ndarray,
+        masks: np.ndarray,
+        databases: list[str],
+    ):
+        self.source = np.ascontiguousarray(source, dtype=np.int32)
+        self.target = np.ascontiguousarray(target, dtype=np.int32)
+        self.database = np.ascontiguousarray(database, dtype=np.int32)
+        self.value = np.ascontiguousarray(value, dtype=np.int32)
+        masks = np.ascontiguousarray(masks, dtype=np.uint64)
+        self.masks = masks.reshape(len(self.source), -1) if masks.size else np.zeros((len(self.source), 1), np.uint64)
+        self.databases = databases
+        n = len(self.source)
+        if not (len(self.target) == len(self.database) == len(self.value) == len(self.masks) == n):
+            raise IntegrityError("The marks of the links of a graph must have one row per link and value.")
+        if n and np.any(np.diff(self.source) < 0):
+            raise IntegrityError("The marks of the links of a graph must be ordered by node.")
+        if n and not 0 <= int(self.database.min()) <= int(self.database.max()) < max(1, len(databases)):
+            raise IntegrityError("The marks of the links of a graph name a database the graph does not list.")
+
+    @classmethod
+    def empty(cls) -> _LinkMarks:
+        """Return the marks of a graph that has none."""
+        nothing = np.zeros(0, dtype=np.int64)
+        return cls(nothing, nothing, nothing, nothing, np.zeros((0, 1), dtype=np.uint64), [])
+
+    @classmethod
+    def of(cls, marks: Mapping[tuple[int, int, str, int], int]) -> _LinkMarks:
+        """Make the table from ``{(external node, Ensembl node, database, value): release mask}`` (masks not 0)."""
+        databases = sorted({key[2] for key in marks})
+        code = {name: i for i, name in enumerate(databases)}
+        keys = sorted((source, target, code[database], value) for source, target, database, value in marks)
+        columns = list(zip(*keys)) if keys else [()] * 4
+        masks = [marks[(source, target, databases[db], value)] for source, target, db, value in keys]
+        return cls(
+            np.asarray(columns[0], dtype=np.int64),
+            np.asarray(columns[1], dtype=np.int64),
+            np.asarray(columns[2], dtype=np.int64),
+            np.asarray(columns[3], dtype=np.int64),
+            _masks_to_words(masks) if keys else np.zeros((0, 1), dtype=np.uint64),
+            databases,
+        )
+
+    def __len__(self) -> int:
+        return len(self.source)
+
+    def of_node(self, i: int) -> list[tuple[int, str, int, int]]:
+        """Return ``(Ensembl node, database, value, release mask)`` of every row of the links of node ``i``."""
+        key = np.int32(i)
+        a = int(np.searchsorted(self.source, key, side="left"))
+        b = int(np.searchsorted(self.source, key, side="right"))
+        if a == b:
+            return []
+        masks = _words_to_masks(self.masks[a:b])
+        names = self.databases
+        return [
+            (int(self.target[j]), names[int(self.database[j])] if names else "", int(self.value[j]), masks[j - a])
+            for j in range(a, b)
+        ]
+
+    def nodes(self) -> np.ndarray:
+        """Return the external nodes that have a row, ascending."""
+        return np.unique(self.source)
+
+    def digest_bytes(self) -> bytes:
+        """Return the content of the table as bytes, for a graph's content digest."""
+        parts = [self.source, self.target, self.database, self.value, self.masks]
+        return b"".join(np.ascontiguousarray(part).tobytes() for part in parts) + "\x00".join(self.databases).encode()
+
+
 def _backbone_type() -> str:
     return ids.GENE
 
@@ -499,15 +712,6 @@ def _connection_or_none(value: Any) -> Connection | None:
         return None
 
 
-_STORED_GLOBALS = (
-    "shared_external_ids",
-    "available_external_databases",
-    "available_genome_assemblies",
-    "available_external_databases_assembly",
-    "external_database_connection_form",
-)
-
-
 def _masks_to_words(masks: list[int]) -> np.ndarray:
     """Return release bit masks as rows of 64-bit words (lowest word first), as a graph file stores them."""
     words = max(1, max((mask.bit_length() for mask in masks), default=1) + 63 >> 6)
@@ -520,6 +724,10 @@ def _masks_to_words(masks: list[int]) -> np.ndarray:
 
 def _words_to_masks(rows: np.ndarray) -> list[int]:
     """Return the release bit masks stored as rows of 64-bit words."""
+    if rows.ndim == 2 and rows.shape[1] == 1:
+        return rows[:, 0].tolist()
+    if rows.ndim == 2 and rows.shape[1] == 2:  # releases up to 127: every graph of today's Ensembl
+        return (rows[:, 0].astype(object) | (rows[:, 1].astype(object) << 64)).tolist()
     return [sum(int(word) << (64 * position) for position, word in enumerate(row)) for row in rows.tolist()]
 
 
@@ -536,26 +744,3 @@ def _to_json(value: Any) -> Any:
     if isinstance(value, (float, np.floating)):
         return None if math.isnan(value) else float(value)
     return value
-
-
-def _from_json_graph(attributes: dict) -> dict:
-    """Restore the types of the graph attributes read from a file."""
-    result = dict(attributes)
-    if "misplaced_external_entry" in result:
-        result["misplaced_external_entry"] = set(result["misplaced_external_entry"])
-    if "backbone_assembly" in result:
-        result["backbone_assembly"] = {int(k): int(v) for k, v in result["backbone_assembly"].items()}
-    return result
-
-
-def _from_json_globals(stored: dict) -> dict:
-    """Restore the types of the graph-wide tables read from a file."""
-    return {
-        "shared_external_ids": {str(k): int(v) for k, v in stored["shared_external_ids"].items()},
-        "available_external_databases": set(stored["available_external_databases"]),
-        "available_genome_assemblies": {int(a) for a in stored["available_genome_assemblies"]},
-        "available_external_databases_assembly": {
-            int(a): set(names) for a, names in stored["available_external_databases_assembly"].items()
-        },
-        "external_database_connection_form": dict(stored["external_database_connection_form"]),
-    }

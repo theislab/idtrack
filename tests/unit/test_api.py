@@ -87,7 +87,7 @@ class TestAPIErrorHandling:
         """API.load never builds: a missing file is a graph-file error that names the file."""
         from idtrack.api import API
 
-        path = os.path.join(temp_dir, "graph_homo_sapiens_assembly38_min48_max115_narrow.npz")
+        path = os.path.join(temp_dir, "graph_homo_sapiens_assembly38_min48_max115.npz")
         with pytest.raises(errors.GraphFileError, match="No graph file") as raised:
             API.load(path)
         assert raised.value.path == path
@@ -98,7 +98,7 @@ class TestAPIErrorHandling:
         """API.load of a file that is not a graph is a graph-file error, not a mismatch."""
         from idtrack.api import API
 
-        path = os.path.join(temp_dir, "graph_homo_sapiens_assembly38_min48_max115_narrow.npz")
+        path = os.path.join(temp_dir, "graph_homo_sapiens_assembly38_min48_max115.npz")
         with open(path, "wb") as handle:
             handle.write(b"not a graph")
         with pytest.raises(errors.GraphFileError, match="cannot be read") as raised:
@@ -122,7 +122,7 @@ class TestAPIErrorHandling:
         from idtrack.api import API
 
         assert API.graph_path("sus_scrofa", 115, temp_dir) == os.path.join(
-            temp_dir, "graph_sus_scrofa_assembly111_min56_max115_narrow.npz"
+            temp_dir, "graph_sus_scrofa_assembly111_min56_max115.npz"
         )
         with pytest.raises(errors.ArgumentTypeError):
             API.graph_path("sus_scrofa", 115.0, temp_dir)  # type: ignore[arg-type]

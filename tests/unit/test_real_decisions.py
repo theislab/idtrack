@@ -13,9 +13,9 @@ compares each answer with the cut tables themselves, read by ``tests._real_table
 * an identifier read without a database stands for the genes of every database, by the same rule.
 
 The second part holds the rules that need a particular case (the hyper-connectivity threshold, the strict engine
-and the flagged fall-back of the API, the suffix of an accession, a dataset whose database is named, and, for
-human, the copies of a gene outside the reference sequence); each case is taken from the tables or from the truth
-file (``tests/data/real/<organism>.truth.jsonl``), never from what idtrack answered.
+and the flagged fall-back of the API, the miRBase name of a miRNA gene, the suffix of an accession, a dataset whose
+database is named, and, for human, the copies of a gene outside the reference sequence); each case is taken from the
+tables or from the truth file (``tests/data/real/<organism>.truth.jsonl``), never from what idtrack answered.
 """
 
 from __future__ import annotations
@@ -27,10 +27,11 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from idtrack import ids, organisms
+from idtrack import ids, organisms, settings
 from idtrack.errors import InactiveAtReleaseError, UnknownVersionError
+from idtrack.results import BRIDGE_RULES_TAKEN
 from idtrack.settings import GraphSettings, SearchSettings
-from tests._real_tables import ORGANISMS, SNAPSHOT, RealTables, read_truth, tables_path, truth_path, verdict
+from tests._real_tables import ORGANISMS, SNAPSHOT, RealTables, fold, read_truth, tables_path, truth_path, verdict
 
 SYNONYM = ids.SYNONYM_PREFIX
 AVAILABLE = [organism for organism in ORGANISMS if tables_path(organism).is_file()]
@@ -72,6 +73,8 @@ class Release:
         self.assembly = world.backbone[release]
         self.genes = world.genes_at(release)
         self.outside = world.ensembl.non_reference_genes(self.assembly, release)
+        # decision 95: the Y copies of pseudoautosomal genes, apart beside the genes they copy on X
+        self.twins = world.ensembl.y_twins(self.assembly, release)
         self.ids_of_gene: dict[tuple[str, str], set[str]] = collections.defaultdict(set)
         self.genes_of_id: dict[tuple[str, str], set[str]] = collections.defaultdict(set)
         self.databases_of: dict[str, dict[str, set[str]]] = collections.defaultdict(
@@ -85,6 +88,12 @@ class Release:
                 self.databases_of[value.lower()][gene].add(name)
                 self.attached[value.lower()].add((gene, form, name))
         self.databases = sorted({name for _gene, name in self.ids_of_gene})
+        # I144: the genes whose display name (gene.display_xref_id) an identifier is at the release, letter case
+        # ignored (the graph keeps one node per identifier), where the graph keeps the identifier on the gene
+        self.displayed: dict[str, set[str]] = collections.defaultdict(set)
+        for gene, _database, value in world.ensembl.display_names(self.assembly, release):
+            if value.lower() in self.databases_of and gene in self.databases_of[value.lower()]:
+                self.displayed[value.lower()].add(gene)
 
     def nearest_form_has_every_database(self, value: str) -> bool:
         """Tell whether, for each gene, the databases that attach an identifier to it do so on one form.
@@ -108,12 +117,16 @@ class Release:
     def answer(self, owners: set[str], value: str) -> tuple[set[str], set[str], set[str]]:
         """Return the genes an identifier stands for, the best of them, and the copies reported apart.
 
-        Copies outside the reference sequence leave an answer that holds a gene of the reference sequence; among
-        the genes left, the best are those that most databases attach the identifier to.
+        Copies outside the reference sequence leave an answer that holds a gene of the reference sequence, and so do
+        the Y copies of pseudoautosomal genes beside a gene on X (decision 95); among the genes left, those whose
+        display name the identifier is at the release come first (I144), and of those the best are those that most
+        databases attach the identifier to.
         """
         reference = owners - self.outside
+        reference -= {gene for gene in reference if self.twins.get(gene, set()) & reference}
         kept = reference or owners
-        support = {gene: len(self.databases_of[value.lower()][gene]) for gene in kept}
+        displayed = kept & self.displayed[value.lower()]
+        support = {gene: len(self.databases_of[value.lower()][gene]) for gene in displayed or kept}
         best = {self.node(gene) for gene, count in support.items() if count == max(support.values())}
         apart = {self.node(gene) for gene in owners - reference} if reference else set()
         return {self.node(gene) for gene in kept}, best, apart
@@ -292,6 +305,17 @@ def test_every_gene_id_of_a_release_is_itself_at_that_release(real_world, organi
             free = api.convert(identifier, to_release=release)
             given = api.convert(identifier, from_release=release, to_release=release)
             for result, inferred, strategy in ((free, True, "best"), (given, False, "all")):
+                if gene.startswith("LRG_"):
+                    # decision 96: an LRG id answers the gene its record describes, the record listed apart
+                    right = (
+                        result.match == "lrg:exact"
+                        and node in result.alternative_locus_genes
+                        and result.targets(strategy)
+                        and not any(t.startswith("LRG_") for t in result.targets(strategy))
+                    )
+                    if not right:
+                        wrong.append((identifier, inferred, list(result.targets(strategy)), result.from_release))
+                    continue
                 right = (
                     list(result.targets(strategy)) == [node]
                     and [[c.gene, c.target] for c in result.view(strategy)] == [[node, node]]
@@ -311,7 +335,8 @@ def test_gene_id_that_exists_at_the_target_release_is_its_own_answer(real_world,
 
     Every gene of the tables is asked from its first release to its last, back, and from a release in between
     (also over the changes of assembly): the best answer is the id with its version of the target release, alone
-    and not as a tie; with ``strategy="all"`` it is the first of the genes returned.
+    and not as a tie; in the view ``"all"`` of the same search it is the first of the genes returned, and every other
+    gene there is one of the target release.
     """
     world = real_world(organism)
     api = world.api
@@ -322,29 +347,30 @@ def test_gene_id_that_exists_at_the_target_release_is_its_own_answer(real_world,
     wrong = []
     asked = versions_changed = 0
     for gene, releases in sorted(releases_of.items()):
+        if gene.startswith("LRG_"):
+            continue  # decision 96: an LRG id answers the gene its record describes (test_every_gene_id_...)
         first, last, middle = releases[0], releases[-1], releases[len(releases) // 2]
         for source, target in {(first, last), (last, first), (middle, last), (first, middle)}:
             if source == target:
                 continue
             node = f"{gene}.{world.genes_at(target)[gene]}"
             versions_changed += world.genes_at(source)[gene] != world.genes_at(target)[gene]
-            best = api.convert(gene, from_release=source, to_release=target)
-            everyone = api.convert(gene, from_release=source, to_release=target)
+            result = api.convert(gene, from_release=source, to_release=target)
+            best, everyone = list(result.targets("best")), list(result.targets("all"))
             asked += 1
             there = world.genes_at(target)
             if not (
-                list(best.targets("best")) == [node]
-                and best.tie is False
-                and list(everyone.targets("all"))[:1] == [node]
-                and best.from_release == source
-                and node not in list(best.alternative_locus_genes)
+                best == [node]
+                and result.tie is False
+                and everyone[:1] == [node]
+                and [c.target for c in result.view("best")] == best
+                and [c.target for c in result.view("all")][: len(result.view("best"))] == best
+                and result.from_release == source
+                and node not in list(result.alternative_locus_genes)
                 # whatever else the history reaches is a gene of the target release
-                and all(
-                    there.get(other.rpartition(".")[0]) == int(other.rpartition(".")[2])
-                    for other in list(everyone.targets("all"))
-                )
+                and all(there.get(other.rpartition(".")[0]) == int(other.rpartition(".")[2]) for other in everyone)
             ):
-                wrong.append((gene, source, target, list(best.targets("best")), list(everyone.targets("all"))[:3]))
+                wrong.append((gene, source, target, best, everyone[:3]))
     assert not wrong, wrong[:10]
     assert asked >= 500 and versions_changed >= 100
 
@@ -564,7 +590,9 @@ def test_naming_the_database_removes_the_ties_it_should_and_makes_none(real_worl
         )
         cases["several genes in the symbol database"] += len(view_owners(world, symbol, database)) > 1
     assert len(symbols) > 100
-    assert cases["tie without the database, one gene with it"] >= 2, dict(cases)
+    # Ensembl's display name ranks first (I144): of the ties of equal support only those where both genes or neither
+    # display the symbol are left (pig: one in the cut tables)
+    assert cases["tie without the database, one gene with it"] >= 1, dict(cases)
     assert cases["another gene with the database than without"] >= 2, dict(cases)
     # the symbol database of pig gives no symbol to two genes at this release; HGNC does
     assert (cases["several genes in the symbol database"] >= 2) is (organism == "homo_sapiens"), dict(cases)
@@ -582,8 +610,9 @@ def test_harmonizer_reads_a_dataset_in_the_database_it_is_told(real_world, organ
     A dataset of symbols of the snapshot release, among them every symbol on which naming the database matters,
     converted to the same symbol database. Each feature's gene is compared with the tables: with the database
     named, the gene that the database gives the symbol to (the best supported, should it give it to several);
-    without, the best supported of all genes that carry the string and have a symbol in the target database, and
-    ``ambiguous`` when two are equal.
+    without, the best of all genes that carry the string (I151: the answer is a gene before it is an id of the target
+    database, ``converted_no_final_id`` where it has none), a tie judged among its genes that have a symbol there,
+    and ``ambiguous`` when two are equal.
     """
     ad = pytest.importorskip("anndata")
     pytest.importorskip("scipy")
@@ -608,10 +637,14 @@ def test_harmonizer_reads_a_dataset_in_the_database_it_is_told(real_world, organ
         return {name: (row["status"], row["ensembl_gene"]) for name, row in table.iterrows()}
 
     def expected(owners, symbol):
-        # one result has one final database: the genes that have a symbol in it are the candidates
-        with_symbol = {gene for gene in owners if view.ids_of_gene.get((gene, database))}
-        best = view.answer(with_symbol, symbol)[1]
-        return ("converted", next(iter(best))) if len(best) == 1 else ("ambiguous", None)
+        # the answer is first a gene, ranked as Ensembl genes (I151: a target in a database is an id of the gene
+        # answered); one result has one final database, so a tie is judged among its genes that have a symbol in it
+        best = view.answer(set(owners), symbol)[1]
+        base = {view.node(gene): gene for gene in owners}
+        named = {node for node in best if view.ids_of_gene.get((base[node], database))}
+        if len(best) == 1:
+            return ("converted" if named else "converted_no_final_id", next(iter(best)))
+        return ("converted", next(iter(named))) if len(named) == 1 else ("ambiguous", None)
 
     without = harmonized("unnamed")
     named = harmonized("named", from_database_by_dataset={"study": database})
@@ -627,7 +660,9 @@ def test_harmonizer_reads_a_dataset_in_the_database_it_is_told(real_world, organ
         statuses[(pairs[0][0][0], pairs[1][0][0])] += 1
         if pairs[0][1] != pairs[1][1]:
             statuses["changed by naming the database"] += 1
-    assert statuses["changed by naming the database"] >= 2, dict(statuses)
+    # a symbol whose gene changes with the database named: where one of the genes displays the symbol, it is the
+    # answer with the database named and without (I144), so fewer such symbols are left (human: one in the cut tables)
+    assert statuses["changed by naming the database"] >= 1, dict(statuses)
 
 
 # --------------------------------------------------------------------------- cases of the truth file
@@ -652,6 +687,38 @@ def ask(api, query, **more):
     )  # fmt: skip
 
 
+def _considered(result, nodes: set) -> list[tuple[str, str, str]]:
+    """Return the bridges a conversion considered between two genes (two stable ids) through one of the nodes.
+
+    The explained path names the ids between two genes as results name nodes (decision 56: a synonym without the
+    graph's prefix, its node of kind ``synonym``), so each is read back as the graph's node through the explanation's
+    nodes. Returns ``(source, target, rule)`` per bridge and node.
+    """
+    graph_name = {
+        node.id: ids.SYNONYM_PREFIX + node.label if node.kind == "synonym" else node.id for node in result.path.nodes
+    }
+    return [
+        (check.source, check.target, rule)
+        for check in result.path.bridges
+        if ids.split(check.source)[0] != ids.split(check.target)[0]
+        for middle, rule in check.through
+        if graph_name.get(middle, middle) in nodes
+    ]
+
+
+def _shown_by_one_of_two_rules(query, result, nodes: set) -> None:
+    """Check that a truth line shows the rule lifted in ``result``.
+
+    The answer is wrong, or the bridge rule of decision 72 (which the line predates) refuses the same bridge, through
+    one of ``nodes``, at least once and takes none.
+    """
+    if verdict(query, result) is not None:
+        return
+    considered = _considered(result, nodes)
+    assert considered, "the lifted rule changed nothing that the answer shows"
+    assert all(rule not in BRIDGE_RULES_TAKEN for _, _, rule in considered), considered
+
+
 @pytest.mark.parametrize("organism, query", lines(shows="threshold"))
 def test_id_shared_by_more_than_five_genes_at_once_is_no_bridge(real_world, organism, query):
     """A retired id that Ensembl gives no successor is not bridged through a family name to another gene.
@@ -662,7 +729,10 @@ def test_id_shared_by_more_than_five_genes_at_once_is_no_bridge(real_world, orga
     """
     world = real_world(organism)
     assert world.api.graph.graph_settings.hyperconnective_threshold == 5
-    assert verdict(query, ask(world.api, query)) is None
+    strict = ask(world.api, query, explain=True)
+    assert verdict(query, strict) is None
+    family = set(world.api.graph.hyperconnective_nodes)
+    assert not _considered(strict, family)  # a family name is never considered as a bridge
 
     import idtrack
 
@@ -670,7 +740,7 @@ def test_id_shared_by_more_than_five_genes_at_once_is_no_bridge(real_world, orga
         world.api.graph_path(organism, SNAPSHOT, world.repository),
         graph_settings=GraphSettings(hyperconnective_threshold=20),
     )
-    assert verdict(query, ask(lenient, query)) is not None
+    _shown_by_one_of_two_rules(query, ask(lenient, query, explain=True), family)
     assert verdict(query, ask(world.api, query)) is None  # the setting is the loaded graph's, not the process's
 
 
@@ -686,36 +756,73 @@ def test_clone_based_name_is_no_bridge_between_two_genes(real_world, organism, q
 
     world = real_world(organism)
     assert any(name.startswith("Clone_based") for name in world.api.search.non_bridging_databases)
-    assert verdict(query, ask(world.api, query)) is None
+    strict = ask(world.api, query, explain=True)
+    assert verdict(query, strict) is None
 
     allowed = idtrack.API(world.api.graph, search=SearchSettings(non_bridging_databases=frozenset()))
-    assert verdict(query, ask(allowed, query)) is not None
+    result = ask(allowed, query, explain=True)
+    # the ids a clone-based database names (the same string may also be a symbol, through which it can bridge)
+    clones = {node.id for node in result.path.nodes if any(d.startswith("Clone_based") for d in node.databases)}
+    _shown_by_one_of_two_rules(query, result, clones)
     assert verdict(query, ask(world.api, query)) is None  # the setting is the API's, not the process's
 
 
-@pytest.mark.parametrize("organism, query", lines(shows="fallback"))
-def test_engine_is_strict_about_the_release_and_the_api_falls_back_with_a_flag(real_world, organism, query):
-    """An identifier that the graph does not hold at ``from_release``: the engine raises, the API says what it did."""
+def born_later(world) -> tuple[str, int]:
+    """Return a gene born after the first release of its assembly, and the release before its birth.
+
+    The gene is one of the cut tables that Ensembl first lists at a release after the first one of its assembly, that
+    no assembly lists at any earlier release, and that Ensembl lists at the snapshot.
+    """
+    releases = sorted(world.backbone)
+    present = {r: set(world.ensembl.genes(world.backbone[r], r)) for r in releases}
+    for before, release in zip(releases, releases[1:]):
+        if world.backbone[before] != world.backbone[release]:
+            continue
+        for gene in sorted(present[release] - present[before]):
+            if gene in present[SNAPSHOT] and all(gene not in present[r] for r in releases if r <= before):
+                return gene, before
+    raise AssertionError("the cut tables hold no gene born after the first release of its assembly")
+
+
+@pytest.mark.parametrize("organism", AVAILABLE)
+def test_engine_is_strict_about_the_release_and_the_api_falls_back_with_a_flag(real_world, organism):
+    """An identifier that the graph does not hold at ``from_release``: the engine raises, the API says what it did.
+
+    The case is from the tables: a gene asked at the release before Ensembl first lists it.
+    """
     world = real_world(organism)
-    track = world.api.engine
-
+    gene, before = born_later(world)
     with pytest.raises(InactiveAtReleaseError) as error:
-        track.convert(query["id"], from_release=query["from_release"], to_release=query["to_release"])
-    assert str(query["from_release"]) in str(error.value)
+        world.api.engine.convert(gene, from_release=before, to_release=SNAPSHOT)
+    assert str(before) in str(error.value)
 
-    result = ask(world.api, query)
-    read_at = result.from_release
-    assert verdict(query, result) is None
-    assert (result.from_release_fallback, result.from_release_given) == (True, query["from_release"])
-    assert read_at != query["from_release"] and result.from_release_inferred is True
+    result = world.api.convert(gene, from_release=before, to_release=SNAPSHOT)
+    version = world.ensembl.genes(world.backbone[SNAPSHOT], SNAPSHOT)[gene]
+    assert list(result.targets("all")) == [f"{gene}.{version}"]
+    assert (result.from_release_fallback, result.from_release_given) == (True, before)
+    assert result.from_release != before and result.from_release_inferred is True
     # the fall-back is the reading without a release: the same node, the same release, the same answer
-    free = world.api.convert(query["id"], to_release=query["to_release"])
-    assert (free.from_release, free.graph_id, list(free.targets(query["strategy"]))) == (
-        read_at,
+    free = world.api.convert(gene, to_release=SNAPSHOT)
+    assert (free.from_release, free.graph_id, list(free.targets("all"))) == (
+        result.from_release,
         result.graph_id,
-        list(result.targets(query["strategy"])),
+        list(result.targets("all")),
     )
     assert free.from_release_fallback is False
+
+
+@pytest.mark.parametrize("organism, query", lines(shows="mirna_name"))
+def test_mirna_name_is_read_at_its_release(real_world, organism, query):
+    """A miRNA's miRBase name is a name of its gene at every release that Ensembl lists it (decision 73).
+
+    Ensembl attaches the miRBase cross reference to the miRNA gene; read at the release asked, without a fall-back,
+    the name gives the gene that the truth expects.
+    """
+    world = real_world(organism)
+    world.api.engine.convert(query["id"], from_release=query["from_release"], to_release=query["to_release"])
+    result = ask(world.api, query)
+    assert result.from_release == query["from_release"] and result.from_release_fallback is False
+    assert verdict(query, result) is None
 
 
 @pytest.mark.parametrize("organism, query", lines(kind="version_unknown"))
@@ -730,27 +837,64 @@ def test_engine_raises_for_a_version_that_never_existed(real_world, organism, qu
 
 @pytest.mark.parametrize("organism", AVAILABLE)
 def test_version_suffix_is_cut_off_an_accession_and_never_off_a_symbol(real_world, organism):
-    """``NM_000546.9`` is the accession ``NM_000546``; a symbol followed by ``.<digits>`` is no identifier."""
+    """An accession is read with the version Ensembl's cross references attached; a symbol is never cut (I140).
+
+    ``<accession>.<version>`` of a version that a link attached at the snapshot is that accession as those links carry
+    it; a version above every version attached is the latest, flagged; a version below the latest that no link
+    attached is ``unknown_version`` naming the versions there are (Ensembl's ``xref.version``, read by the oracle from
+    the cut tables). A symbol followed by ``.<digits>`` is no identifier.
+    """
     world = real_world(organism)
     view = at(world, SNAPSHOT)
     written = world.ensembl.written(None)
-    accessions = [d for d in view.databases if d.startswith(ids.ACCESSION_DATABASE_PREFIXES)]
+    versions = world.ensembl.accession_versions()
+    # decision 101: the databases whose number is an edit counter, read from the tables by the oracle
+    counters = world.ensembl.edit_counter_databases(settings.VERSION_EDIT_COUNTER_SHARE)
+    assert set(counters) == set(world.api.graph.edit_counter_databases())
+    assert {d for d in counters if d.startswith("Uniprot/")} and not {d for d in counters if d.startswith("RefSeq")}
+    by_counter = {accession for (database, accession, _node) in world.ensembl._link_versions if database in counters}
+    for value in sample(sorted(a for a in by_counter if "." not in a), 8):
+        result = world.api.convert(f"{value}.1", to_release=SNAPSHOT)
+        plain = world.api.convert(value, to_release=SNAPSHOT)
+        assert (result.match, result.reason, result.graph_id) == ("version_not_judged", "version_not_judged", value)
+        assert list(result.targets("best")) == list(plain.targets("best")) and result.known_versions == ()
     symbol_databases = [d for d in organisms.SYMBOL_DATABASES[organism] if d in view.databases]
-    assert accessions and symbol_databases
+    assert versions and symbol_databases
 
+    def symbol(value: str) -> bool:
+        return any(
+            name in symbol_databases for names in view.databases_of.get(value.lower(), {}).values() for name in names
+        )
+
+    now = sorted(
+        a
+        for a, per in versions.items()
+        if any(SNAPSHOT in releases for releases in per.values()) and a not in by_counter
+    )
     asked = 0
-    for database in accessions:
-        values = sorted(value for value, name in view.genes_of_id if name == database)
-        for value in sample(values, 8):
-            if "." in value or world.ensembl.meaning(value, SNAPSHOT)[0] != "exact":
-                continue
-            if any(name in symbol_databases for names in view.databases_of[value.lower()].values() for name in names):
-                continue
-            everyone, _best, _apart = view.answer(set(view.databases_of[value.lower()]), value)
-            result = world.api.convert(f"{value}.7", to_release=SNAPSHOT)
-            assert (result.match, result.graph_id) == ("version", value), value
-            assert set(list(result.targets("all"))) == everyone
-            asked += 1
+
+    def own_identifier(typed: str) -> bool:  # an identifier of its own (CCDS's label ``CCDS10027.1``): read exactly
+        return any((kind, fold(typed)) in written for kind in ("id", "synonym"))
+
+    for value in sample([a for a in now if not symbol(a) and "." not in a], 40):
+        held = versions[value]
+        current = max(v for v, releases in held.items() if SNAPSHOT in releases)
+        if any(own_identifier(f"{value}.{v}") for v in range(1, max(held) + 2)):
+            continue
+        result = world.api.convert(f"{value}.{current}", to_release=SNAPSHOT)
+        assert (result.match, result.graph_id, result.from_release) == ("version", value, SNAPSHOT), value
+        carriers = {gene for v, releases in held.items() if v == current for gene in releases[SNAPSHOT]}
+        assert {c.gene for c in result.best} <= carriers, value
+        newer = world.api.convert(f"{value}.{max(held) + 1}", to_release=SNAPSHOT)
+        assert (newer.match, newer.graph_id) == ("version_newer_than_graph", value), value
+        never = [v for v in range(1, max(held)) if v not in held]
+        if never:
+            missing = world.api.convert(f"{value}.{never[0]}", to_release=SNAPSHOT)
+            assert (missing.status, missing.known_versions) == (
+                "unknown_version",
+                tuple(f"{value}.{v}" for v in sorted(held)),
+            ), value
+        asked += 1
     assert asked >= 8
 
     asked = 0
@@ -811,9 +955,10 @@ def names_that_are_also_synonyms(world) -> list[tuple[int, str, set[str], bool]]
     """Return the strings that are a name of one gene and a synonym of another at one release, from the tables.
 
     Each item: the release, the string exactly as a database writes it there as an identifier, the genes that
-    carry it as an identifier there, and whether this is the one way in which the identifier is written at the
-    last release at which a database has it (``False`` also when two databases write it in two ways there).
-    Taken are the strings whose genes as a synonym are not the genes of the name, so that the reading matters.
+    carry it so written as an identifier there (a gene whose databases write it only in another letter case is not
+    one of them: decision 75), and whether this is the one way in which the identifier is written at the last
+    release at which a database has it (``False`` also when two databases write it in two ways there). Taken are
+    the strings whose genes as a synonym are not the genes of the name, so that the reading matters.
     """
     found = world.__dict__.get("names_and_synonyms")
     if found is not None:
@@ -831,8 +976,11 @@ def names_that_are_also_synonyms(world) -> list[tuple[int, str, set[str], bool]]
         for gene, name, value, kind, form in world.ensembl.links(view.assembly, release):
             if kind == "synonym" and world.ensembl.selected(form, SYNONYM + name, view.assembly, release):
                 synonym_genes[value].add(gene)
-        for value in sorted({written for written, _database in view.genes_of_id}):
-            owners = set(view.databases_of[value.lower()])
+        written_by: dict[str, set[str]] = collections.defaultdict(set)
+        for (written, _database), genes in view.genes_of_id.items():
+            written_by[written] |= genes
+        for value in sorted(written_by):
+            owners = written_by[value]
             if value in synonym_genes and synonym_genes[value] != owners:
                 found.append((release, value, owners, last_spellings[value.lower()] == {value}))
     world.__dict__["names_and_synonyms"] = found
@@ -936,7 +1084,11 @@ def test_copies_outside_the_reference_sequence_are_reported_apart(real_world, or
 
 @pytest.mark.parametrize("organism", HUMAN)
 def test_copy_asked_by_its_own_id_is_the_answer(real_world, organism):
-    """A gene on a patch, a haplotype or an LRG record, asked by its id, is itself, and nothing is listed apart."""
+    """A gene on a patch or a haplotype, asked by its id, is itself, and nothing is listed apart.
+
+    An LRG record's id answers the gene of the reference sequence the record describes, the record itself listed
+    apart (decision 96).
+    """
     world = real_world(organism)
     view = at(world, SNAPSHOT)
     asked = collections.Counter()
@@ -944,7 +1096,13 @@ def test_copy_asked_by_its_own_id_is_the_answer(real_world, organism):
         node = view.node(gene)
         for identifier in (node, gene, gene.lower()):
             result = world.api.convert(identifier, to_release=SNAPSHOT)
-            assert (list(result.targets("all")), list(result.alternative_locus_genes)) == ([node], []), identifier
+            if gene.startswith("LRG_"):
+                described = list(result.targets("all"))
+                assert described and node not in described and node in result.alternative_locus_genes, identifier
+                assert result.match.startswith("lrg:"), identifier
+                assert all(target not in view.outside for target in described), identifier
+            else:
+                assert (list(result.targets("all")), list(result.alternative_locus_genes)) == ([node], []), identifier
         asked["LRG record" if gene.startswith("LRG_") else "gene on a patch or haplotype"] += 1
     assert asked["LRG record"] >= 3 and asked["gene on a patch or haplotype"] >= 5
 

@@ -7,6 +7,7 @@ the API calls as well.
 
 from __future__ import annotations
 
+import math
 import operator
 import os
 from collections.abc import Iterable
@@ -67,15 +68,41 @@ def string(value: Any, name: str) -> str:
     return value
 
 
-def strings(values: Any, name: str) -> list[str]:
+def is_missing_object(value: Any) -> bool:
+    """Tell whether a value is a missing value as Python, NumPy and pandas hold one (not as text).
+
+    ``None``, a float NaN (Python's or NumPy's), pandas' ``NA`` and a missing date or time (``NaT``, NumPy's or
+    pandas'): what a column of a table holds in a cell without a value before it is cast to text. pandas is not
+    imported (the query path needs NumPy and networkx only): its two markers are known by their types' names.
+
+    Args:
+        value: Any value.
+
+    Returns:
+        bool: Whether it is such a missing value.
+    """
+    if value is None or type(value).__name__ in ("NAType", "NaTType"):
+        return True
+    if isinstance(value, (float, np.floating)):
+        return math.isnan(value)
+    if isinstance(value, (np.datetime64, np.timedelta64)):
+        return bool(np.isnat(value))
+    return False
+
+
+def strings(values: Any, name: str, missing: bool = False) -> list[Any]:
     """Return a batch of strings as a list, refusing a single string and items that are not strings.
 
     Args:
         values: A list, a tuple, a NumPy array, a pandas Index or Series of strings.
         name: The name of the argument, for the message.
+        missing: Keep the items that are missing values as Python, NumPy and pandas hold them
+            (:py:func:`is_missing_object`: ``None``, NaN, ``pd.NA``, ``NaT``), for the caller to answer each as a
+            missing value (decision 81: a missing value is never a gene, and one item never stops a batch); ``False``:
+            they are refused like any other item that is not a string.
 
     Returns:
-        list[str]: The items.
+        list: The items (strings, and with *missing* the missing values as given).
 
     Raises:
         ArgumentTypeError: For a string, a value that is not iterable, or items that are not strings (their positions
@@ -89,7 +116,7 @@ def strings(values: Any, name: str) -> list[str]:
             value=type(values).__name__,
         )
     items = list(values)
-    not_strings = [i for i, x in enumerate(items) if not isinstance(x, str)]
+    not_strings = [i for i, x in enumerate(items) if not isinstance(x, str) and not (missing and is_missing_object(x))]
     if not_strings:
         raise ArgumentTypeError(
             f"`{name}` holds {len(not_strings)} non-string items, at positions {not_strings[:20]} "

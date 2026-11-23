@@ -25,7 +25,8 @@ RELEASES = [110, 111, 112, 113, 114, 115]
 def _gene(release: int, versions: bool = True) -> pd.DataFrame:
     """Genes 1..3 exist in every release; gene 1 changes version at every release (version = release - 109).
 
-    Genes 1 and 2 lie on sequence region 7 (a chromosome), gene 3 on region 8 (a patch).
+    Genes 1 and 2 lie on sequence region 7 (a chromosome), gene 3 on region 8 (a patch); all three are protein
+    coding, none has a display name.
     """
     return pd.DataFrame(
         {
@@ -33,6 +34,11 @@ def _gene(release: int, versions: bool = True) -> pd.DataFrame:
             "stable_id": ["ENSG00000000001", "ENSG00000000002", "ENSG00000000003"],
             "version": [float(release - 109), 1.0, 1.0] if versions else [np.nan] * 3,
             "seq_region_id": [7, 7, 8],
+            "biotype": ["protein_coding"] * 3,
+            "display_xref_id": [np.nan] * 3,
+            "seq_region_start": [1000, 5000, 9000],
+            "seq_region_end": [2000, 6000, 9500],
+            "seq_region_strand": [1, -1, 1],
         }
     )
 
@@ -89,8 +95,13 @@ def _tables(release: int, versions: bool = True) -> dict[str, pd.DataFrame]:
         ),
         "stable_id_event": sie,
         "mapping_session": ms,
-        # Region 7 is a top-level chromosome; region 8 is top-level too and outside the reference sequence.
+        # Region 7 is a top-level chromosome; region 8 is top-level too and outside the reference sequence (a patch,
+        # in the chromosome coordinate system as Ensembl keeps patches).
         "attrib_type": pd.DataFrame({"attrib_type_id": [6, 16, 312], "code": ["toplevel", "non_ref", "patch_fix"]}),
+        "coord_system": pd.DataFrame({"coord_system_id": [1, 4], "name": ["contig", "chromosome"]}),
+        "seq_region": pd.DataFrame(
+            {"seq_region_id": [7, 8], "name": ["17", "CHR_HSCHR17_1_CTG1"], "coord_system_id": [4, 4]}
+        ),
         "seq_region_attrib": pd.DataFrame({"seq_region_id": [7, 8, 8, 8], "attrib_type_id": [6, 6, 16, 312]}),
         "object_xref": pd.DataFrame(
             {
@@ -106,6 +117,7 @@ def _tables(release: int, versions: bool = True) -> dict[str, pd.DataFrame]:
                 "external_db_id": [1, 2, 2, 3],
                 "dbprimary_acc": ["P12345", "7157", "672", "HGNC:1"],
                 "display_label": ["TP53 ", "BRCA1", "   ", "TP53"],
+                "version": ["7", "0", "0", "0"],
             }
         ),
         "external_db": pd.DataFrame(
@@ -181,6 +193,8 @@ class FakeEnsembl:
         self.downloads.append((int(dm.release), table_key))
         if table_key in self.replaced:
             df = self.replaced[table_key]
+            if isinstance(df, dict):  # one table per release
+                df = df[int(dm.release)]
         else:
             df = _tables(int(dm.release), self.versions[int(dm.release)])[table_key]
         return df.copy() if usecols is None else df.loc[:, list(usecols)].copy()
@@ -267,7 +281,7 @@ def test_release_without_id_versions_is_refused_and_no_table_is_made_up_for_it(t
     with pytest.raises(BuildError, match="the transcript ids of homo_sapiens have no version at Ensembl release 112"):
         _dm(tmp_path, release=112, form="transcript").get_db("ids")
     stored = os.listdir(refused.tables_directory)
-    assert stored and all(name.startswith("ens112_mysql_") for name in stored)  # raw tables, nothing derived
+    assert stored and all("_mysql_" in name for name in stored)  # raw tables only, nothing derived
 
     # a release with versions is served as ever, whatever another release of the window lacks
     served = _dm(tmp_path, release=115)
@@ -318,7 +332,12 @@ def test_ids_of_a_form_are_not_stored_per_asking_form(tmp_path, fake):
         _dm(tmp_path, form=form).get_db("external")
     names = os.listdir(_dm(tmp_path).tables_directory)
     assert not [n for n in names if "idsraw" in n]
-    assert len([n for n in names if n.startswith("ens115_mysql_gene_")]) == 1
+    # the ids, and the annotation the gene form reads for its display names: each once, whatever the form asking
+    assert sorted(n for n in names if n.startswith("ens115_mysql_gene_")) == [
+        "ens115_mysql_gene__cols=biotype+display_xref_id+gene_id+seq_region_end+seq_region_id+seq_region_start"
+        "+seq_region_strand.h5",
+        "ens115_mysql_gene__cols=gene_id+stable_id+version.h5",
+    ]
     assert len([n for n in names if n.startswith("ens115_relationcurrent")]) == 1
 
 
@@ -334,24 +353,39 @@ def test_a_cached_raw_table_comes_back_in_the_order_of_usecols(tmp_path, fake):
 
 
 def test_gene_region_marks_the_genes_on_regions_outside_the_reference_sequence(tmp_path, fake):
-    """Decision 18: a gene is marked when its sequence region carries Ensembl's `non_ref` attribute, and only then."""
+    """Decision 18: a gene is marked when its sequence region carries Ensembl's `non_ref` attribute, and only then.
+
+    Decision 72 (c): the table gives every gene's place, the region by its name; I133: and what the region is.
+    """
     table = _dm(tmp_path).get_db("generegion")
-    assert list(table.columns) == ["gene_stable_id", "gene_version", "non_reference"]
+    assert list(table.columns) == [
+        "gene_stable_id",
+        "gene_version",
+        "non_reference",
+        "seq_region",
+        "start",
+        "end",
+        "strand",
+        "kind",
+    ]
     assert table["non_reference"].dtype == np.dtype(bool)
     assert table.values.tolist() == [
-        ["ENSG00000000001", 6, False],  # its region is top-level, like every region: that is no mark
-        ["ENSG00000000002", 1, False],
-        ["ENSG00000000003", 1, True],
+        ["ENSG00000000001", 6, False, "17", 1000, 2000, 1, "chromosome"],  # top-level, like every region: no mark
+        ["ENSG00000000002", 1, False, "17", 5000, 6000, -1, "chromosome"],
+        ["ENSG00000000003", 1, True, "CHR_HSCHR17_1_CTG1", 9000, 9500, 1, "chromosome"],
     ]
     # The table is about genes: a manager of another form gives the same one.
     pd.testing.assert_frame_equal(_dm(tmp_path, form="translation").get_db("generegion"), table)
     # Each raw table is downloaded once and stored; the table itself is a function of them and is not stored.
     _dm(tmp_path).get_db("generegion")
-    for raw in ("attrib_type", "seq_region_attrib"):
+    for raw in ("attrib_type", "seq_region_attrib", "seq_region", "coord_system"):
         assert fake.downloads.count((115, raw)) == 1
-    assert fake.downloads.count((115, "gene")) == 2  # the ids (id, stable id, version) and the regions
+    assert fake.downloads.count((115, "gene")) == 2  # the ids (id, stable id, version) and the annotation
     names = os.listdir(_dm(tmp_path).tables_directory)
-    assert "ens115_mysql_gene__cols=gene_id+seq_region_id.h5" in names
+    assert (
+        "ens115_mysql_gene__cols=biotype+display_xref_id+gene_id+seq_region_end+seq_region_id+seq_region_start"
+        "+seq_region_strand.h5" in names
+    )
     assert not [n for n in names if "generegion" in n]
 
 
@@ -365,6 +399,35 @@ def test_gene_region_of_a_release_that_marks_no_region(tmp_path, fake):
     del fake.replaced["attrib_type"]
     fake.replaced["seq_region_attrib"] = pd.DataFrame({"seq_region_id": [7, 8], "attrib_type_id": [6, 6]})
     assert not _dm(other).get_db("generegion")["non_reference"].any()
+
+
+def test_gene_region_tells_chromosomes_the_mitochondrial_genome_and_scaffolds_apart(tmp_path, fake):
+    """I133 and I134: what a region is, read from Ensembl's tables, never from its name.
+
+    A region of the coordinate system ``chromosome`` is a chromosome; in an assembly loaded with one level
+    (``primary_assembly``) a region Ensembl ranks in the karyotype is one; a region translated with an alternate
+    genetic code (``codon_table``) is the mitochondrial genome whatever its coordinate system; any other region is a
+    scaffold. Fails if the kind is read from the region's name (region 9, named like a chromosome, is a scaffold;
+    region 11, named ``chrM``, is the mitochondrial genome), or if one of the two sources of chromosomes is left out.
+    """
+    gene = _gene(115).assign(seq_region_id=[9, 10, 11])
+    fake.replaced["gene"] = gene
+    fake.replaced["coord_system"] = pd.DataFrame({"coord_system_id": [1, 2], "name": ["primary_assembly", "contig"]})
+    fake.replaced["seq_region"] = pd.DataFrame(
+        {"seq_region_id": [9, 10, 11], "name": ["18", "6", "chrM"], "coord_system_id": [1, 1, 1]}
+    )
+    fake.replaced["attrib_type"] = pd.DataFrame(
+        {"attrib_type_id": [6, 11, 367], "code": ["toplevel", "codon_table", "karyotype_rank"]}
+    )
+    fake.replaced["seq_region_attrib"] = pd.DataFrame(
+        {"seq_region_id": [9, 10, 11, 10, 11], "attrib_type_id": [6, 6, 6, 367, 11]}
+    )
+    table = _dm(tmp_path).get_db("generegion")
+    assert dict(zip(table["seq_region"], table["kind"])) == {
+        "18": "scaffold",
+        "6": "chromosome",
+        "chrM": "mitochondrial",
+    }
 
 
 def test_gene_region_refuses_a_gene_without_a_sequence_region(tmp_path, fake):
@@ -773,3 +836,383 @@ def test_class_docstring_names_existing_methods():
 
     names = re.findall(r":py:meth:`~?(?:DatabaseManager\.)?([A-Za-z_]+)`", DatabaseManager.__doc__)
     assert names and all(hasattr(DatabaseManager, n) for n in names), names
+
+
+# ---------------------------------------------------------------- what a cross reference is (decisions 52, 53, 73, 74)
+
+
+def _cross_references(fake, external_db, xref, object_xref, synonyms=(), gene_columns=None):
+    """Serve these cross-reference tables (and gene annotations) instead of the synthetic ones."""
+    fake.replaced["external_db"] = pd.DataFrame(external_db, columns=["external_db_id", "db_name", "db_display_name"])
+    # a row may give the version of its accession (Ensembl's xref.version, text); "0" otherwise
+    fake.replaced["xref"] = pd.DataFrame(
+        [(*row, "0")[:5] if len(row) == 4 else tuple(row) for row in xref],
+        columns=["xref_id", "external_db_id", "dbprimary_acc", "display_label", "version"],
+    )
+    fake.replaced["object_xref"] = pd.DataFrame(
+        [(gene, "Gene", xref_id, 9000 + i) for i, (gene, xref_id) in enumerate(object_xref)],
+        columns=["ensembl_id", "ensembl_object_type", "xref_id", "object_xref_id"],
+    )
+    fake.replaced["identity_xref"] = pd.DataFrame({"ensembl_identity": [], "xref_identity": [], "object_xref_id": []})
+    fake.replaced["external_synonym"] = pd.DataFrame(list(synonyms), columns=["xref_id", "synonym"])
+    if gene_columns:
+        gene = _gene(115)
+        for column, values in gene_columns.items():
+            gene[column] = values
+        fake.replaced["gene"] = gene
+
+
+def _rows(dm) -> set[tuple[str, str, str]]:
+    table = dm.get_db("external")
+    return set(zip(table["graph_id"], table["id_db"], table["name_db"]))
+
+
+def test_a_string_without_letter_or_digit_or_with_evidence_text_is_no_identifier(tmp_path, fake):
+    """Decision 52: ``.``, ``-`` and UniProt's evidence text are no identifiers, dropped where the table is made.
+
+    Without the rule the gene would carry the id ``.`` and the synonym ``BHMT {ECO:...}``.
+    """
+    _cross_references(
+        fake,
+        [(1, "Uniprot_gn", "UniProtKB Gene Name")],
+        [(10, 1, ".", "-"), (11, 1, "Q1", "BHMT")],
+        [(1, 10), (1, 11)],
+        synonyms=[(11, "BHMT {ECO:0000313|EMBL:AGS56948.1}"), (11, "14-3-3"), (11, "--")],
+    )
+    rows = _rows(_dm(tmp_path))
+    gene = "ENSG00000000001.6"
+    assert rows == {
+        (gene, "Q1", "Uniprot_gn"),
+        (gene, "BHMT", "UniProtKB Gene Name"),
+        (gene, "synonym_id::14-3-3", "synonym_id::UniProtKB Gene Name"),
+    }
+
+
+def test_a_value_is_read_as_a_typed_identifier_is_read(tmp_path, fake):
+    """Decisions 83 and 84 where the table is made: the punctuation of a sentence, quotes and invisible characters go.
+
+    UniProt's gene name ``A1BG;`` (as some releases write it), a synonym in quotation marks and one with a zero-width
+    space are the plain names, a synonym keeps its prefix, and a value that is the plain name already gives one row.
+    Fails if the table keeps the values as written (the graph would hold ``A1BG;`` beside ``A1BG``).
+    """
+    _cross_references(
+        fake,
+        [(1, "Uniprot_gn", "UniProtKB Gene Name")],
+        [(10, 1, "Q1", "A1BG;"), (11, 1, "Q2", "A1BG")],
+        [(1, 10), (1, 11)],
+        synonyms=[(10, "'TP53'"), (11, "MDM\u200b2"), (11, "14-3-3?")],
+    )
+    rows = _rows(_dm(tmp_path))
+    gene = "ENSG00000000001.6"
+    assert rows == {
+        (gene, "Q1", "Uniprot_gn"),
+        (gene, "Q2", "Uniprot_gn"),
+        (gene, "A1BG", "UniProtKB Gene Name"),
+        (gene, "synonym_id::TP53", "synonym_id::UniProtKB Gene Name"),
+        (gene, "synonym_id::MDM2", "synonym_id::UniProtKB Gene Name"),
+        (gene, "synonym_id::14-3-3", "synonym_id::UniProtKB Gene Name"),
+    }
+
+
+def test_labels_that_share_their_accessions_name_take_a_name_of_their_own(tmp_path, fake):
+    """Decision 53: one database name means one kind of identifier at every release, read from Ensembl's names.
+
+    ``EntrezGene`` names its labels like its accessions up to 111, ``NCBI gene`` at 112 and 113 and ``NCBI gene
+    (formerly Entrezgene)`` from 114 (as Ensembl does at 87, 88 to 99 and from 100): the labels take the display name of
+    the newest release at which it is not the name of accessions, at every release, with their synonyms. Naming changes
+    the name of rows, never their number: the label ``672`` that repeats its accession is one row with it at 111 (where
+    Ensembl names both ``EntrezGene``) and a label row of its own at 115 (as Ensembl gives it there). ``RFAM`` and
+    ``Reactome_gene`` name their labels after accessions at every release: ``<database> label``. ``HGNC`` names them
+    apart: unchanged. The names Ensembl used and the graph does not
+    are listed for the error that names the graph's name. Without the rule ``EntrezGene`` holds ``TP53`` beside
+    ``7157`` (a tie) and the labels change their database's name at 88 and at 100.
+    """
+    displays = {
+        r: "EntrezGene" if r <= 111 else ("NCBI gene" if r <= 113 else "NCBI gene (formerly Entrezgene)")
+        for r in fake.releases
+    }
+    _cross_references(
+        fake,
+        [
+            (1, "EntrezGene", "EntrezGene"),
+            (3, "RFAM", "RFAM"),
+            (4, "Reactome_gene", "Reactome"),
+            (5, "Reactome", "Reactome"),
+            (6, "HGNC", "HGNC Symbol"),
+        ],
+        [
+            (10, 1, "7157", "TP53"),
+            (11, 1, "672", "672"),
+            (12, 1, "675", "BRCA2"),
+            (13, 3, "RF00001", "5S_rRNA"),
+            (14, 4, "R-HSA-1", "R-HSA-1.1"),
+            (15, 6, "HGNC:11998", "TP53"),
+        ],
+        [(1, 10), (1, 11), (2, 12), (1, 13), (1, 14), (1, 15)],
+        synonyms=[(10, "p53")],
+        gene_columns={"display_xref_id": [13.0, np.nan, np.nan]},
+    )
+    table = fake.replaced["external_db"]
+    fake.replaced["external_db"] = {
+        r: table.assign(
+            db_display_name=[
+                displays[r] if n == "EntrezGene" else d for n, d in zip(table["db_name"], table["db_display_name"])
+            ]
+        )
+        for r in fake.releases
+    }
+    label = "NCBI gene (formerly Entrezgene)"
+    for release in (111, 115):
+        rows = _rows(_dm(tmp_path, release=release))
+        g1, g2 = "ENSG00000000001.6", "ENSG00000000002.1"
+        assert rows == {
+            (g1, "7157", "EntrezGene"),
+            (g1, "TP53", label),
+            (g1, "synonym_id::p53", f"synonym_id::{label}"),
+            (g1, "672", "EntrezGene"),
+            (g2, "675", "EntrezGene"),
+            (g2, "BRCA2", label),
+            (g1, "RF00001", "RFAM"),
+            (g1, "5S_rRNA", "RFAM label"),
+            (g1, "R-HSA-1", "Reactome_gene"),
+            (g1, "R-HSA-1.1", "Reactome_gene label"),
+            (g1, "HGNC:11998", "HGNC"),
+            (g1, "TP53", "HGNC Symbol"),
+        } | ({(g1, "672", label)} if release == 115 else set()), release
+    renamed = _dm(tmp_path).renamed_label_names()
+    assert renamed["NCBI gene"] == label and renamed["synonym_id::NCBI gene"] == f"synonym_id::{label}"
+    assert renamed["synonym_id::EntrezGene"] == f"synonym_id::{label}" and "EntrezGene" not in renamed
+
+
+def test_a_family_label_names_only_the_gene_whose_display_name_it_is(tmp_path, fake):
+    """Decision 74: ``5S_rRNA`` is the RFAM label of genes 1 and 2, the display name of gene 1 only.
+
+    The label stays on gene 1; gene 2 keeps the accession. Without the rule the label names both genes (human
+    ``5S_rRNA`` named 531 genes where Ensembl names 10 with it).
+    """
+    _cross_references(
+        fake,
+        [(3, "RFAM", "RFAM")],
+        [(13, 3, "RF00001", "5S_rRNA")],
+        [(1, 13), (2, 13)],
+        gene_columns={"display_xref_id": [13.0, 99.0, np.nan]},
+    )
+    rows = _rows(_dm(tmp_path))
+    g1, g2 = "ENSG00000000001.6", "ENSG00000000002.1"
+    assert rows == {(g1, "RF00001", "RFAM"), (g1, "5S_rRNA", "RFAM label"), (g2, "RF00001", "RFAM")}
+
+
+def test_a_display_name_is_a_name_of_its_gene_whatever_its_database(tmp_path, fake):
+    """I129: a gene's display name at a release is a name of the gene there, whatever database Ensembl filed it under.
+
+    Pig before 61 (``SMURF1`` of ``HGNC_curated_gene``, an HGNC projection) and genes named by a UniProt entry name
+    through their translation (``F1RP48_PIG``): the YAML selects neither database, and the names are rows of their
+    genes all the same, under the name of their database's labels (the projection told from the authority's own
+    name). A display name the gene has already (``TP53`` of ``HGNC Symbol``) adds no row; the accession of the
+    projection (``16807``) is not a display name and stays out. Fails if the names of a release are read only from the
+    databases the YAML names today (the rule before: ``SMURF1`` at pig 56 was read at 115 and lost).
+    """
+    _write_yaml(str(tmp_path), ["HGNC", "HGNC Symbol"])
+    _cross_references(
+        fake,
+        [
+            (1, "HGNC", "HGNC Symbol"),
+            (2, "HGNC_curated_gene", "HGNC (curated)"),
+            (3, "Uniprot/SPTREMBL", "UniProtKB/TrEMBL"),
+        ],
+        [(10, 1, "HGNC:11998", "TP53"), (20, 2, "16807", "SMURF1 "), (30, 3, "F1RP48", "F1RP48_PIG")],
+        [(1, 10), (2, 20)],  # the entry name is attached to a translation, not to the gene
+        gene_columns={"display_xref_id": [10.0, 20.0, 30.0]},
+    )
+    g1, g2, g3 = "ENSG00000000001.6", "ENSG00000000002.1", "ENSG00000000003.1"
+    table = _dm(tmp_path).get_db("external_relevant")
+    assert set(zip(table["graph_id"], table["id_db"], table["name_db"])) == {
+        (g1, "HGNC:11998", "HGNC"),
+        (g1, "TP53", "HGNC Symbol"),
+        (g2, "SMURF1", "HGNC (curated)"),
+        (g3, "F1RP48_PIG", "UniProtKB/TrEMBL"),
+    }
+    assert table.loc[table["id_db"] == "SMURF1", "is_label"].tolist() == [True]
+    # every cross reference, whatever the YAML: the display names beside them, each once
+    assert {(g2, "SMURF1", "HGNC (curated)"), (g3, "F1RP48_PIG", "UniProtKB/TrEMBL")} <= _rows(_dm(tmp_path))
+    # the other forms hold no display names (a display name is a gene's)
+    assert not len(_dm(tmp_path, form="transcript").get_db("external").query("id_db == 'SMURF1'"))
+    # the template counts the databases' own cross references: a display name is no entry a YAML selects (the
+    # entry name, on a translation only, gives the genes no UniProtKB/TrEMBL entry)
+    counted = _dm(tmp_path).get_db("external_database")
+    assert "UniProtKB/TrEMBL" not in set(counted["name_db"]) and {"HGNC", "HGNC Symbol"} <= set(counted["name_db"])
+
+
+def test_a_mirna_name_shown_on_another_gene_is_not_its_name(tmp_path, fake):
+    """I129 with decision 73's biotype rule: a miRBase name Ensembl displays on its host gene is the miRNA's name.
+
+    Human ``hsa-mir-107`` was the display name of an antisense gene at 68 to 72 beside its miRNA gene; as a name of
+    both it named two genes on two strands, and decision 73 left the entry out of every release. The display name
+    of the miRNA gene stays. Fails if display names skip the definitions of their databases.
+    """
+    _write_yaml(str(tmp_path), [])
+    _cross_references(
+        fake,
+        [(7, "miRBase", "miRBase")],
+        [(20, 7, "MI0000114", "hsa-mir-107")],
+        [],
+        gene_columns={"display_xref_id": [20.0, 20.0, np.nan], "biotype": ["miRNA", "antisense", "protein_coding"]},
+    )
+    rows = _dm(tmp_path).create_external_all()
+    assert set(zip(rows["graph_id"], rows["id_db"], rows["name_db"])) == {
+        ("ENSG00000000001.6", "hsa-mir-107", "miRBase label")
+    }
+
+
+def test_display_names_are_read_where_the_yaml_selects_nothing_for_the_genes(tmp_path, fake):
+    """I129: at a release whose genes the YAML gives no database (pig 56 to 60), the display names are still read.
+
+    The graph reads the cross references of the assemblies the YAML selects something on at the release; the genes'
+    display names are held whatever the YAML, so every assembly with a core database at the release is read for the
+    gene form. Fails if the assemblies come from the YAML alone (no row of the release: ``SMURF1`` at pig 56).
+    """
+    _write_yaml(str(tmp_path), [])  # nothing selected
+    _cross_references(
+        fake,
+        [(2, "HGNC_curated_gene", "HGNC (curated)")],
+        [(20, 2, "16807", "SMURF1")],
+        [(2, 20)],
+        gene_columns={"display_xref_id": [np.nan, 20.0, np.nan]},
+    )
+    rows = _dm(tmp_path).create_external_all()
+    assert set(zip(rows["graph_id"], rows["id_db"], rows["name_db"], rows["assembly"])) == {
+        ("ENSG00000000002.1", "SMURF1", "HGNC (curated)", 38)
+    }
+    assert not len(_dm(tmp_path, form="translation").create_external_all())
+
+
+def test_mirbase_names_only_genes_of_a_mirna_biotype(tmp_path, fake):
+    """Decision 73: miRBase's ids are kept on miRNA genes, not on the protein-coding gene that hosts the miRNA.
+
+    Without the rule rhesus ``mml-mir-127`` named its host gene beside the miRNA gene (two right answers became wrong).
+    """
+    _cross_references(
+        fake,
+        [(7, "miRBase", "miRBase")],
+        [(20, 7, "MI0000001", "mml-mir-127")],
+        [(1, 20), (2, 20)],
+        gene_columns={"biotype": ["miRNA", "protein_coding", "miRNA"]},
+    )
+    rows = _rows(_dm(tmp_path))
+    g1 = "ENSG00000000001.6"
+    assert rows == {(g1, "MI0000001", "miRBase"), (g1, "mml-mir-127", "miRBase label")}
+
+
+def test_a_stored_table_of_other_rules_is_derived_again(tmp_path, fake, monkeypatch):
+    """A table of cross references stored under earlier rules is not served: its rules version is part of its key."""
+    import idtrack.build.database_manager as manager_module
+
+    derived = []
+    real = DatabaseManager.create_external_db
+
+    def counted(self, filter_mode):
+        derived.append(filter_mode)
+        return real(self, filter_mode)
+
+    monkeypatch.setattr(DatabaseManager, "create_external_db", counted)
+    first = _dm(tmp_path).get_db("external")
+    pd.testing.assert_frame_equal(_dm(tmp_path).get_db("external"), first)
+    assert derived == ["all"]  # stored and served
+    monkeypatch.setattr(manager_module, "EXTERNAL_RULES_VERSION", manager_module.EXTERNAL_RULES_VERSION + 1)
+    pd.testing.assert_frame_equal(_dm(tmp_path).get_db("external"), first)
+    assert derived == ["all", "all"]  # derived again under the new rules
+
+
+# ---------------------------------------------------------- the versions of accessions, the display names (I140, I144)
+
+
+def test_an_accession_row_keeps_the_version_ensembl_attached(tmp_path, fake):
+    """I140: the version of an accession is Ensembl's ``xref.version`` of the cross reference, kept on its rows.
+
+    ``XM_1`` attached with version 3 by one cross reference and with version 4 by another (two rows, one link with two
+    versions); a label that is the accession itself carries the version of its cross reference (Havana's labels); a
+    label that is a name (``TP53``), a synonym and a database that gives no version (``0``, or no digits) carry none.
+    Fails if the version is dropped (the rule before: every version of an accession was one row without it) or
+    attached to labels and synonyms.
+    """
+    _cross_references(
+        fake,
+        [(1, "RefSeq_mRNA", "RefSeq mRNA"), (2, "HGNC", "HGNC Symbol"), (3, "OTTG", "Havana gene")],
+        [
+            (10, 1, "XM_1", "XM_1.3", "3"),
+            (11, 1, "XM_1", "XM_1.4", "4"),
+            (20, 2, "HGNC:11998", "TP53", "0"),
+            (30, 3, "OTTHUMG01", "OTTHUMG01", "2"),
+            (40, 1, "XM_2", "XM_2", "beta"),
+        ],
+        [(1, 10), (1, 11), (2, 20), (3, 30), (2, 40)],
+        synonyms=[(20, "p53")],
+    )
+    table = _dm(tmp_path).get_db("external")
+    versions = {(g, i, n): set() for g, i, n in zip(table["graph_id"], table["id_db"], table["name_db"])}
+    for g, i, n, v in zip(table["graph_id"], table["id_db"], table["name_db"], table["version"]):
+        versions[(g, i, n)].add(int(v))
+    g1, g2, g3 = "ENSG00000000001.6", "ENSG00000000002.1", "ENSG00000000003.1"
+    assert versions[(g1, "XM_1", "RefSeq_mRNA")] == {3, 4}
+    assert versions[(g1, "XM_1.3", "RefSeq mRNA")] == {0} and versions[(g1, "XM_1.4", "RefSeq mRNA")] == {0}
+    assert versions[(g2, "HGNC:11998", "HGNC")] == {0} and versions[(g2, "TP53", "HGNC Symbol")] == {0}
+    assert versions[(g2, "synonym_id::p53", "synonym_id::HGNC Symbol")] == {0}
+    assert versions[(g3, "OTTHUMG01", "OTTG")] == {2}
+    assert versions[(g2, "XM_2", "RefSeq_mRNA")] == {0}
+    # the template counts links, not versions: one cross reference of XM_1 on the gene
+    counted = _dm(tmp_path).get_db("external_database")
+    assert dict(zip(counted["name_db"], counted["count"]))["RefSeq_mRNA"] == 2
+
+
+def test_the_display_name_of_a_gene_is_marked_on_its_rows(tmp_path, fake):
+    """I144: every row whose identifier is the gene's display name at the release is marked, held or added.
+
+    ``TP53`` is gene 1's display name and a row of HGNC Symbol it holds: that row is marked, its accession is not;
+    gene 2's display name ``SMURF1`` (an HGNC projection the YAML does not select) is added and marked; gene 3 carries
+    ``TP53`` too but does not display it: unmarked. Fails if the mark is set only on added rows (the authority's own
+    symbol then never ranks as the display name) or on every row of the string.
+    """
+    _write_yaml(str(tmp_path), ["HGNC", "HGNC Symbol"])
+    _cross_references(
+        fake,
+        [(1, "HGNC", "HGNC Symbol"), (2, "HGNC_curated_gene", "HGNC (curated)")],
+        [(10, 1, "HGNC:11998", "TP53"), (20, 2, "16807", "SMURF1"), (11, 1, "HGNC:11999", "TP53")],
+        [(1, 10), (2, 20), (3, 11)],
+        gene_columns={"display_xref_id": [10.0, 20.0, np.nan]},
+    )
+    table = _dm(tmp_path).get_db("external_relevant")
+    marked = {(g, i) for g, i, d in zip(table["graph_id"], table["id_db"], table["is_display"]) if d}
+    g1, g2 = "ENSG00000000001.6", "ENSG00000000002.1"
+    assert marked == {(g1, "TP53"), (g2, "SMURF1")}
+    # the other forms mark nothing (a display name is a gene's)
+    assert not _dm(tmp_path, form="transcript").get_db("external")["is_display"].any()
+
+
+def test_a_mirbase_name_filed_under_another_database_obeys_mirbase(tmp_path, fake, monkeypatch):
+    """I146: a miRBase name that Ensembl files under ``miRBase_gene_name`` obeys miRBase's definitions.
+
+    At human and mouse 61 and 62 Ensembl displays miRBase's names under the database ``miRBase_gene_name``: shown on
+    a gene of another biotype (the host) it is not that gene's name (the biotype rule), and its entries are judged by
+    the one-gene rule with miRBase's (:py:meth:`DatabaseManager.one_gene_only_names`). Fails if the rules are keyed by
+    the database name ``miRBase`` alone (the rule before: the host gene took the name).
+    """
+    _write_yaml(str(tmp_path), [])
+    _cross_references(
+        fake,
+        [(7, "miRBase_gene_name", "miRBase gene name")],
+        [(20, 7, "hsa-mir-220a.1", "hsa-mir-220a.1")],
+        [],
+        gene_columns={"display_xref_id": [20.0, 20.0, np.nan], "biotype": ["miRNA", "protein_coding", "lncRNA"]},
+    )
+    rows = _dm(tmp_path).create_external_all()
+    assert set(zip(rows["graph_id"], rows["id_db"])) == {("ENSG00000000001.6", "hsa-mir-220a.1")}
+    from idtrack.build.database_manager import rules_database
+
+    assert rules_database("miRBase_gene_name") == "miRBase" and rules_database("RFAM_trans_name") == "RFAM_trans_name"
+    assert rules_database("_gene_name") == "_gene_name"
+    monkeypatch.setattr(
+        DatabaseManager,
+        "label_names",
+        lambda self: {"miRBase": "miRBase label", "miRBase_gene_name": "miRBase gene name", "HGNC": "HGNC Symbol"},
+    )
+    assert _dm(tmp_path).one_gene_only_names() == {"miRBase", "miRBase label", "miRBase_gene_name", "miRBase gene name"}

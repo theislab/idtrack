@@ -46,6 +46,7 @@ class VerifyOrganism:
 
     After construction the instance offers two high-level helpers::
 
+        >>> # xdoctest: +REQUIRES(--network)
         >>> resolver = VerifyOrganism("human")
         >>> resolver.get_formal_name()      # 'homo_sapiens'
         >>> resolver.get_latest_release()   # 117  (example)

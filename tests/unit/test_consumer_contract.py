@@ -7,6 +7,13 @@ built from the cut tables of ``tests/data/real`` and compares the answers with
 ``tests/data/real/consumer_contract.json``: the answers of the same calls made with the API they replace (the
 release before this layout), so that a change of what rosetta gets is a failing test. The functions below are
 written as rosetta writes them, against the public names; nothing here reads a private member.
+
+This is a **change detector, not a test of correctness**: its expected answers are an earlier run of idtrack itself,
+not Ensembl's records. A difference passes only where it is explained (:py:func:`changed_only_by_refused_bridges`):
+every gene lost is the target of a bridge whose refusal Ensembl's tables confirm through an oracle that shares no code
+with the engine (:py:func:`refusal_confirmed`), and every gene gained is reached through a bridge (the gain is the
+engine's word, not confirmed from the tables). Whether an answer is right is tested against Ensembl's records
+elsewhere (``test_real_truth.py``, ``test_real_decisions.py``, ``test_history_travel.py``).
 """
 
 from __future__ import annotations
@@ -80,9 +87,7 @@ def draw_queries(api: API, organism: str, snapshot: int, assembly: int, n: int, 
     earlier = [r for r in api.releases() if r < snapshot]
     picked = sorted({earlier[round(i * (len(earlier) - 1) / max(old_releases - 1, 1))] for i in range(old_releases)})
     serving = graph.serving_assembly
-    wanted = {
-        (organisms.ASSEMBLY_NODE_TYPES[serving[r]][ids.BACKBONE_FORM], serving[r], r): ("gene", r) for r in picked
-    }
+    wanted = {(organisms.ASSEMBLY_LABELS[serving[r]][ids.BACKBONE_FORM], serving[r], r): ("gene", r) for r in picked}
     symbol_dbs = [d for d in organisms.SYMBOL_DATABASES[organism] if d in api.external_databases()]
     wanted |= {(d, assembly, snapshot): ("symbol", snapshot) for d in symbol_dbs}
     found: dict[tuple, set] = {v: set() for v in wanted.values()}
@@ -191,8 +196,6 @@ class GraphView:
         self.releases = [int(r) for r in self.G.releases]
         self.symbol_databases = set(symbol_databases)
         self.tier = {db: "symbol" for db in symbol_databases} | {db: "name" for db in name_databases}
-        # The graph names a database of synonyms with its prefix (as NameMatch reports it).
-        self.tier |= {ids.SYNONYM_PREFIX + db: "synonym" for db in list(symbol_databases) + list(name_databases)}
         self._versions: dict = {}
 
     def versions(self, base: str) -> list[tuple[str, int]]:
@@ -210,7 +213,10 @@ class GraphView:
         """Return the genes that a text names, per tier, with the mask of the releases of each."""
         out: dict[str, dict[str, int]] = {t: {} for t in TIERS}
         for match in self.api.genes_named(text, fold_case=fold):
+            # decision 56: a synonym is reported under its database's own name, marked `synonym`
             tier = self.tier.get(match.database)
+            if tier is not None and match.synonym:
+                tier = "synonym"
             if tier is not None:
                 base = self.G.base_id(match.gene)
                 out[tier][base] = out[tier].get(base, 0) | mask_of(match.releases)
@@ -223,9 +229,8 @@ class GraphView:
             if not mask >> release & 1:
                 continue
             for match in self.api.names_of(v, release):
-                plain = match.database.removeprefix(ids.SYNONYM_PREFIX)
-                if plain in self.symbol_databases and (synonyms or not match.synonym):
-                    out.add(match.name.removeprefix(ids.SYNONYM_PREFIX).lower())
+                if match.database in self.symbol_databases and (synonyms or not match.synonym):
+                    out.add(match.name.lower())
         return out
 
     def convert(self, genes: list[str], from_release, to_release: int) -> dict[str, dict]:
@@ -248,8 +253,226 @@ class GraphView:
 # --------------------------------------------------------------------------------------------------------------- tests
 
 
+def decided(world, rows: list[dict]) -> list[dict]:
+    """Return d4c2dda's answers as this version's decisions change them: decision 95.
+
+    A name that the X and Y copies of a pseudoautosomal gene share answers the X gene, the Y copy listed apart (from
+    release 110 Ensembl gives the Y copies ids of their own); a Y copy is at the place of an X gene of the answer, read
+    from the tables' places (:py:meth:`tests._real_tables.Ensembl.y_twins`).
+    """
+    assembly = world.backbone[SNAPSHOT]
+    twins = world.ensembl.y_twins(assembly, SNAPSHOT)
+    out = []
+    for row in rows:
+        targets = row.get("targets", row.get("target_id"))
+        if not targets:
+            out.append(row)
+            continue
+        genes = {t.rpartition(".")[0] for t in targets}
+        y = [t for t in targets if twins.get(t.rpartition(".")[0], set()) & genes]
+        if not y:
+            out.append(row)
+            continue
+        row = dict(row)
+        kept = [t for t in targets if t not in y]
+        if "target_id" in row:
+            row.update(target_id=kept, tie=len(kept) > 1)
+        else:
+            row.update(
+                targets=kept,
+                target_genes=[g for g in row["target_genes"] if g not in y],
+                targets_all=[t for t in row["targets_all"] if t not in y],
+                tie=len(kept) > 1,
+                alternative_locus_genes=sorted(set(row["alternative_locus_genes"]) | set(y)),
+            )
+            for key in ("class", "class_all"):
+                one = len(kept if key == "class" else row["targets_all"]) == 1
+                row[key] = row[key].replace("1_to_n", "1_to_1") if one else row[key]
+        out.append(row)
+    return out
+
+
+def tiers_decided(world, view: GraphView, text: str, fold: bool, got: dict, expected: dict) -> None:
+    """Check rosetta's names of a text per tier against d4c2dda's, as decisions 83 and 104 on the side of the tables change them.
+
+    The graph holds a value a database wrote with the punctuation of a sentence as the plain name (UniProt's ``CLCN5;``
+    is ``CLCN5``), and a row of a database that continues a selected one under the selected database (decision 104:
+    pig HGNC projections filed as ``HGNC_curated_gene`` up to release 60 are ``HGNC Symbol``'s), so a gene can be
+    named by the text at more releases than before. A release a gene gained in a tier is accepted only where the tables
+    give the gene, at that release and in a database of that tier, a value that reads as the text and is written
+    otherwise (:py:meth:`tests._real_tables.Ensembl.read_changed`), or that Ensembl wrote under another database that
+    continues it (:py:meth:`tests._real_tables.Ensembl.refiled`); nothing may be lost.
+    """
+    assert set(got) == set(expected), (text, got, expected)
+    for tier in expected:
+        for gene in set(got[tier]) | set(expected[tier]):
+            before, now = int(expected[tier].get(gene, 0)), int(got[tier].get(gene, 0))
+            assert before & ~now == 0, (text, tier, gene, "lost releases")
+            gained = now & ~before
+            for release in (r for r in range(gained.bit_length()) if gained >> r & 1):
+                assembly = world.backbone.get(release)
+                confirmed = assembly is not None and any(
+                    row[0] == gene
+                    and (row[2].lower() == text.lower() if fold else row[2] == text)
+                    and view.tier.get(row[1]) is not None
+                    and ("synonym" if row[3] == "synonym" else view.tier[row[1]]) == tier
+                    for row in world.ensembl.read_changed(assembly, release) | world.ensembl.refiled(assembly, release)
+                )
+                assert confirmed, (text, tier, gene, release)
+
+
+def symbols_decided(world, view: GraphView, key: str, got: list[str], expected: list[str]) -> None:
+    """Check rosetta's symbols of a gene at a release against d4c2dda's, as decision 104 on the side of the tables changes them.
+
+    A symbol gained is accepted only where the tables give a version of the gene, at that release, the symbol under a
+    database that Ensembl wrote otherwise and that continues a symbol database (:py:meth:`tests._real_tables.Ensembl.
+    refiled`: pig HGNC projections of releases 56 to 60, filed as ``HGNC_curated_gene``); nothing may be lost.
+    """
+    base, release, synonyms = key.split(":")
+    assert set(expected) <= set(got), (key, "lost", sorted(set(expected) - set(got)))
+    assembly = world.backbone.get(int(release))
+    genes = {unversioned(v) for v, mask in view.versions(base) if mask >> int(release) & 1}  # the tables' gene ids
+    for symbol in sorted(set(got) - set(expected)):
+        confirmed = assembly is not None and any(
+            row[0] in genes
+            and row[2].lower() == symbol
+            and row[1].removeprefix(ids.SYNONYM_PREFIX) in view.symbol_databases
+            and (synonyms == "True" or row[3] != "synonym")
+            for row in world.ensembl.refiled(assembly, int(release))
+        )
+        assert confirmed, (key, symbol)
+
+
 def _plain(value):
     return json.loads(json.dumps(value))
+
+
+def _genes(record: dict) -> set[str]:
+    """Every gene (without version) a rosetta record names as an answer: its targets, best and all, and paths."""
+    found: set[str] = set()
+    for key in ("target_id", "targets", "targets_all", "target_genes"):
+        found.update(unversioned(str(t)) for t in record.get(key) or ())
+    found.update(unversioned(str(path[0])) for path in record.get("paths") or ())
+    return found
+
+
+def release_of_no_answer_confirmed(world, got: dict, expected: dict, conversion: tuple) -> bool:
+    """Tell whether a record differs only by the release a conversion without an answer reports, as the tables say.
+
+    The API before this version reported no release (``None``) for a gene id that leads to no gene; this version
+    reports the release the id was read at. Accepted only where nothing else of the record changed and the release is
+    the one the rule gives by Ensembl's id tables (the oracle): the release given where the tables have the id there,
+    else the target release where they have it there, else the latest release that has it.
+
+    Args:
+        world: The test world (graph and tables).
+        got: The record now.
+        expected: The expected record.
+        conversion: ``(identifier, release given)`` of the record's conversion.
+
+    Returns:
+        bool: ``True`` when that is the only difference and the tables confirm the release.
+    """
+    if expected.get("from_release") is not None or not isinstance(got.get("from_release"), int):
+        return False
+    if {k: v for k, v in got.items() if k != "from_release"} != {
+        k: v for k, v in expected.items() if k != "from_release"
+    }:
+        return False
+    if _genes(got) or _genes(expected):
+        return False
+    identifier, given = conversion
+    base = unversioned(identifier)
+    held = [release for release in sorted(world.backbone) if base in world.genes_at(release)]
+    if not held:
+        return False
+    if given is not None and given in held:
+        rule = given
+    else:
+        rule = SNAPSHOT if SNAPSHOT in held else held[-1]
+    return bool(got["from_release"] == rule)
+
+
+def refusal_confirmed(world, check) -> bool:
+    """Tell whether Ensembl's tables, read by the oracle, confirm every rule that refused a bridge.
+
+    The oracle (:py:class:`tests._real_tables.Ensembl`) shares no code with the engine: ``synonym``, the tables list
+    the id as a synonym of one of the two genes; ``places_apart``, the two genes lie on the reference sequence of a
+    common assembly and no places of them overlap there; ``copy_id_elsewhere``, one of them lies on a ``non_ref`` region
+    at some release and no release gives the id to both; ``copy_id_of_several_genes``, one of them lies on a
+    ``non_ref`` region at some release and at a release that gives the id to both, the genes it is given to are more
+    than one locus (:py:meth:`tests._real_tables.Ensembl.one_locus_count`). Any other rule (a rule that takes a bridge,
+    or ``shared_at_one_release``, which a graph with places never gives) is not confirmed.
+
+    Args:
+        world: The test world (graph and tables).
+        check: A :py:class:`idtrack.results.BridgeCheck` the engine refused.
+
+    Returns:
+        bool: ``True`` when the tables confirm the rule of every id between the two genes.
+    """
+    oracle = world.ensembl
+    source, target = unversioned(check.source), unversioned(check.target)
+    for middle, rule in check.through:
+        text = re.sub(r"^(synonym_id::|synonym:)", "", middle)
+        if rule == "synonym":
+            confirmed = oracle.is_synonym(text, {source, target})
+        elif rule == "places_apart":
+            confirmed = oracle.apart(source, target)
+        elif rule == "copy_id_elsewhere":
+            held = oracle.holders(unversioned(text))
+            confirmed = (oracle.outside_somewhere(source) or oracle.outside_somewhere(target)) and not (
+                held.get(source, set()) & held.get(target, set())
+            )
+        elif rule == "copy_id_of_several_genes":
+            held = oracle.holders(unversioned(text))
+            confirmed = (oracle.outside_somewhere(source) or oracle.outside_somewhere(target)) and any(
+                oracle.one_locus_count({gene for gene, releases in held.items() if release in releases}) > 1
+                for release in held.get(source, set()) & held.get(target, set())
+            )
+        else:
+            confirmed = False
+        if not confirmed:
+            return False
+    return True
+
+
+def changed_only_by_refused_bridges(world, got, expected, conversion_of) -> None:
+    """Check that rosetta's answers are the expected ones, or differ only where the rule of bridges says why.
+
+    The expected answers are those of the API before this version. A record that differs only by the release a
+    conversion without an answer now reports is accepted where the tables confirm that release
+    (:py:func:`release_of_no_answer_confirmed`). Any other record that differs is accepted only when the
+    same conversion, explained, shows the cause and Ensembl's tables confirm it: every gene the record lost is the
+    target of a bridge the rules refused, for reasons the tables confirm (:py:func:`refusal_confirmed`, not the
+    engine's word for it), every gene it gained is reached through a bridge, and it lost or gained at least one gene
+    (a changed order or class alone is no explanation).
+
+    Args:
+        world: The test world (graph and tables).
+        got: The answers now (a list or a dict of records).
+        expected: The expected answers, of the same shape.
+        conversion_of: ``(index or key, expected record) -> (identifier, from_release)`` of the record's conversion.
+    """
+    if got == expected:
+        return
+    assert type(got) is type(expected) and len(got) == len(expected), "a record was added or removed"
+    keys = range(len(got)) if isinstance(got, list) else sorted(expected)
+    for key in keys:
+        if got[key] == expected[key] or release_of_no_answer_confirmed(
+            world, got[key], expected[key], conversion_of(key, expected[key])
+        ):
+            continue
+        lost, gained = _genes(expected[key]) - _genes(got[key]), _genes(got[key]) - _genes(expected[key])
+        assert lost or gained, (key, expected[key], got[key])
+        identifier, from_release = conversion_of(key, expected[key])
+        result = world.api.convert(identifier, from_release=from_release, to_release=SNAPSHOT, explain=True)
+        taken = {unversioned(c.target) for c in result.path.bridges if c.taken}
+        refused = {
+            unversioned(c.target) for c in result.path.bridges if not c.taken and refusal_confirmed(world, c)
+        } - taken
+        bridged = {unversioned(c.gene) for c in result.candidates if c.bridges}
+        assert lost <= refused and gained <= bridged, (key, lost, refused, gained, bridged)
 
 
 def test_graph_is_the_one_the_expectations_were_made_on(real_world, organism):
@@ -261,13 +484,18 @@ def test_graph_is_the_one_the_expectations_were_made_on(real_world, organism):
     assert list(described.releases) == expected["releases"]
     assert described.serving_assembly == expected["serving_assembly"]
     assert {str(a.assembly): list(a.releases) for a in described.assemblies} == expected["assemblies"]
-    assert {str(a.assembly): list(a.external_databases) for a in described.assemblies} == expected["external_databases"]
-    for a in described.assemblies:  # the databases of synonyms are those with the graph's prefix
-        assert list(a.synonym_databases) == [d for d in a.external_databases if d.startswith(ids.SYNONYM_PREFIX)]
-    assert api.databases_by_assembly() == expected["external_databases"]
+    assert {str(a.assembly): list(a.external_databases) for a in described.assemblies} == {
+        a: sorted({ids.public_name(d) for d in names}) for a, names in expected["external_databases"].items()
+    }
+    for a in described.assemblies:  # decision 56: the databases that record synonyms, by their own names
+        assert set(a.synonym_databases) <= set(a.external_databases)
+        assert not any(d.startswith(ids.SYNONYM_PREFIX) for d in a.external_databases)
+    assert api.databases_by_assembly() == {str(a.assembly): list(a.external_databases) for a in described.assemblies}
     assert described.organism == organism and described.snapshot_release == SNAPSHOT
-    for key in ("counts", "content_digest", "format_version", "history", "source_tables", "tables"):
-        assert key in api.graph.manifest  # rosetta's record copies these from the graph file's manifest
+    record = api.graph.record  # rosetta's record of a graph unit copies these from the graph file's record
+    for key in ("counts", "content_digest", "history", "source_tables", "tables", "build_date"):
+        assert key in record.to_json()
+    assert described.format_version == idtrack.graph.GRAPH_FORMAT_VERSION
 
 
 def test_draw_queries_and_answer(real_world, organism):
@@ -277,7 +505,12 @@ def test_draw_queries_and_answer(real_world, organism):
     assembly = int(api.describe().primary_assembly)
     queries = draw_queries(api, organism, SNAPSHOT, assembly, 60, 0, 5)
     assert _plain(queries) == expected["queries"]
-    assert _plain(answer(api, queries, SNAPSHOT)) == expected["answer"]
+    changed_only_by_refused_bridges(
+        real_world(organism),
+        _plain(answer(api, queries, SNAPSHOT)),
+        decided(real_world(organism), expected["answer"]),
+        lambda i, record: (queries[i]["id"], queries[i]["from_release"]),
+    )
 
 
 def test_convert(real_world, organism):
@@ -288,10 +521,21 @@ def test_convert(real_world, organism):
     for q in expected["queries"]:
         if q["kind"] == "gene":
             genes.setdefault(q["from_release"], []).append(q["id"])
+    world = real_world(organism)
     for release, ids_ in sorted(genes.items()):
-        assert _plain(convert(api, ids_, SNAPSHOT, from_release=release)) == expected["convert_genes"][str(release)]
+        changed_only_by_refused_bridges(
+            world,
+            _plain(convert(api, ids_, SNAPSHOT, from_release=release)),
+            decided(world, expected["convert_genes"][str(release)]),
+            lambda i, record, release=release: (record["query_id"], release),
+        )
     symbols = [q["id"] for q in expected["queries"] if q["kind"] == "symbol"]
-    assert _plain(convert(api, symbols, SNAPSHOT)) == expected["convert_symbols"]
+    changed_only_by_refused_bridges(
+        world,
+        _plain(convert(api, symbols, SNAPSHOT)),
+        decided(world, expected["convert_symbols"]),
+        lambda i, record: (record["query_id"], None),
+    )
 
 
 def test_graph_view(real_world, organism):
@@ -303,15 +547,21 @@ def test_graph_view(real_world, organism):
     for key, tiers in expected["name_tiers"].items():
         fold, text = key.split(":", 1)
         got = view.name_tiers(text, fold == "True")
-        assert {t: {g: m for g, m in sorted(v.items())} for t, v in got.items()} == tiers, key
+        tiers_decided(real_world(organism), view, text, fold == "True", got, tiers)
     for base, versions in expected["versions"].items():
         assert _plain(view.versions(base)) == versions, base
     for key, symbols in expected["symbols"].items():
         base, release, synonyms = key.split(":")
-        assert sorted(view.symbols(base, int(release), synonyms == "True")) == symbols, key
+        got = sorted(view.symbols(base, int(release), synonyms == "True"))
+        symbols_decided(real_world(organism), view, key, got, symbols)
     bases = sorted(expected["versions"])
     older = min(int(k) for k in expected["convert_genes"])
-    assert _plain(view.convert(bases, older, SNAPSHOT)) == expected["graph_view_convert"]
+    changed_only_by_refused_bridges(
+        real_world(organism),
+        _plain(view.convert(bases, older, SNAPSHOT)),
+        expected["graph_view_convert"],
+        lambda gene, record: (gene, older),
+    )
 
 
 def test_graph_file_name_manager_and_self_tests(real_world, organism, monkeypatch):
@@ -319,9 +569,7 @@ def test_graph_file_name_manager_and_self_tests(real_world, organism, monkeypatc
     world = real_world(organism)
     first = organisms.first_release(organism)
     assembly = organisms.primary_assembly(organism, SNAPSHOT)
-    name = files.graph_file_path(
-        str(world.repository), organism, assembly, first, SNAPSHOT, narrow=True, narrow_external=True
-    )
+    name = files.graph_file_path(str(world.repository), organism, assembly, first, SNAPSHOT)
     assert os.path.isfile(name) and name == API.graph_path(organism, SNAPSHOT, str(world.repository))
 
     shipped = importlib.resources.files("idtrack") / "default_config" / f"{organism}_externals_modified.yml"
@@ -339,7 +587,7 @@ def test_graph_file_name_manager_and_self_tests(real_world, organism, monkeypatc
     monkeypatch.setattr(DatabaseManager, "_core_db_index_cache", {})
     world.tables.install(monkeypatch, world.repository)
     manager = API.database_manager(organism, SNAPSHOT, str(world.repository), assembly=assembly, first_release=first)
-    assert GraphMaker(manager).create_file_name(narrow=True, narrow_external=True) == name
+    assert GraphMaker(manager).create_file_name() == name
     checks = GraphChecks(world.api.graph, manager)
     for check in SELF_TESTS:
         method = getattr(checks, check)

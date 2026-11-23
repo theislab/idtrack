@@ -4,17 +4,21 @@ The search records each path as a tuple of raw steps: ``(source, target, key)`` 
 ``(source, target, 0, release)`` for a cross-reference edge used at a release (``None`` for the final hop of
 confidence 1), and ``(None, gene, None)`` for a gene that is its own answer. :py:class:`PathBuilder` turns them into
 :py:class:`idtrack.results.PathStep` and :py:class:`idtrack.results.PathNode` records with what the graph says about
-each (releases, scores, splits and merges, databases and assemblies), every step and node once per conversion.
+each (releases, scores, splits and merges, databases and assemblies, where each gene lies and whether a history step
+moves it), every step and node once per conversion, and the bridges the search considered with the rule that took or
+refused each (:py:class:`idtrack.results.BridgeCheck`).
 """
 
 from __future__ import annotations
 
+import dataclasses
 import math
 from typing import TYPE_CHECKING, Any
 
 from idtrack import ids
 from idtrack.errors import IntegrityError
-from idtrack.results import ExplainedPath, PathNode, PathStep
+from idtrack.graph import genes
+from idtrack.results import BridgeCheck, ExplainedPath, GenePlace, PathNode, PathStep
 
 if TYPE_CHECKING:
     from idtrack.graph.graph import TheGraph
@@ -47,6 +51,10 @@ class PathBuilder:
         self._serving_masks = tuple((int(assembly), releases.mask) for assembly, releases in graph.serving_line.items())
         self._last = graph.snapshot_release
         self._real: dict[str, bool] = {}
+        self._facts: dict[str, genes.GeneFacts] = {}
+        self._places: dict[str, tuple] = {}
+        self._bridges: tuple[BridgeCheck, ...] = ()
+        self._refused: list[PathStep] = []
 
     # ------------------------------------------------------------------ nodes
 
@@ -60,6 +68,7 @@ class PathBuilder:
         active: tuple = ()
         assemblies: tuple[int, ...] = ()
         non_reference: tuple = ()
+        places: tuple[GenePlace, ...] = ()
         if node_type == ids.EXTERNAL:
             if name.startswith(ids.SYNONYM_PREFIX):
                 kind = "synonym"
@@ -77,8 +86,19 @@ class PathBuilder:
                     alive |= (1 << (high + 1)) - (1 << low)
             assemblies = tuple(sorted(assembly for assembly, served in self._serving_masks if served & alive))
             outside = graph.non_reference_releases(name)
-            if outside.mask:
-                non_reference = tuple((int(a), int(b)) for a, b in graph.list_to_ranges(sorted(outside)))
+            non_reference = outside.ranges()
+            places = tuple(
+                GenePlace(
+                    assembly=int(place.assembly),
+                    region=str(place.region),
+                    start=int(place.start),
+                    end=int(place.end),
+                    strand=int(place.strand),
+                    releases=place.releases.ranges(),
+                    reference=not place.releases.mask & outside.mask,
+                )
+                for place in self._places_of(name)
+            )
         self._nodes[name] = PathNode(
             id=name,
             kind=kind,
@@ -87,6 +107,7 @@ class PathBuilder:
             active=active,
             assemblies=assemblies,
             non_reference=non_reference,
+            places=places,
         )
 
     def _is_real(self, name: str) -> bool:
@@ -133,6 +154,9 @@ class PathBuilder:
         else:
             reason = "replaced"
         old_release = _finite(old)
+        relation = None
+        if kind == "history" and self._is_real(tail) and self._is_real(head):
+            relation = genes.relation(self._place_facts(tail), self._place_facts(head))
         return PathStep(
             kind=kind,
             source=source,
@@ -146,7 +170,22 @@ class PathBuilder:
             assembly=None if new_release is None else self._assembly(new_release),
             old_assembly=None if old_release is None else self._assembly(old_release),
             reason=reason,
+            places=relation,
         )
+
+    def _places_of(self, name: str) -> tuple:
+        """The places of a gene, read once per conversion (for its node and for the history steps it is on)."""
+        found = self._places.get(name)
+        if found is None:
+            found = self._places[name] = self.graph.places(name)
+        return found
+
+    def _place_facts(self, name: str) -> genes.GeneFacts:
+        """The facts of a gene version for :py:func:`idtrack.graph.genes.relation`, read once: the engine's facts."""
+        found = self._facts.get(name)
+        if found is None:
+            found = self._facts[name] = genes.facts_of_nodes(self.graph, [name])
+        return found
 
     def _assembly(self, release: int) -> int | None:
         assembly = self._serving.get(release)
@@ -246,10 +285,76 @@ class PathBuilder:
         """
         return tuple(self._add(raw, "final") for raw in raw_path)
 
+    def bridges(self, checks: tuple[BridgeCheck, ...]) -> None:
+        """Record the bridges the search considered, and their nodes (both genes and every id between them).
+
+        Args:
+            checks: The bridges, ordered by source and target.
+        """
+        for check in checks:
+            self._node(check.source)
+            self._node(check.target)
+            for middle, _ in check.through:
+                self._node(middle)
+        self._bridges = tuple(checks)
+
+    def refused(self, steps: dict[tuple[str, str, int], str]) -> None:
+        """Record the history steps the search did not follow, each with its rule, and their nodes.
+
+        Args:
+            steps: ``{(gene, other, key): rule}`` as the walk would have taken each step (a key of
+                :py:data:`idtrack.results.STEP_REASONS`).
+        """
+        for (source, target, key), rule in sorted(steps.items()):
+            step = dataclasses.replace(self._history("history", source, target, key), reason=rule)
+            self._node(source)
+            self._node(target)
+            self._refused.append(step)
+
     def result(self) -> ExplainedPath:
-        """Return the explanation collected.
+        """Return the explanation collected, its nodes and databases named as results name them (decision 56).
+
+        A synonym is named without the graph's prefix (its node is of kind ``synonym``), as is the database of a
+        synonym; should the same text name another node of the same explanation as well, the synonym's id is written
+        ``synonym:<text>`` so that every node keeps an id of its own. The bridges considered name their genes and the
+        ids between them by the same ids as the nodes.
 
         Returns:
-            ExplainedPath: Nodes and steps.
+            ExplainedPath: Nodes, steps and the bridges considered.
         """
-        return ExplainedPath(nodes=tuple(self._nodes.values()), steps=tuple(self._steps))
+        plain = {name for name in self._nodes if not name.startswith(ids.SYNONYM_PREFIX)}
+        public: dict[str, str] = {}
+        for name in self._nodes:
+            text = ids.public_name(name)
+            public[name] = f"synonym:{text}" if name not in plain and text in plain else text
+
+        def databases(found: tuple[str, ...]) -> tuple[str, ...]:
+            return tuple(sorted({ids.public_name(d) for d in found}))
+
+        nodes = tuple(
+            dataclasses.replace(node, id=public[name], label=ids.public_name(name), databases=databases(node.databases))
+            for name, node in self._nodes.items()
+        )
+        steps = tuple(
+            dataclasses.replace(
+                step,
+                source=None if step.source is None else public[step.source],
+                target=public[step.target],
+                databases=databases(step.databases),
+            )
+            for step in self._steps
+        )
+        bridges = tuple(
+            dataclasses.replace(
+                check,
+                source=public[check.source],
+                target=public[check.target],
+                through=tuple((public[middle], rule) for middle, rule in check.through),
+            )
+            for check in self._bridges
+        )
+        refused = tuple(
+            dataclasses.replace(step, source=public[step.source or ""], target=public[step.target])
+            for step in self._refused
+        )
+        return ExplainedPath(nodes=nodes, steps=steps, bridges=bridges, refused=refused)

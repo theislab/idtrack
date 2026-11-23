@@ -145,11 +145,11 @@ class TestOrganismTable:
 
     def test_assembly_node_types(self):
         """Every assembly of the table has a node type per form, named after the assembly and form."""
-        for assembly in organisms.ASSEMBLY_NODE_TYPES:
+        for assembly in organisms.ASSEMBLY_LABELS:
             for form in ids.FORMS:
-                assert organisms.ASSEMBLY_NODE_TYPES[assembly][form] == f"assembly_{assembly}_ensembl_{form}"
+                assert organisms.ASSEMBLY_LABELS[assembly][form] == f"assembly_{assembly}_ensembl_{form}"
         held = {int(a) for entries in organisms.ORGANISM_TABLE.values() for a in entries}
-        assert set(organisms.ASSEMBLY_NODE_TYPES) == held
+        assert set(organisms.ASSEMBLY_LABELS) == held
 
     def test_resolve_organism_offline(self):
         """Organism names resolve without the network; unknown or unconfigured organisms raise."""
@@ -259,9 +259,17 @@ class TestVocabulary:
             ids.split("A.B.1")
 
     def test_stable_id_of(self):
-        """`stable_id_of` strips the synonym prefix and a numeric version only."""
-        assert ids.stable_id_of("synonym_id::TP53") == "TP53"
+        """`stable_id_of` strips the numeric version of an id of Ensembl's form only.
+
+        An Ensembl id has an Ensembl prefix and 11 digits (or is an LRG id): a symbol that begins with ``ENS`` is never
+        cut, and results carry no synonym prefix to strip.
+        """
         assert ids.stable_id_of("ENSG00000141510.18") == "ENSG00000141510"
+        assert ids.stable_id_of("ENSMUSG00000059552.14") == "ENSMUSG00000059552"
+        assert ids.stable_id_of("ensg00000141510.18") == "ensg00000141510"
+        assert ids.stable_id_of("ENSAP1.2") == "ENSAP1.2"
+        assert ids.stable_id_of("ENSG0141510.2") == "ENSG0141510.2"
+        assert ids.public_name("synonym_id::TP53") == "TP53" and ids.public_name("TP53") == "TP53"
         assert ids.stable_id_of("LRG_321.1") == "LRG_321"
         assert ids.stable_id_of("SLA.7") == "SLA.7"
         # only a numeric version is a version: the sentinel nodes and other suffixes stay

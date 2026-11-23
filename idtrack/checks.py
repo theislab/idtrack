@@ -15,7 +15,7 @@ import numpy as np
 from tqdm import tqdm
 
 from idtrack import _arguments, ids, organisms
-from idtrack.engine.track import Track
+from idtrack.engine.track import Track, _renamed_note
 from idtrack.errors import (
     ArgumentTypeError,
     InactiveAtReleaseError,
@@ -179,7 +179,7 @@ class GraphChecks:
 
     def _assembly_releases(self) -> list[tuple[int, int]]:
         """Return every ``(assembly, release)`` of the graph: each release that an assembly has, by assembly."""
-        releases = {int(release) for release in self.graph.graph["confident_for_release"]}
+        releases = set(self.graph.releases)
         return [
             (int(assembly), int(release))
             for assembly, of_assembly in sorted(self.graph.assembly_releases.items())
@@ -199,8 +199,8 @@ class GraphChecks:
     def _source_databases(self, assembly: int) -> list[str]:
         """Return the names under which the graph holds identifiers on a genome assembly, sorted.
 
-        The external databases of the assembly, and the Ensembl ids of every form of the graph by their node type:
-        ``ensembl_<form>`` and ``assembly_<key>_ensembl_<form>`` (the ids of that assembly), and the gene ids
+        The external databases of the assembly, and the Ensembl ids of every form of the graph by their node type
+        (``ensembl_<form>``) and by their label on the assembly (``assembly_<key>_ensembl_<form>``), and the gene ids
         without version (``base_ensembl_gene``). Empty for an assembly that the graph does not have.
         """
         graph = self.graph
@@ -208,7 +208,7 @@ class GraphChecks:
             return []
         held = set(graph.available_external_databases_assembly.get(assembly, ()))
         for form in graph.available_forms:
-            held.update((ids.ENSEMBL_TYPE[form], organisms.ASSEMBLY_NODE_TYPES[assembly][form]))
+            held.update((ids.ENSEMBL_TYPE[form], organisms.ASSEMBLY_LABELS[assembly][form]))
         held.add(ids.BASE_ENSEMBL_TYPE[ids.BACKBONE_FORM])
         return sorted(held)
 
@@ -221,8 +221,7 @@ class GraphChecks:
             if forms.get(name) == ids.BACKBONE_FORM and not name.startswith(ids.SYNONYM_PREFIX)
         )
 
-    @staticmethod
-    def _refuse_unknown_database(argument: str, value: Any, allowed: list[str], what: str) -> None:
+    def _refuse_unknown_database(self, argument: str, value: Any, allowed: list[str], what: str) -> None:
         """Refuse a database argument that is not one of the databases that can be used.
 
         Args:
@@ -238,7 +237,7 @@ class GraphChecks:
         _arguments.string(value, argument)
         if value not in allowed:
             raise UnknownDatabaseError(
-                f"`{argument}`={value!r} is not {what}; valid: {allowed}.",
+                f"`{argument}`={value!r} is not {what};{_renamed_note(self.graph, value)} valid: {allowed}.",
                 argument=argument,
                 value=value,
                 allowed=allowed,
@@ -271,7 +270,7 @@ class GraphChecks:
 
     def _gene_ids_against_tables(self, progress: bool) -> tuple[bool, dict[str, Any]]:
         labels = {
-            organisms.ASSEMBLY_NODE_TYPES[assembly][ids.BACKBONE_FORM]: assembly
+            organisms.ASSEMBLY_LABELS[assembly][ids.BACKBONE_FORM]: assembly
             for assembly in self.graph.available_assemblies
         }
         in_graph: dict[tuple[int, int], set[str]] = {}
@@ -363,7 +362,9 @@ class GraphChecks:
         lacks, and an identifier of the graph that the tables do not have (the kind of error that produces wrong
         mappings). The graph keeps one node for identifiers that differ in letter case only, so the comparison
         ignores letter case; an identifier of the tables that is itself an Ensembl id of the graph is no external
-        identifier there (``misplaced_external_entry`` of the graph) and is left out.
+        identifier there (:py:attr:`idtrack.TheGraph.misplaced_external_entries`) and is left out, and so is an entry of
+        :py:data:`idtrack.build.database_manager.ONE_GENE_ONLY` that the build left out because the tables give it to
+        several genes over the releases of the graph (:py:attr:`idtrack.TheGraph.entries_of_several_genes`).
 
         Args:
             progress (bool): Show a progress bar per assembly.
@@ -377,8 +378,9 @@ class GraphChecks:
         return self._run("is_id_functions_consistent_external", lambda: self._external_ids_against_tables(progress))
 
     def _external_ids_against_tables(self, progress: bool) -> tuple[bool, dict[str, Any]]:
-        table_name = "external_relevant" if self.graph.graph["narrow_external"] else "external"
-        misplaced = {name.lower() for name in self.graph.graph["misplaced_external_entry"]}
+        table_name = "external" if self.graph.all_external else "external_relevant"
+        misplaced = {name.lower() for name in self.graph.misplaced_external_entries}
+        several = self.graph.entries_of_several_genes
         in_graph: dict[tuple[int, int], dict[str, set[str]]] = {}
         for node in self.graph.nodes:
             if self.graph.node_type(node) == ids.EXTERNAL:
@@ -392,12 +394,17 @@ class GraphChecks:
             for assembly, release in loop_obj:
                 loop_obj.set_postfix_str(f"Item:{assembly},{release}", refresh=False)
                 manager = self._manager(release, assembly)
+                judged = manager.one_gene_only_names() if several else set()
                 in_tables: dict[str, set[str]] = {}
                 for form in self.graph.available_forms:
                     table = manager.change_form(form).get_db(table_name)
                     for database, identifier in zip(table["name_db"].tolist(), table["id_db"].tolist()):
-                        if str(identifier).lower() not in misplaced:
-                            in_tables.setdefault(str(database), set()).add(str(identifier).lower())
+                        lower = str(identifier).lower()
+                        if lower in misplaced or (
+                            lower in several and str(database).removeprefix(ids.SYNONYM_PREFIX) in judged
+                        ):
+                            continue
+                        in_tables.setdefault(str(database), set()).add(lower)
                 of_graph = in_graph.get((assembly, release), {})
                 for database in sorted(set(in_tables) | set(of_graph)):
                     compared += 1
@@ -695,9 +702,9 @@ class GraphChecks:
         Raises:
             UnknownDatabaseError: If a database is not one that the graph holds; nothing is converted then, and the message
                 lists what is valid. A source is an external database of *from_assembly* or the Ensembl ids of a
-                form of the graph, named by their node type (``ensembl_gene``, ``base_ensembl_gene``, or
-                ``assembly_<key>_ensembl_<form>`` for the ids of that assembly; the name of a form, ``gene``, is
-                not a database). A target is a database that :py:meth:`idtrack.engine.Track.convert` takes as
+                form of the graph, named by their node type (``ensembl_gene``, ``base_ensembl_gene``) or by their
+                label on the assembly (``assembly_<key>_ensembl_<form>``; the name of a form, ``gene``, is not a
+                database). A target is a database that :py:meth:`idtrack.engine.Track.convert` takes as
                 ``final_database`` at *to_release* (:py:meth:`idtrack.engine.Track.final_databases`). Also if
                 *to_release* is not a release of the graph, or *from_fraction* is outside the interval (0, 1].
             ArgumentTypeError: If a database is not a string.
@@ -908,7 +915,7 @@ class GraphChecks:
         only_backbone_tests_1 = not any([include_ensembl_1, include_external_1])
         only_backbone_tests_2 = not any([include_ensembl_2, include_external_2])
 
-        main_assembly = int(self.graph.graph["genome_assembly"])
+        main_assembly = self.graph._primary()
         assemblies = sorted(self.graph.available_assemblies) if not only_backbone_tests_1 else [main_assembly]
         # Final conversions are always evaluated on the graph's primary assembly.
         to_assembly = main_assembly
@@ -1037,7 +1044,9 @@ class GraphChecks:
         genes, and each conversion is compared with the manager's table of external identifiers of the assembly
         that serves the release. The invariant holds when every gene that the table gives an id converts to
         exactly those ids (letter case ignored), and no gene converts to an id that the table does not give it. A
-        gene without an id in the database converts to nothing; that is the only loss that is not a violation.
+        gene without an id in the database converts to nothing; that is the only loss that is not a violation. The
+        entries the build left out by decision 73's rule (:py:attr:`idtrack.TheGraph.entries_of_several_genes`) are no
+        ids of the table here.
 
         Args:
             convert_using_release (bool): Give the release to the conversion as ``from_release`` (otherwise the
@@ -1115,17 +1124,21 @@ class GraphChecks:
             self.log.info(f"Assembly: {assembly}, Database: {database}, Release: {release}")
 
         manager = self._manager(release, assembly).change_form(ids.BACKBONE_FORM)
-        table = manager.get_db("external_relevant" if self.graph.graph["narrow_external"] else "external")
+        table = manager.get_db("external" if self.graph.all_external else "external_relevant")
         table = table[table["name_db"] == database]
+        # an entry the build left out by decision 73's rule is no id the gene can convert to
+        several = self.graph.entries_of_several_genes
+        left_out = several if several and database in manager.one_gene_only_names() else frozenset()
         expected: dict[str, set[str]] = {}
         for gene, identifier in zip(table["graph_id"].tolist(), table["id_db"].tolist()):
-            expected.setdefault(gene, set()).add(identifier)
+            if str(identifier).lower() not in left_out:
+                expected.setdefault(gene, set()).add(identifier)
 
         run = self.history_travel_testing(
             from_fraction=from_fraction,
             from_release=release,
             from_assembly=assembly,
-            from_database=organisms.ASSEMBLY_NODE_TYPES[assembly][ids.BACKBONE_FORM],
+            from_database=organisms.ASSEMBLY_LABELS[assembly][ids.BACKBONE_FORM],
             to_release=release,
             final_database=database,
             allow_bridges=True,
@@ -1230,7 +1243,7 @@ class GraphChecks:
                     and (form is None or self.graph.external_database_connection_form[name] == form)
                 )
             if include_ensembl and not for_final_database:
-                of_assembly = organisms.ASSEMBLY_NODE_TYPES[assembly]
+                of_assembly = organisms.ASSEMBLY_LABELS[assembly]
                 sources.extend(of_assembly.values() if form is None else [of_assembly[form]])
             if include_ensembl and (form == ids.BACKBONE_FORM or form is None):
                 sources.extend([ids.ENSEMBL_TYPE[ids.BACKBONE_FORM], ids.BASE_ENSEMBL_TYPE[ids.BACKBONE_FORM]])

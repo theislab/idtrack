@@ -108,9 +108,9 @@ class TestShippedTable:
     def test_derived_attributes_cover_new_keys(self):
         """Derived attributes cover new keys."""
         for key in (1, 5, 6, 10, 801):
-            assert key in organisms.ASSEMBLY_NODE_TYPES
-            assert organisms.ASSEMBLY_NODE_TYPES[key]["gene"] == f"assembly_{key}_ensembl_gene"
-            assert organisms.ASSEMBLY_NODE_TYPES[key]["transcript"] == f"assembly_{key}_ensembl_transcript"
+            assert key in organisms.ASSEMBLY_LABELS
+            assert organisms.ASSEMBLY_LABELS[key]["gene"] == f"assembly_{key}_ensembl_gene"
+            assert organisms.ASSEMBLY_LABELS[key]["transcript"] == f"assembly_{key}_ensembl_transcript"
 
 
 class TestValidator:
@@ -185,6 +185,39 @@ class TestValidator:
             self._check({"danio_rerio": {11: _entry()}}, symbols={"danio_rerio": "ZFIN"})
 
 
+class TestArchiveFolders:
+    """I138 (F15): the HTTPS folder of an assembly that Ensembl keeps beside its successor is read from the table."""
+
+    def test_an_assembly_kept_beside_its_successor_is_read_from_its_archive_folder(self):
+        """Human GRCh37 from 76 on its archive folder first; before 76, and GRCh38, on the release's folder only.
+
+        A registered organism whose table keeps an assembly beside its successor gets the same rule, by its name.
+        Fails if the branch names an organism, an assembly or a release in code (the rule before: only
+        ``homo_sapiens``, assembly 37, from 76).
+        """
+        roots = DatabaseManager._ftp_mysql_root_candidates
+        host = settings.ENSEMBL.https_host
+        assert roots(organism="homo_sapiens", assembly=37, release=80) == (
+            f"https://{host}/pub/grch37/release-80/mysql/",
+            f"https://{host}/pub/release-80/mysql/",
+        )
+        assert roots(organism="homo_sapiens", assembly=37, release=70) == (f"https://{host}/pub/release-70/mysql/",)
+        assert roots(organism="homo_sapiens", assembly=38, release=80) == (f"https://{host}/pub/release-80/mysql/",)
+        with restored_organism_table():
+            organisms.register_organism(
+                "danio_rerio",
+                {
+                    11: {"Name": "GRCz11", "Ports": [3306, 5306], "Priority": 1, "ReleaseRange": [92, None]},
+                    10: {"Name": "GRCz10", "Ports": [3306, 5306], "Priority": 2, "ReleaseRange": [80, None]},
+                },
+                symbol_databases=["ZFIN"],
+            )
+            assert roots(organism="danio_rerio", assembly=10, release=100)[0] == (
+                f"https://{host}/pub/grcz10/release-100/mysql/"
+            )
+            assert len(roots(organism="danio_rerio", assembly=10, release=85)) == 1
+
+
 class TestRegisterOrganism:
     """`organisms.register_organism` adds or replaces an organism and recomputes the derived attributes."""
 
@@ -198,15 +231,15 @@ class TestRegisterOrganism:
                 symbol_databases=["ZFIN"],
             )
             assert "danio_rerio" in organisms.supported_organisms()
-            assert 11 in organisms.ASSEMBLY_NODE_TYPES
-            assert organisms.ASSEMBLY_NODE_TYPES[11]["gene"] == "assembly_11_ensembl_gene"
+            assert 11 in organisms.ASSEMBLY_LABELS
+            assert organisms.ASSEMBLY_LABELS[11]["gene"] == "assembly_11_ensembl_gene"
             assert organisms.SYMBOL_DATABASES["danio_rerio"] == ("ZFIN",)
             assert organisms.table_version() == version + 1
             # DatabaseManager now accepts the organism (it fails later, on the missing directory, not on the name).
             with pytest.raises(InvalidArgumentError, match="existing directory"):
                 DatabaseManager(organism="danio_rerio", form="gene", local_repository="/nonexistent/dir")
         assert "danio_rerio" not in organisms.supported_organisms()
-        assert 11 not in organisms.ASSEMBLY_NODE_TYPES
+        assert 11 not in organisms.ASSEMBLY_LABELS
 
     def test_read_only_mappings_are_stored_as_independent_dicts(self):
         """Entries given as read-only mappings are accepted and stored as plain dicts, detached from the input."""
@@ -233,7 +266,7 @@ class TestRegisterOrganism:
         with restored_organism_table():
             organisms.register_organism("macaca_fascicularis", {7: _entry(ReleaseRange=[117, None])}, ["VGNC Symbol"])
             assert list(organisms.ORGANISM_TABLE["macaca_fascicularis"]) == [7]
-            held = organisms.ASSEMBLY_NODE_TYPES
+            held = organisms.ASSEMBLY_LABELS
             assert 7 in held and 5 not in held and 6 not in held
 
     def test_replacing_without_symbol_databases_keeps_them(self):

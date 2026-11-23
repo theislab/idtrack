@@ -217,6 +217,28 @@ def write_externals_yaml(data: dict, path: str) -> None:
     write_text(path, text)
 
 
+def settings_release_of(content: dict | None, organism: str, release: int) -> int | None:
+    """Return the release of a parsed externals YAML whose settings apply to *release*.
+
+    See :py:meth:`ExternalDatabases.settings_release`.
+
+    Args:
+        content: The parsed YAML.
+        organism: The organism.
+        release: The release asked about.
+
+    Returns:
+        int | None: *release* if the file lists it for the organism; the last listed release if *release* is after
+        it; ``None`` otherwise (and for a file without an entry for the organism).
+    """
+    listed = ExternalDatabases._releases_of(content or {}, organism)
+    if release in listed:
+        return release
+    if listed and release > max(listed):
+        return max(listed)
+    return None
+
+
 class ExternalDatabases:
     """Manage third-party metadata for Ensembl entities through YAML side-car files.
 
@@ -527,6 +549,19 @@ class ExternalDatabases:
             for e in str(j4["Ensembl release"]).split(",")
         }
 
+    def settings_release(self) -> int | None:
+        """Return the release of the externals YAML whose settings apply to the manager's release.
+
+        A release that the file lists takes its own settings. A release after the last one the file lists takes the
+        settings of that last release (for the same form and assembly), so that a new Ensembl release is never built
+        without external databases; a graph records which release's settings each of its releases took. A release
+        before or between listed releases has none.
+
+        Returns:
+            int | None: The release whose settings apply, or ``None``.
+        """
+        return settings_release_of(self._modified_yaml_view(), self.organism, int(self.release))
+
     def covered_releases(self) -> set[int]:
         """Return the Ensembl releases that the organism's externals YAML lists (any form, database or assembly).
 
@@ -567,11 +602,12 @@ class ExternalDatabases:
             return
 
         ensembl_releases = self._releases_of(read_yaml_file, self.organism)
-        if self.release not in ensembl_releases:
+        if settings_release_of(read_yaml_file, self.organism, int(self.release)) is None:
             raise ExternalsReleaseNotCoveredError(
-                f"The Ensembl release {self.release} is not included in any entry of the YAML config file.\n"
+                f"The Ensembl release {self.release} is not included in any entry of the YAML config file, and it is not "
+                f"after its last release ({max(ensembl_releases)}), whose settings a later release takes.\n"
                 f"Please extend the configuration to this release (`ExternalDatabases.extend_modified_yaml`), or "
-                f"create the graph/track object using a supported release (e.g., {max(ensembl_releases)}).\n"
+                f"create the graph/track object using a supported release.\n"
                 "You may also report this issue on GitHub so the default configuration can be updated."
             )
 
@@ -698,6 +734,27 @@ class ExternalDatabases:
             )
         return report
 
+    def selected_names(self) -> set[str]:
+        """Return the database names the YAML enables for the organism anywhere: any form, assembly or release."""
+        content = self._modified_yaml_view().get(self.organism) or {}
+        return {
+            str(db_name)
+            for databases in content.values()
+            for db_name, entry in (databases or {}).items()
+            if any(item.get("Include") for item in (entry.get("Assembly") or {}).values())
+        }
+
+    def selected_units(self) -> set[tuple[str, str]]:
+        """Return the ``(form, name)`` pairs the YAML enables for the organism anywhere (a synonym's by its entry's name)."""
+        prefix = "synonym_id::"
+        content = self._modified_yaml_view().get(self.organism) or {}
+        return {
+            (str(form), str(db_name)[len(prefix) :] if str(db_name).startswith(prefix) else str(db_name))
+            for form, databases in content.items()
+            for db_name, entry in (databases or {}).items()
+            if any(item.get("Include") for item in (entry.get("Assembly") or {}).values())
+        }
+
     def give_list_for_case(self, give_type: str) -> list:
         """Return database names or assembly codes extracted from the external-DB YAML file.
 
@@ -741,13 +798,15 @@ class ExternalDatabases:
         # A file without an entry for this organism or form means "no external databases" (see
         # `validate_yaml_file_up_to_date`).
         the_dict = (the_dict_loaded.get(self.organism) or {}).get(self.form) or {}
+        # the settings of the release itself, or of the last listed release for a release after it
+        release = settings_release_of(the_dict_loaded, self.organism, int(self.release))
 
         result = set()
         for db_name in the_dict:
             for asm in the_dict[db_name]["Assembly"]:
                 item = the_dict[db_name]["Assembly"][asm]
                 releases = {int(r) for r in str(item["Ensembl release"]).split(",")}
-                if self.release not in releases or not item["Include"]:
+                if release not in releases or not item["Include"]:
                     continue
                 if give_type == "db":
                     # Only add db_name if assembly matches

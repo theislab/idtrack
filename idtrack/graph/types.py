@@ -8,7 +8,6 @@ rule for where a cross-reference counts (:py:func:`served_mask`).
 from __future__ import annotations
 
 import hashlib
-import re
 from collections.abc import Iterable, Mapping
 from typing import Any, NamedTuple
 
@@ -17,7 +16,6 @@ import numpy as np
 from idtrack import ids
 from idtrack.errors import IntegrityError
 
-_ASSEMBLY_TYPE = re.compile(r"^assembly_(-?[0-9]+)_ensembl_([a-z]+)$")
 _INF = float("inf")
 _NAN = float("nan")
 # The kinds of edges of a store: an event of the id history, a cross-reference, anything else (graphs made by hand).
@@ -54,6 +52,21 @@ class ReleaseSet(frozenset):
             found.mask = mask
             cls._interned[mask] = found
         return found
+
+    def ranges(self) -> tuple[tuple[int, int], ...]:
+        """Return the inclusive ranges of consecutive releases of the set, ascending (``{1, 2, 3, 5}``: ``(1, 3), (5, 5)``).
+
+        Returns:
+            tuple[tuple[int, int], ...]: ``(first, last)`` of every run of consecutive releases.
+        """
+        ranges = []
+        mask = self.mask
+        while mask:
+            low = (mask & -mask).bit_length() - 1
+            length = ((mask >> low) & ~((mask >> low) + 1)).bit_length()  # the run of set bits that starts at ``low``
+            ranges.append((low, low + length - 1))
+            mask &= ~(((1 << length) - 1) << low)
+        return tuple(ranges)
 
     @classmethod
     def of(cls, releases: Iterable[int]) -> ReleaseSet:
@@ -201,6 +214,54 @@ def served_mask(
     return mask
 
 
+class Place(NamedTuple):
+    """Where a gene lies: on an assembly, a sequence region, from start to end (1-based, inclusive), on a strand.
+
+    The fields: ``assembly``, the key of the assembly (:py:data:`idtrack.organisms.ORGANISM_TABLE`); ``region``, the
+    name of the sequence region (a chromosome, a scaffold, a patch); ``start`` and ``end``, the first and last base of
+    the gene as Ensembl counts them; ``strand``, ``1`` or ``-1``; ``releases``, the releases at which the gene lies
+    there on the assembly that serves the release; ``kind``, what Ensembl's tables say the sequence region is, one of
+    :py:data:`idtrack.graph.genes.PLACE_KINDS` (a chromosome, the mitochondrial genome, or a scaffold or another
+    sequence below a chromosome; ``"scaffold"`` where the graph does not say). Whether two places overlap, and so
+    whether two genes lie at one place, is the rule of :py:func:`idtrack.graph.genes.overlap`; the kind lets two places
+    on different assemblies be compared (:py:func:`idtrack.graph.genes.relation`).
+    """
+
+    assembly: int
+    region: str
+    start: int
+    end: int
+    strand: int
+    releases: ReleaseSet
+    kind: str = "scaffold"
+
+
+class AssemblyException(NamedTuple):
+    """Which region of the reference sequence a patch, a haplotype or a pseudoautosomal region stands for.
+
+    One row of Ensembl's ``assembly_exception`` table (:py:meth:`idtrack.DatabaseManager.create_assembly_exceptions`)
+    at the releases that list it. The fields: ``assembly``, the key of the assembly; ``region``, ``start`` and
+    ``end``, the bases of the sequence region outside the reference sequence (or of the pseudoautosomal region of Y);
+    ``type``, Ensembl's type of the exception (``PATCH_FIX``, ``PATCH_NOVEL``, ``HAP``, ``PAR``); ``ref_region``,
+    ``ref_start`` and ``ref_end``, the region of the reference sequence it stands for; ``ref_kind``, what that region
+    is (:py:data:`idtrack.graph.genes.PLACE_KINDS`); ``releases``, the releases that list it, on the assembly that
+    serves them; ``carried``, the reference region carried onto later assemblies by Ensembl's mapping of the
+    assemblies, ``((assembly, region, start, end), ...)`` (decision 103).
+    """
+
+    assembly: int
+    region: str
+    start: int
+    end: int
+    type: str
+    ref_region: str
+    ref_start: int
+    ref_end: int
+    ref_kind: str
+    releases: ReleaseSet
+    carried: tuple[tuple[int, str, int, int], ...] = ()
+
+
 class HistoryEdge(NamedTuple):
     """One edge of the gene history as seen from a node: the other end and the release pair.
 
@@ -224,21 +285,11 @@ def _stable_hash(text: str) -> int:
 
 def _has_id_and_version(node_type: Any) -> bool:
     """Tell whether nodes of this type are Ensembl ``<id>.<version>`` nodes."""
-    return isinstance(node_type, str) and (
-        node_type in ids.FORM_OF_ENSEMBL_TYPE or bool(_ASSEMBLY_TYPE.match(node_type))
-    )
-
-
-def _is_assembly_gene(node_type: Any) -> bool:
-    """Tell whether the type is the gene type of one assembly (``assembly_<key>_ensembl_gene``)."""
-    if not isinstance(node_type, str):
-        return False
-    found = _ASSEMBLY_TYPE.match(node_type)
-    return found is not None and found.group(2) == ids.BACKBONE_FORM
+    return isinstance(node_type, str) and node_type in ids.FORM_OF_ENSEMBL_TYPE
 
 
 def _assembly_label(form: str, assembly: int) -> str:
-    """Return the database name of an Ensembl relation on one assembly (``assembly_<key>_ensembl_<form>``)."""
+    """Return the label of the Ensembl ids of a form on one assembly (``assembly_<key>_ensembl_<form>``)."""
     return f"assembly_{assembly}_ensembl_{form}"
 
 

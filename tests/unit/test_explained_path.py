@@ -11,6 +11,7 @@ are compared with what Ensembl's own tables say. Every field of :py:class:`idtra
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import math
 
@@ -18,7 +19,17 @@ import pytest
 
 from idtrack import API, ids
 from idtrack.graph import TheGraph
-from idtrack.results import STEP_REASONS, ConversionResult, ExplainedPath, PathNode, PathStep
+from idtrack.results import (
+    BRIDGE_RULES,
+    BRIDGE_RULES_TAKEN,
+    PLACE_RELATIONS,
+    STEP_REASONS,
+    ConversionResult,
+    ExplainedPath,
+    GenePlace,
+    PathNode,
+    PathStep,
+)
 
 NAN = float("nan")
 INF = float("inf")
@@ -38,8 +49,6 @@ class _Writer:
                 "genome_assembly": 38,
                 "ensembl_release": RELEASES[-1],
                 "confident_for_release": list(RELEASES),
-                "narrow": True,
-                "narrow_external": True,
                 "misplaced_external_entry": set(),
             }
         )
@@ -158,7 +167,10 @@ def gene_node(name: str, first: int, last: int | None) -> PathNode:
 
 
 def history(source, target, old, new, weight, splits, merges, reason, kind="history", key=0) -> PathStep:
-    """A history step; the assemblies are those that serve its two releases."""
+    """A history step; the assemblies are those that serve its two releases.
+
+    A graph written by hand holds no places, so a step between two genes says ``no_place`` (decision 89).
+    """
     return PathStep(
         kind=kind,
         source=source,
@@ -172,6 +184,7 @@ def history(source, target, old, new, weight, splits, merges, reason, kind="hist
         assembly=ASSEMBLY_OF[new],
         old_assembly=ASSEMBLY_OF[old],
         reason=reason,
+        places="no_place" if kind == "history" else None,
     )
 
 
@@ -194,19 +207,28 @@ IDENTITY = {"kind": "identity", "source": None, "key": None, "reason": "identity
 def explained(api: API, identifier: str, **arguments) -> ConversionResult:
     """Convert with ``explain=True`` and check what every explanation must satisfy.
 
-    The steps and nodes are each held once, the nodes in the order in which the steps first use them; every index
-    of a candidate points at a step; the explanation is strict JSON and reads back equal.
+    The steps and nodes are each held once, the nodes in the order in which the steps first use them, then those of
+    the bridges considered (both genes and every id between them); every index of a candidate points at a step; a
+    bridge is taken exactly when one of its ids is under a rule that takes it, and every rule and relation of places
+    has a text; the explanation is strict JSON and reads back equal.
     """
     result = api.convert(identifier, explain=True, **arguments)
     path = result.path
     assert isinstance(path, ExplainedPath)
     assert len(set(path.steps)) == len(path.steps)
     first_use = []
-    for step in path.steps:
-        for name in (step.source, step.target):
-            if name is not None and name not in first_use:
-                first_use.append(name)
+    for name in [name for step in path.steps for name in (step.source, step.target)] + [
+        name for check in path.bridges for name in (check.source, check.target, *(m for m, _ in check.through))
+    ]:
+        if name is not None and name not in first_use:
+            first_use.append(name)
     assert [n.id for n in path.nodes] == first_use
+    assert [(c.source, c.target) for c in path.bridges] == sorted({(c.source, c.target) for c in path.bridges})
+    for check in path.bridges:
+        assert check.places in PLACE_RELATIONS and check.through
+        assert all(rule in BRIDGE_RULES for _, rule in check.through)
+        assert check.taken == any(rule in BRIDGE_RULES_TAKEN for _, rule in check.through)
+    assert all(step.places in PLACE_RELATIONS for step in path.steps if step.places is not None)
     for candidate in result.candidates:
         assert all(0 <= i < len(path.steps) for i in candidate.path + candidate.final_path)
         if candidate.path:
@@ -292,22 +314,17 @@ def test_a_bridge_has_two_sides_in_the_direction_of_the_walk(api):
     assert (back.path.steps[0].assembly, back.path.steps[1].assembly) == (38, 37)
 
 
-def test_a_synonym_keeps_the_names_of_the_graph(api):
-    """A synonym is read through its node ``synonym_id::OLDSYM``; the path shows the graph's names."""
+def test_a_synonym_is_named_as_it_is(api):
+    """Decision 56: a synonym is read through its node, named in the path as it is.
+
+    The path names the synonym and its database without the graph's prefix ``synonym_id::``; the node's kind says it
+    is a synonym.
+    """
     result = explained(api, "OLDSYM")
-    assert (result.graph_id, result.match, result.from_databases) == (
-        "synonym_id::OLDSYM",
-        "synonym:exact",
-        ("synonym_id::HGNC Symbol",),
-    )
-    assert result.path.steps == (xref_step("entry", "synonym_id::OLDSYM", "Z.1", 9, ("synonym_id::HGNC Symbol",)),)
+    assert (result.graph_id, result.match, result.from_databases) == ("OLDSYM", "synonym:exact", ("HGNC Symbol",))
+    assert result.path.steps == (xref_step("entry", "OLDSYM", "Z.1", 9, ("HGNC Symbol",)),)
     assert result.path.nodes == (
-        PathNode(
-            id="synonym_id::OLDSYM",
-            kind="synonym",
-            label="synonym_id::OLDSYM",
-            databases=("synonym_id::HGNC Symbol",),
-        ),
+        PathNode(id="OLDSYM", kind="synonym", label="OLDSYM", databases=("HGNC Symbol",)),
         gene_node("Z.1", 5, None),
     )
 
@@ -356,7 +373,10 @@ def test_final_steps_at_the_target_release_and_through_another_release(api):
 
 
 def test_every_reason_code_is_given_and_has_a_text(api):
-    """The conversions above give every code of ``STEP_REASONS``, and nothing else."""
+    """The conversions above give every code of ``STEP_REASONS`` of a step taken, and nothing else.
+
+    The code of a step refused, ``mitochondrial_genome``, is tested in ``test_mitochondrial_step.py``.
+    """
     calls = [
         ("A.1", {}),
         ("D.1", {}),
@@ -371,7 +391,7 @@ def test_every_reason_code_is_given_and_has_a_text(api):
     seen = {
         step.reason for identifier, arguments in calls for step in explained(api, identifier, **arguments).path.steps
     }
-    assert seen == set(STEP_REASONS)
+    assert seen == set(STEP_REASONS) - {"mitochondrial_genome"}
     assert all(isinstance(text, str) and text for text in STEP_REASONS.values())
 
 
@@ -425,13 +445,121 @@ def _lives(world, name: str) -> list[int]:
     return [r for r in sorted(world.backbone) if world.genes_at(r).get(base) == int(version)]
 
 
+def _places_of(world, name: str) -> tuple[GenePlace, ...]:
+    """Return where Ensembl's gene tables put a gene version: one place per (assembly, region, start, end, strand)."""
+    base = ids.split(name)[0]
+    grouped: dict[tuple, list[int]] = {}
+    beside: dict[tuple, bool] = {}
+    for release in _lives(world, name):
+        assembly = world.backbone[release]
+        key = (assembly, *world.ensembl.places(assembly, release)[base])
+        grouped.setdefault(key, []).append(release)
+        beside[key] = beside.get(key, False) or base in world.ensembl.non_reference_genes(assembly, release)
+    return tuple(
+        GenePlace(
+            assembly=key[0],
+            region=key[1],
+            start=key[2],
+            end=key[3],
+            strand=key[4],
+            releases=tuple(_ranges(releases)),
+            reference=not beside[key],
+        )
+        for key, releases in sorted(grouped.items())
+    )
+
+
+def _assembly_order(world) -> list[int]:
+    """Return the assemblies of the cut tables in the order of the first release each serves."""
+    first: dict[int, int] = {}
+    for release, assembly in sorted(world.backbone.items()):
+        first.setdefault(assembly, release)
+    return sorted(first, key=first.__getitem__)
+
+
+def _carry(world, earlier: int, later: int, segment: tuple[str, int, int, int]) -> list[tuple[str, int, int, int]]:
+    """Return where Ensembl's mapping of two assemblies puts a place of the earlier one (decision 103, written here).
+
+    The cut blocks of the chain (0-based start, exclusive end on the earlier assembly; the start on the later one's
+    forward strand; the block's strand), the aligned bases of the place per region and strand from the first to the
+    last; through the assembly that follows the earlier one where Ensembl maps neither pair directly.
+    """
+    found = world.tables.chain(earlier, later)
+    if found is None:
+        order = _assembly_order(world)
+        following = (
+            order[order.index(earlier) + 1] if earlier in order and order.index(earlier) + 1 < len(order) else None
+        )
+        if following is None or following == later or world.tables.chain(earlier, following) is None:
+            return []
+        return sorted(
+            {
+                there
+                for step in _carry(world, earlier, following, segment)
+                for there in _carry(world, following, later, step)
+            }
+        )
+    region, start, end, strand = segment
+    spans: dict[tuple[str, int], list[int]] = {}
+    for row in found[0][found[0]["region"].astype(str) == str(region)].itertuples(index=False):
+        a, b = max(int(row.start), int(start) - 1), min(int(row.end), int(end))
+        if a >= b:
+            continue
+        if int(row.strand) == 1:
+            low, high = int(row.onto_start) + a - int(row.start), int(row.onto_start) + b - int(row.start)
+        else:
+            low, high = int(row.onto_start) + int(row.end) - b, int(row.onto_start) + int(row.end) - a
+        span = spans.setdefault((str(row.onto), int(row.strand) * int(strand)), [low, high])
+        span[0], span[1] = min(span[0], low), max(span[1], high)
+    return sorted((there, low + 1, high, sign) for (there, sign), (low, high) in spans.items())
+
+
+def _relation(world, one: tuple[GenePlace, ...], other: tuple[GenePlace, ...]) -> str:
+    """Where two genes lie relative to each other, from their places (the rule of decisions 72, 89 and 103, written here).
+
+    On an assembly where both lie on the reference sequence: ``same_place`` when two places share a base on one region
+    and strand, else ``places_apart``; else, where Ensembl's mapping carries a place of one onto an assembly on whose
+    reference sequence the other lies, ``same_place`` when a carried place overlaps a place of the other there and
+    ``places_apart`` when none does; elsewhere ``outside_reference`` when one lies outside the reference sequence,
+    ``no_place`` when one has no place, else ``other_assemblies``.
+    """
+
+    def overlap(p, q) -> bool:
+        return (p.region, p.strand) == (q.region, q.strand) and p.start <= q.end and q.start <= p.end
+
+    common = {p.assembly for p in one if p.reference} & {p.assembly for p in other if p.reference}
+    if common:
+        found = any(
+            p.assembly == q.assembly in common and p.reference and q.reference and overlap(p, q)
+            for p in one
+            for q in other
+        )
+        return "same_place" if found else "places_apart"
+    order = _assembly_order(world)
+    carried = []
+    for first, second in ((one, other), (other, one)):
+        for p in (p for p in first if p.reference):
+            for q in (q for q in second if q.reference and q.assembly in order and p.assembly in order):
+                if order.index(p.assembly) < order.index(q.assembly):
+                    for region, start, end, strand in _carry(
+                        world, p.assembly, q.assembly, (p.region, p.start, p.end, p.strand)
+                    ):
+                        carried.append(overlap(GenePlace(q.assembly, region, start, end, strand, (), True), q))
+    if carried:
+        return "same_place" if any(carried) else "places_apart"
+    if not all(p.reference for p in one + other):
+        return "outside_reference"
+    return "no_place" if not one or not other else "other_assemblies"
+
+
 def _disagreements(world, result: ConversionResult, events: dict) -> list:
     """Compare the steps and gene nodes of a conversion forward in time with Ensembl's own tables.
 
     A history step leaves its source at a release the source has and enters its target at a release the target has;
     its two assemblies are those that serve the two releases (Ensembl's index of core databases); its weight is the
-    score Ensembl gives the event, where Ensembl gives one; ``new_version`` is a change of version of one id. A gene
-    node is active, served and outside the reference sequence exactly where Ensembl's tables say so.
+    score Ensembl gives the event, where Ensembl gives one; ``new_version`` is a change of version of one id; it says
+    where the target lies relative to the source as their places in Ensembl's gene tables say (decision 89). A gene
+    node is active, served, outside the reference sequence and placed exactly where Ensembl's tables say so.
     """
     from tests._real_tables import SNAPSHOT
 
@@ -442,6 +570,12 @@ def _disagreements(world, result: ConversionResult, events: dict) -> list:
             continue
         assert step.source is not None, "a history step leaves a gene"
         source, target = ids.split(step.source), ids.split(step.target)
+        if step.kind == "history":
+            expected = _relation(world, _places_of(world, step.source), _places_of(world, step.target))
+            if step.places != expected:
+                found.append(("places", step, expected))
+        elif step.places is not None:
+            found.append(("places", step, None))
         if step.kind == "history" and step.old_release not in _lives(world, step.source):
             found.append(("old_release", step))
         if step.kind == "history" and step.new_release not in _lives(world, step.target):
@@ -463,6 +597,8 @@ def _disagreements(world, result: ConversionResult, events: dict) -> list:
         beside = _ranges(r for r in life if base in world.ensembl.non_reference_genes(world.backbone[r], r))
         if (node.active, node.assemblies, node.non_reference) != (active, served, tuple(beside)):
             found.append(("node", node, active, served, beside))
+        if node.places != _places_of(world, node.id):
+            found.append(("node places", node, _places_of(world, node.id)))
     return found
 
 
@@ -479,7 +615,11 @@ def human(real_world):
 
 
 def test_pig_gene_through_two_assembly_hand_offs(pig):
-    """``ENSSSCG00000000058`` goes from Sscrofa9 (key 9) to 10.2 (102) at 66/67 and to 11.1 (111) at 89/90."""
+    """``ENSSSCG00000000058`` goes from Sscrofa9 (key 9) to 10.2 (102) at 66/67 and to 11.1 (111) at 89/90.
+
+    Ensembl's mapping of Sscrofa9 onto 10.2 puts version 1 where version 2 lies (``same_place``); no mapping of 10.2
+    onto 11.1 is published (``other_assemblies``).
+    """
     result = explained(pig.api, "ENSSSCG00000000058.1")
     name = "ENSSSCG00000000058.{}".format
     expected = [(1, 2, 66, 67, 0.729437, 9, 102), (2, 3, 89, 90, 0.942198, 102, 111)]
@@ -496,14 +636,18 @@ def test_pig_gene_through_two_assembly_hand_offs(pig):
             assembly=assembly,
             old_assembly=old_assembly,
             reason="new_version",
+            # Ensembl maps Sscrofa9 onto 10.2 (its chain file), and no assembly onto 11.1: the place of version 1,
+            # carried onto 10.2, overlaps version 2; versions 2 and 3 are not compared
+            places="other_assemblies" if (old_assembly, assembly) == (102, 111) else "same_place",
         )
         for a, b, old, new, weight, old_assembly, assembly in expected
     )
     lives = [(1, 56, 66, 9), (2, 67, 89, 102), (3, 90, 97, 111), (4, 98, 106, 111), (5, 107, None, 111)]
-    assert result.path.nodes == tuple(
+    assert tuple(dataclasses.replace(node, places=()) for node in result.path.nodes) == tuple(
         PathNode(id=name(v), kind="ensembl_gene", label=name(v), active=((a, b),), assemblies=(asm,))
         for v, a, b, asm in lives
     )
+    assert [len(node.places) for node in result.path.nodes] == [1, 1, 1, 1, 1]
     assert [(c.gene, c.path) for c in result.candidates] == [(name(5), (0, 1, 2, 3))]
     # What Ensembl says: the scores of the events, and the assemblies that serve the releases.
     events = _events(pig)
@@ -530,6 +674,7 @@ def test_human_split_onto_alternative_loci(human):
             assembly=37,
             old_assembly=36,
             reason="split",
+            places="outside_reference",
         ),
         PathStep(
             kind="history",
@@ -542,9 +687,10 @@ def test_human_split_onto_alternative_loci(human):
             assembly=37,
             old_assembly=37,
             reason="new_version",
+            places="same_place",
         ),
     )
-    assert result.path.nodes == (
+    assert tuple(dataclasses.replace(node, places=()) for node in result.path.nodes) == (
         PathNode(
             id="ENSG00000007816.4",
             kind="ensembl_gene",

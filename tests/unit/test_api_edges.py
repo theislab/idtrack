@@ -106,7 +106,7 @@ def test_the_window_of_a_graph_is_checked(tmp_path):
         InvalidArgumentError, "first_release", API.graph_path, "homo_sapiens", 100, repository, first_release=101
     )
     assert error.value == 101
-    assert API.graph_path("homo_sapiens", 100, repository, first_release=100).endswith("_min100_max100_narrow.npz")
+    assert API.graph_path("homo_sapiens", 100, repository, first_release=100).endswith("_min100_max100.npz")
 
 
 @pytest.mark.wrong_argument_type

@@ -28,6 +28,7 @@ from idtrack.errors import (  # noqa: E402
 )
 from idtrack.harmonize import HarmonizeFeatures, feature_table, output_plan  # noqa: E402
 from idtrack.harmonize.features import _aggregate  # noqa: E402
+from idtrack.settings import RULES_VERSION  # noqa: E402
 from tests.unit._fake_engine import fake_api  # noqa: E402
 
 HGNC = "HGNC Symbol"
@@ -253,7 +254,8 @@ def test_the_source_release_of_a_dataset_is_used(tmp_path):
         tmp_path, {"d": ["GENEA", "OLDNAME"], "e": ["OLDNAME"]}, api=api, from_release_by_dataset={"d": 100}
     )
     queries = {(c["identifier"], c["from_release"]) for c in api.engine.calls}
-    assert {("GENEA", 100), ("OLDNAME", 100), ("OLDNAME", None)} <= queries
+    # the graph's readings say where OLDNAME is read: the engine is asked once, without the release it lacks
+    assert {("GENEA", 100), ("OLDNAME", None)} <= queries and ("OLDNAME", 100) not in queries
     # the feature is converted from the release at which the graph holds it, and the row says so
     assert h.feature_table("d").loc["OLDNAME", "status"] == "converted"
     assert h.feature_table("d").loc["OLDNAME", "reason"] == "not in the graph at release 100; read at release 101"
@@ -344,7 +346,10 @@ def test_result_cache_is_json_written_atomically_and_checked(tmp_path, monkeypat
     path = first.result_cache_path("lung/2021")
     assert os.path.dirname(path) == str(tmp_path / "project") and path.endswith(".json")
     stored = json.loads(pathlib.Path(path).read_text())
-    assert stored["header"]["idtrack_version"] == idtrack.__version__
+    # decision 69: keyed by the rules of conversion and the graph's content, not by the package's version
+    assert "idtrack_version" not in stored["header"]
+    assert stored["header"]["rules_version"] == RULES_VERSION
+    assert stored["header"]["graph_content_digest"] == _api(tmp_path).graph.record.content_digest
     assert [m["query_id"] for m in stored["matchings"]] == ["GENEA", "TP53"]
     api = _api(tmp_path)
     again = _harmonizer(tmp_path, datasets, api=api)
@@ -358,12 +363,28 @@ def test_result_cache_is_json_written_atomically_and_checked(tmp_path, monkeypat
     _harmonizer(tmp_path, datasets, api=api)
     assert len(api.engine.calls) > 0
     assert not [f for f in os.listdir(tmp_path / "project") if f.startswith(".tmp_")]
+    api = _api(tmp_path)
+    api.graph.graph["confident_for_release"] = [99, 100, 101]  # the same graph again: the stored conversions
+    _harmonizer(tmp_path, datasets, api=api)
+    assert api.engine.calls == []
+    # new rules of conversion (an answer changed) with the same graph: the stored conversions are not used
+    monkeypatch.setattr("idtrack.harmonize.features.RULES_VERSION", RULES_VERSION + 1)
+    api = _api(tmp_path)
+    api.graph.graph["confident_for_release"] = [99, 100, 101]
+    _harmonizer(tmp_path, datasets, api=api)
+    assert len(api.engine.calls) > 0
 
 
 def test_a_given_api_is_used_and_no_graph_is_kept(tmp_path, monkeypatch):
     """api_harmonize-37: with an API no graph is loaded; without one, nothing is loaded when all is cached."""
     (tmp_path / "idtrack_repo").mkdir()
-    (tmp_path / "idtrack_repo" / "graph_homo_sapiens_assembly38_min48_max101_narrow.npz").write_bytes(b"graph")
+    # a graph file whose record holds the content digest of the fake graph (decision 69: what keys the cache)
+    digest = _api(tmp_path).graph.record.content_digest
+    document = json.dumps({"record": {"content_digest": digest}}).encode()
+    np.savez(
+        tmp_path / "idtrack_repo" / "graph_homo_sapiens_assembly38_min48_max101.npz",
+        document=np.frombuffer(document, np.uint8),
+    )
     _harmonizer(tmp_path, {"d": ["GENEA"]})
 
     def _fail(*args, **kwargs):
@@ -552,15 +573,15 @@ def _bare_harmonizer(idtrack_repo, project_repo=None) -> HarmonizeFeatures:
 def test_organism_and_snapshot_resolved_from_graph_files(tmp_path):
     """Without `organism`/`snapshot_release`, the graphs `API.build` made are used."""
     for name in (
-        "graph_macaca_mulatta_assembly10_min48_max114_narrow.npz",
-        "graph_macaca_mulatta_assembly10_min48_max116_narrow.npz",
+        "graph_macaca_mulatta_assembly10_min48_max114.npz",
+        "graph_macaca_mulatta_assembly10_min48_max116.npz",
         # not graphs `API.build` would load: another window, the earlier assembly as primary, gene ids only,
         # every external database, the full history, a graph file of an earlier idtrack
-        "graph_macaca_mulatta_assembly10_min100_max117_narrow.npz",
-        "graph_macaca_mulatta_assembly801_min48_max118_narrow.npz",
-        "graph_macaca_mulatta_assembly10_min48_max119_narrow_formsgene.npz",
-        "graph_macaca_mulatta_assembly10_min48_max120_narrow_extall.npz",
-        "graph_macaca_mulatta_assembly10_min48_max121.npz",
+        "graph_macaca_mulatta_assembly10_min100_max117.npz",
+        "graph_macaca_mulatta_assembly801_min48_max118.npz",
+        "graph_macaca_mulatta_assembly10_min48_max119_formsgene.npz",
+        "graph_macaca_mulatta_assembly10_min48_max120_extall.npz",
+        "graph_macaca_mulatta_assembly10_min48_max121_sessions.npz",
         "graph_macaca_mulatta_min48_max122_narrow.pickle",
     ):
         (tmp_path / name).write_bytes(b"")
@@ -569,9 +590,9 @@ def test_organism_and_snapshot_resolved_from_graph_files(tmp_path):
     assert h.organism == "macaca_mulatta"
     assert h._default_snapshot_release() == 116
 
-    (tmp_path / "graph_macaca_mulatta_assembly801_min48_max90_narrow.npz").write_bytes(b"")  # Mmul_8.0.1 at 90
+    (tmp_path / "graph_macaca_mulatta_assembly801_min48_max90.npz").write_bytes(b"")  # Mmul_8.0.1 at 90
     assert _bare_harmonizer(tmp_path)._graph_snapshots() == {"macaca_mulatta": [90, 114, 116]}
-    (tmp_path / "graph_homo_sapiens_assembly38_min48_max115_narrow.npz").write_bytes(b"")
+    (tmp_path / "graph_homo_sapiens_assembly38_min48_max115.npz").write_bytes(b"")
     with pytest.raises(InvalidArgumentError, match="Pass `organism`.*several organisms.*homo_sapiens, macaca_mulatta"):
         _bare_harmonizer(tmp_path)._resolve_organism(None)
 

@@ -21,8 +21,18 @@ import json
 
 import pytest
 
+from idtrack import ids
 from idtrack.results import ConversionResult
-from tests._real_tables import ORGANISMS, SNAPSHOT, answer_of, read_truth, truth_path, verdict, without_version
+from tests._real_tables import (
+    ORGANISMS,
+    SNAPSHOT,
+    answer_of,
+    read_truth,
+    truth_path,
+    verdict,
+    with_y_copies_apart,
+    without_version,
+)
 
 TRUTH = [
     (organism, query) for organism in ORGANISMS if truth_path(organism).is_file() for query in read_truth(organism)
@@ -65,7 +75,7 @@ def test_conversion_returns_the_ids_that_ensembl_gives(real_world, organism, que
     world = real_world(organism)
     result = ask(world, query)
 
-    assert verdict(query, result) is None
+    assert verdict(with_y_copies_apart(world, query), result) is None
     assert ConversionResult.from_dict(json.loads(json.dumps(result.to_dict(), allow_nan=False))) == result
     assert result.error is None
     assert (result.query_id, result.to_release) == (query["id"], query["to_release"])
@@ -186,7 +196,8 @@ def test_external_id_is_matched_and_read_as_ensembls_tables_say(real_world, orga
     if result.status == "no_conversion":
         assert list(result.from_databases) == []  # read, but it leads to no gene at the target: nothing to report
     elif databases is not None:
-        assert sorted(result.from_databases) == sorted(databases)
+        # decision 56: a synonym's database by its own name
+        assert sorted(result.from_databases) == sorted({ids.public_name(d) for d in databases})
 
     # The node read and the release it is read at, for a string matched as it is written or up to letter case.
     kind = "synonym" if str(result.match).startswith("synonym:") else "id"
@@ -198,7 +209,7 @@ def test_external_id_is_matched_and_read_as_ensembls_tables_say(real_world, orga
     latest = spellings[max(spellings)]
     if len(latest) == 1:
         # one node per identifier, named as Ensembl writes it at the last release that has it
-        assert result.graph_id == ("synonym_id::" if kind == "synonym" else "") + next(iter(latest))
+        assert result.graph_id == next(iter(latest))  # a synonym as it is (decision 56)
     if query["from_release"] is None:
         # read at the target release if it exists there, else at the last release that has it
         expected = query["to_release"] if query["to_release"] in spellings else max(spellings)

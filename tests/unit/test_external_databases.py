@@ -303,12 +303,12 @@ class TestValidateYamlFileUpToDate:
         edb.validate_yaml_file_up_to_date(yaml_data)
 
     def test_invalid_release_raises(self, temp_dir):
-        """Test validation fails for missing release."""
+        """Test validation fails for a release before or between the listed ones (a later one takes the last's)."""
         from idtrack.build.externals import ExternalDatabases
 
         edb = ExternalDatabases(
             organism="homo_sapiens",
-            release=115,  # Not in YAML
+            release=108,  # Not in YAML, and before its releases
             form="gene",
             local_repository=temp_dir,
             assembly=38,
@@ -329,8 +329,47 @@ class TestValidateYamlFileUpToDate:
             }
         }
 
-        with pytest.raises(ExternalsReleaseNotCoveredError, match="115 is not included"):
+        with pytest.raises(ExternalsReleaseNotCoveredError, match="108 is not included"):
             edb.validate_yaml_file_up_to_date(yaml_data)
+
+    def test_a_release_after_the_last_listed_takes_its_settings(self, temp_dir):
+        """Decision 68: release 117 takes the settings of the last listed release, 115; 113 (a gap) takes none.
+
+        Under the earlier rule a release after the last listed one had no external databases at all (accuracy_build-10:
+        the next Ensembl release would have been built without symbols, silently).
+        """
+        from idtrack.build.externals import ExternalDatabases, settings_release_of, write_externals_yaml
+
+        data = {
+            "homo_sapiens": {
+                "gene": {
+                    "HGNC Symbol": {"Assembly": {"38": {"Ensembl release": "111,112,114,115", "Include": True}}},
+                    "WikiGene": {"Assembly": {"38": {"Ensembl release": "111,112", "Include": True}}},
+                    "RFAM": {"Assembly": {"38": {"Ensembl release": "114,115", "Include": False}}},
+                }
+            }
+        }
+        write_externals_yaml(data, os.path.join(temp_dir, "homo_sapiens_externals_modified.yml"))
+        assert [settings_release_of(data, "homo_sapiens", r) for r in (110, 112, 113, 115, 117)] == [
+            None,
+            112,
+            None,
+            115,
+            115,
+        ]
+
+        def edb(release):
+            return ExternalDatabases(
+                organism="homo_sapiens", release=release, form="gene", local_repository=temp_dir, assembly=38
+            )
+
+        assert edb(117).settings_release() == 115
+        assert edb(117).give_list_for_case("db") == ["HGNC Symbol"] == edb(115).give_list_for_case("db")
+        assert edb(117).give_list_for_case("assembly") == [38]
+        edb(117).validate_yaml_file_up_to_date(data)  # no error
+        assert edb(113).settings_release() is None
+        with pytest.raises(ExternalsReleaseNotCoveredError, match="113 is not included"):
+            edb(113).give_list_for_case("db")
 
 
 class TestGiveListForCase:
@@ -628,6 +667,27 @@ class TestShippedFiles:
                 for assemblies in databases.values():
                     assert set(assemblies) == configured, organism
 
+    def test_ncbi_gene_ids_are_selected_on_every_form(self):
+        """I129: NCBI's gene ids, symbols and synonyms are selected on whatever form Ensembl attached them.
+
+        Ensembl attached EntrezGene to translations up to release 62 (pig, Sscrofa9: 56 to 62); the selection by
+        today's form left them out. Fails if the allowlist names NCBI's databases on the gene form only.
+        """
+        from idtrack.build.default_externals import DEFAULT_EXTERNALS, NCBI_GENE, apply_allowlist
+
+        for organism, allowlist in DEFAULT_EXTERNALS.items():
+            for form, databases in allowlist.items():
+                assert set(NCBI_GENE) <= set(databases), (organism, form)
+        template = {
+            "sus_scrofa": {
+                form: {db: {"Assembly": {"9": {"Ensembl release": "56,57", "Include": False}}} for db in NCBI_GENE}
+                for form in ("gene", "transcript", "translation")
+            }
+        }
+        modified, enabled, absent = apply_allowlist(template, "sus_scrofa", DEFAULT_EXTERNALS["sus_scrofa"])
+        assert enabled == 9 and not {pair for pair in absent if pair[1] in NCBI_GENE}
+        assert modified["sus_scrofa"]["translation"]["EntrezGene"]["Assembly"]["9"]["Include"] is True
+
     def test_notebook_allowlists_match_the_package(self):
         """Tutorial 02 shows the allowlists as editable dicts; they must equal the package's lists."""
         import ast
@@ -765,8 +825,9 @@ class TestExtendModifiedYaml:
             edb.extend_modified_yaml(pd.DataFrame({"organism": ["homo_sapiens"]}))
 
     def test_missing_release_error_mentions_extension(self, temp_dir, base_yaml):
-        """Missing release error mentions extension."""
+        """Missing release error mentions extension (a release before the listed ones; a later one takes theirs)."""
         from idtrack.build.externals import ExternalsReleaseNotCoveredError
 
         with pytest.raises(ExternalsReleaseNotCoveredError, match="extend_modified_yaml"):
-            self._edb(temp_dir, release=116).load_modified_yaml()
+            self._edb(temp_dir, release=113).load_modified_yaml()
+        assert self._edb(temp_dir, release=116).load_modified_yaml()["homo_sapiens"]

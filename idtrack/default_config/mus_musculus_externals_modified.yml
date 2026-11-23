@@ -8,34 +8,24 @@ mus_musculus:
                 "39":
                     Ensembl release: 103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
-        Clone-based (Ensembl):
+        Clone-based (Ensembl) gene:
             Assembly:
                 "37":
                     Ensembl release: 52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67
                     Include: false
                 "38":
-                    Ensembl release: 68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87
-                    Include: false
-        Clone-based (Ensembl) gene:
-            Assembly:
-                "38":
-                    Ensembl release: 88,89,90,91,92,93,94,95,96,97,98,99,100,101,102
+                    Ensembl release: 68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102
                     Include: false
                 "39":
                     Ensembl release: "103"
                     Include: false
-        Clone-based (Vega):
+        Clone-based (Vega) gene:
             Assembly:
                 "37":
                     Ensembl release: 52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67
                     Include: false
                 "38":
-                    Ensembl release: 68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87
-                    Include: false
-        Clone-based (Vega) gene:
-            Assembly:
-                "38":
-                    Ensembl release: "88"
+                    Ensembl release: 68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88
                     Include: false
         Clone_based_ensembl_gene:
             Assembly:
@@ -225,15 +215,13 @@ mus_musculus:
                 "37":
                     Ensembl release: 52,53,54,55,56,57,58,59,60
                     Include: false
-        NCBI gene:
-            Assembly:
-                "38":
-                    Ensembl release: 88,89,90,91,92,93,94,95,96,97,98,99
-                    Include: true
         NCBI gene (formerly Entrezgene):
             Assembly:
+                "37":
+                    Ensembl release: 63,64,65,66,67
+                    Include: true
                 "38":
-                    Ensembl release: 100,101,102
+                    Ensembl release: 68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102
                     Include: true
                 "39":
                     Ensembl release: 103,104,105,106,107,108,109,110,111,112,113,114,115,116
@@ -262,20 +250,26 @@ mus_musculus:
                 "37":
                     Ensembl release: 61,62,63
                     Include: false
+        RFAM label:
+            Assembly:
+                "37":
+                    Ensembl release: 63,64,65,66,67
+                    Include: true
+                "38":
+                    Ensembl release: 68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,86,87,88,89,90,91,98
+                    Include: true
+                "39":
+                    Ensembl release: 104,105,106,107
+                    Include: true
         RFAM_gene_name:
             Assembly:
                 "37":
                     Ensembl release: 61,62,63
                     Include: false
-        Reactome:
-            Assembly:
-                "38":
-                    Ensembl release: 80,81,82,83,84,85,86,87
-                    Include: false
         Reactome gene:
             Assembly:
                 "38":
-                    Ensembl release: 88,89,90,91,92,93,94,95,96,97,98,99,100,101,102
+                    Ensembl release: 80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102
                     Include: false
                 "39":
                     Ensembl release: 103,104,105,106,107,108,109,110,111,112,113,114,115,116
@@ -370,7 +364,7 @@ mus_musculus:
                 "39":
                     Ensembl release: 103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
-        miRBase:
+        WikiGene label:
             Assembly:
                 "37":
                     Ensembl release: 63,64,65,66,67
@@ -381,24 +375,38 @@ mus_musculus:
                 "39":
                     Ensembl release: 103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
-        miRBase gene name:
-            Assembly:
-                "37":
-                    Ensembl release: 61,62,63
-                    Include: false
-        miRBase_gene_name:
-            Assembly:
-                "37":
-                    Ensembl release: 61,62,63
-                    Include: false
-        synonym_id::EntrezGene:
+        miRBase:
             Assembly:
                 "37":
                     Ensembl release: 63,64,65,66,67
                     Include: true
                 "38":
-                    Ensembl release: 68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87
+                    Ensembl release: 68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102
                     Include: true
+                "39":
+                    Ensembl release: 103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Include: true
+        miRBase gene name:
+            Assembly:
+                "37":
+                    Ensembl release: 61,62,63
+                    Include: false
+        miRBase label:
+            Assembly:
+                "37":
+                    Ensembl release: 63,64,65,66,67
+                    Include: true
+                "38":
+                    Ensembl release: 68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102
+                    Include: true
+                "39":
+                    Ensembl release: 103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Include: true
+        miRBase_gene_name:
+            Assembly:
+                "37":
+                    Ensembl release: 61,62,63
+                    Include: false
         synonym_id::HGNC Symbol:
             Assembly:
                 "38":
@@ -430,15 +438,13 @@ mus_musculus:
                 "39":
                     Ensembl release: 103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: true
-        synonym_id::NCBI gene:
-            Assembly:
-                "38":
-                    Ensembl release: 88,89,90,91,92,93,94,95,96,97,98,99
-                    Include: true
         synonym_id::NCBI gene (formerly Entrezgene):
             Assembly:
+                "37":
+                    Ensembl release: 63,64,65,66,67
+                    Include: true
                 "38":
-                    Ensembl release: 100,101,102
+                    Ensembl release: 68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102
                     Include: true
                 "39":
                     Ensembl release: 103,104,105,106,107,108,109,110,111,112,113,114,115,116
@@ -573,34 +579,35 @@ mus_musculus:
                 "39":
                     Ensembl release: 103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: true
-        Clone-based (Ensembl):
+        CCDS label:
+            Assembly:
+                "37":
+                    Ensembl release: 52,53,54,55,56,57,58,59,60,61,63,64,65,66,67
+                    Include: true
+                "38":
+                    Ensembl release: 68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102
+                    Include: true
+                "39":
+                    Ensembl release: 103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Include: true
+        Clone-based (Ensembl) transcript:
             Assembly:
                 "37":
                     Ensembl release: 52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67
                     Include: false
                 "38":
-                    Ensembl release: 68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87
-                    Include: false
-        Clone-based (Ensembl) transcript:
-            Assembly:
-                "38":
-                    Ensembl release: 88,89,90,91,92,93,94,95,96,97,98,99,100,101,102
+                    Ensembl release: 68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102
                     Include: false
                 "39":
                     Ensembl release: "103"
                     Include: false
-        Clone-based (Vega):
+        Clone-based (Vega) transcript:
             Assembly:
                 "37":
                     Ensembl release: 52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67
                     Include: false
                 "38":
-                    Ensembl release: 68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87
-                    Include: false
-        Clone-based (Vega) transcript:
-            Assembly:
-                "38":
-                    Ensembl release: "88"
+                    Ensembl release: 68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88
                     Include: false
         Clone_based_ensembl_transcript:
             Assembly:
@@ -685,11 +692,6 @@ mus_musculus:
                 "39":
                     Ensembl release: 103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
-        HGNC transcript name:
-            Assembly:
-                "38":
-                    Ensembl release: 76,78,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97
-                    Include: false
         HGNC_trans_name:
             Assembly:
                 "38":
@@ -701,7 +703,7 @@ mus_musculus:
         Havana transcript:
             Assembly:
                 "37":
-                    Ensembl release: 50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67
+                    Ensembl release: 48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67
                     Include: true
                 "38":
                     Ensembl release: 68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,91,100,101,102
@@ -713,11 +715,6 @@ mus_musculus:
                     Include: false
                 "38":
                     Ensembl release: 68,69,70,71,72,73,74,75
-                    Include: false
-        Havana transcripts:
-            Assembly:
-                "37":
-                    Ensembl release: 48,49
                     Include: false
         IMGT/GENE-DB:
             Assembly:
@@ -846,6 +843,11 @@ mus_musculus:
                 "38":
                     Ensembl release: 99,100,101,102
                     Include: false
+        RFAM label:
+            Assembly:
+                "37":
+                    Ensembl release: 50,51,52,53,54,55,56,57,58,59,60
+                    Include: false
         RFAM transcript name:
             Assembly:
                 "37":
@@ -886,15 +888,10 @@ mus_musculus:
                 "39":
                     Ensembl release: 103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
-        Reactome:
-            Assembly:
-                "38":
-                    Ensembl release: 80,81,82,85,86,87
-                    Include: false
         Reactome transcript:
             Assembly:
                 "38":
-                    Ensembl release: 88,89,90,91
+                    Ensembl release: 80,81,82,85,86,87,88,89,90,91
                     Include: false
                 "39":
                     Ensembl release: 103,104,105,106,107,108,109,110,111,112,113,114,115,116
@@ -1026,7 +1023,7 @@ mus_musculus:
         Transcript name:
             Assembly:
                 "38":
-                    Ensembl release: 98,99,100,101,102
+                    Ensembl release: 76,78,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102
                     Include: false
                 "39":
                     Ensembl release: 104,105,106,107,108,109,110,111,112,113,114,115,116
@@ -1061,12 +1058,7 @@ mus_musculus:
         UniProt transcript name:
             Assembly:
                 "38":
-                    Ensembl release: 71,72,73,74,75,76,77,78,79,80,81,82
-                    Include: false
-        Uniprot transcript name:
-            Assembly:
-                "38":
-                    Ensembl release: "70"
+                    Ensembl release: 70,71,72,73,74,75,76,77,78,79,80,81,82
                     Include: false
         Uniprot_genename_transcript_name:
             Assembly:
@@ -1105,6 +1097,11 @@ mus_musculus:
                     Ensembl release: 68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,91,100,101,102
                     Include: false
         miRBase:
+            Assembly:
+                "37":
+                    Ensembl release: 48,49,50,51,52,53,54,55,56,57,58,59,60,61,62
+                    Include: false
+        miRBase label:
             Assembly:
                 "37":
                     Ensembl release: 48,49,50,51,52,53,54,55,56,57,58,59,60,61,62
@@ -1204,6 +1201,11 @@ mus_musculus:
                 "37":
                     Ensembl release: 48,49,50,51
                     Include: false
+        CCDS label:
+            Assembly:
+                "37":
+                    Ensembl release: 48,49,50,51
+                    Include: false
         ChEMBL:
             Assembly:
                 "38":
@@ -1242,7 +1244,7 @@ mus_musculus:
             Assembly:
                 "37":
                     Ensembl release: 48,49,50,51,52,53,54,55,56,57,58,59,60,61,62
-                    Include: false
+                    Include: true
         Eukaryotic Promoter Database (Bucher):
             Assembly:
                 "38":
@@ -1251,18 +1253,13 @@ mus_musculus:
         European Nucleotide Archive:
             Assembly:
                 "37":
-                    Ensembl release: 61,62,63,64,65,66,67
+                    Ensembl release: 59,60,61,62,63,64,65,66,67
                     Include: false
                 "38":
                     Ensembl release: 68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102
                     Include: false
                 "39":
                     Ensembl release: 103,104,105,106,107,108,109,110,111,112,113,114,115,116
-                    Include: false
-        European Nucleotide Archive (was EMBL):
-            Assembly:
-                "37":
-                    Ensembl release: 59,60
                     Include: false
         Fantom:
             Assembly:
@@ -1271,6 +1268,11 @@ mus_musculus:
                     Include: false
                 "38":
                     Ensembl release: 68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83
+                    Include: false
+        Fantom label:
+            Assembly:
+                "37":
+                    Ensembl release: 55,56,57,58,59,60
                     Include: false
         GO:
             Assembly:
@@ -1306,8 +1308,11 @@ mus_musculus:
                     Include: true
         INSDC protein ID:
             Assembly:
+                "37":
+                    Ensembl release: 48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67
+                    Include: false
                 "38":
-                    Ensembl release: 71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102
+                    Ensembl release: 68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102
                     Include: false
                 "39":
                     Ensembl release: 103,104,105,106,107,108,109,110,111,112,113,114,115,116
@@ -1320,15 +1325,18 @@ mus_musculus:
                 "38":
                     Ensembl release: 68,69,70,71,72,73
                     Include: false
-        KEGG:
+        IPI label:
             Assembly:
+                "37":
+                    Ensembl release: 48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67
+                    Include: false
                 "38":
-                    Ensembl release: 86,88
+                    Ensembl release: 68,69,70,71,72,73
                     Include: false
         KEGG Pathway and Enzyme:
             Assembly:
                 "38":
-                    Ensembl release: 89,90,91,92,93,94,95,96,97,98,99,100,101,102
+                    Ensembl release: 86,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102
                     Include: false
                 "39":
                     Ensembl release: 103,104
@@ -1378,6 +1386,11 @@ mus_musculus:
                 "38":
                     Ensembl release: 86,88,89,90
                     Include: false
+        NCBI gene (formerly Entrezgene):
+            Assembly:
+                "37":
+                    Ensembl release: 48,49,50,51,52,53,54,55,56,57,58,59,60,61,62
+                    Include: true
         OTTP:
             Assembly:
                 "37":
@@ -1396,14 +1409,6 @@ mus_musculus:
                     Include: false
                 "39":
                     Ensembl release: 103,104,105,106,107,108,109,110,111,112,113,114,115,116
-                    Include: false
-        Protein ID:
-            Assembly:
-                "37":
-                    Ensembl release: 48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67
-                    Include: false
-                "38":
-                    Ensembl release: 68,69,70
                     Include: false
         Reactome:
             Assembly:
@@ -1475,10 +1480,20 @@ mus_musculus:
                 "38":
                     Ensembl release: 86,88
                     Include: false
+        UniProtKB Gene Name:
+            Assembly:
+                "37":
+                    Ensembl release: "62"
+                    Include: false
         UniProtKB isoform:
             Assembly:
                 "39":
                     Ensembl release: 103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Include: false
+        UniProtKB/SpliceVariant:
+            Assembly:
+                "37":
+                    Ensembl release: 48,49,50,51,52,53,54,55,56,57,58,59,60
                     Include: false
         UniProtKB/Swiss-Prot:
             Assembly:
@@ -1501,11 +1516,6 @@ mus_musculus:
                     Include: false
                 "39":
                     Ensembl release: 103,104,105,106,107,108,109,110,111,112,113,114,115,116
-                    Include: false
-        Uniprot Gene Name:
-            Assembly:
-                "37":
-                    Ensembl release: "62"
                     Include: false
         Uniprot/SPTREMBL:
             Assembly:
@@ -1530,11 +1540,6 @@ mus_musculus:
                     Ensembl release: 103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: true
         Uniprot/Varsplic:
-            Assembly:
-                "37":
-                    Ensembl release: 48,49,50,51,52,53,54,55,56,57,58,59,60
-                    Include: false
-        UniprotKB/SpliceVariant:
             Assembly:
                 "37":
                     Ensembl release: 48,49,50,51,52,53,54,55,56,57,58,59,60
@@ -1570,6 +1575,11 @@ mus_musculus:
                 "37":
                     Ensembl release: 54,55,56,57,58,59,60,61,62
                     Include: false
+        WikiGene label:
+            Assembly:
+                "37":
+                    Ensembl release: 54,55,56,57,58,59,60,61,62
+                    Include: false
         goslim_goa:
             Assembly:
                 "37":
@@ -1589,15 +1599,20 @@ mus_musculus:
                 "39":
                     Ensembl release: 103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
-        synonym_id::EntrezGene:
-            Assembly:
-                "37":
-                    Ensembl release: 48,49,50,51,52,53,54,55,56,57,58,59,60,61,62
-                    Include: false
         synonym_id::MGI Symbol:
             Assembly:
                 "37":
                     Ensembl release: 48,49,50
+                    Include: false
+        synonym_id::NCBI gene (formerly Entrezgene):
+            Assembly:
+                "37":
+                    Ensembl release: 48,49,50,51,52,53,54,55,56,57,58,59,60,61,62
+                    Include: true
+        synonym_id::UniProtKB Gene Name:
+            Assembly:
+                "37":
+                    Ensembl release: "62"
                     Include: false
         synonym_id::UniProtKB/Swiss-Prot:
             Assembly:
@@ -1614,11 +1629,6 @@ mus_musculus:
                     Include: false
                 "38":
                     Ensembl release: 68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,86,87
-                    Include: false
-        synonym_id::Uniprot Gene Name:
-            Assembly:
-                "37":
-                    Ensembl release: "62"
                     Include: false
         synonym_id::Vega translation:
             Assembly:

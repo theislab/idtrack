@@ -21,7 +21,7 @@ import math
 import time
 from collections import Counter
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, SupportsIndex
+from typing import TYPE_CHECKING, Any, NamedTuple, SupportsIndex
 
 from idtrack import _arguments, ids, organisms
 from idtrack.engine import ranking
@@ -36,12 +36,27 @@ from idtrack.errors import (
     UnknownReleaseError,
     UnknownVersionError,
 )
+from idtrack.graph import genes
 from idtrack.graph.types import ReleaseSet, served_mask
-from idtrack.results import Candidate, ExplainedPath
+from idtrack.results import BRIDGE_RULES_TAKEN, BridgeCheck, Candidate, ExplainedPath
 from idtrack.settings import SearchSettings, check_search
 
 if TYPE_CHECKING:
     from idtrack.graph.graph import TheGraph
+
+
+class Written(NamedTuple):
+    """How an external identifier was written, where that restricts the links that carry it (:py:meth:`Track._read`).
+
+    Attributes:
+        text: The spelling as typed, where the string matched exactly a node that some link spells otherwise (only the
+            links spelt so carry it; for a synonym, with the synonym prefix); ``None`` otherwise.
+        version: The version of an accession read with one (only the links that attach that version carry it, at the
+            releases at which they do: :py:meth:`idtrack.graph.TheGraph.reading_version`); ``None`` otherwise.
+    """
+
+    text: str | None = None
+    version: int | None = None
 
 
 #: The modes of :py:meth:`Track.identify_source`: what an origin of an identifier is.
@@ -82,12 +97,12 @@ class _GraphReader:
         self.backbone_type: str = ids.GENE
         self.base_type: str = ids.BASE_ENSEMBL_TYPE[ids.BACKBONE_FORM]
 
-        self.releases: tuple[int, ...] = tuple(sorted(int(r) for r in graph.graph["confident_for_release"]))
+        self.releases: tuple[int, ...] = graph.releases
         self.release_set = frozenset(self.releases)
         self.first_release = self.releases[0]
         self.snapshot_release = self.releases[-1]
 
-        organism = graph.graph.get("organism")
+        organism = graph.organism
         # Assembly keys carry no order of their own (rhesus Mmul_8.0.1 is 801 but older than Mmul_10, 10): the order
         # comes from the organism table only.
         if not isinstance(organism, str) or organism not in organisms.ORGANISM_TABLE:
@@ -291,7 +306,7 @@ class _GraphReader:
                     "Graph contains genome assemblies not configured for organism %r: %s. "
                     "Treating them as lowest priority; add them with `idtrack.organisms.register_organism` to set an "
                     "explicit order.",
-                    self.graph.graph.get("organism"),
+                    self.graph.organism,
                     missing,
                 )
                 start_rank = (max(priority.values()) if priority else 0) + 1
@@ -355,7 +370,11 @@ class _GraphReader:
             tuple[str, ...]: The databases.
         """
         if self._external_databases is None:
-            self._external_databases = tuple(sorted(self.graph.available_external_databases))
+            # A database's synonyms are read under the database's own name (decision 56): their bookkeeping name
+            # `synonym_id::<database>` is no database of its own.
+            self._external_databases = tuple(
+                sorted({ids.public_name(d) for d in self.graph.available_external_databases})
+            )
         return self._external_databases
 
     def final_databases(self, release: int) -> tuple[str, ...]:
@@ -365,12 +384,18 @@ class _GraphReader:
             release (int): A release of the graph.
 
         Returns:
-            tuple[str, ...]: The external databases of the assembly that serves the release, and ``ensembl_gene``
-            and ``base_ensembl_gene``.
+            tuple[str, ...]: The external databases of the assembly that serves the release (not the synonyms a
+            database records: decision 56), and ``ensembl_gene`` and ``base_ensembl_gene``.
         """
         found = self._final_databases.get(release)
         if found is None:
-            allowed = set(self.graph.available_external_databases_assembly.get(self.serving_assembly[release], set()))
+            allowed = {
+                database
+                for database in self.graph.available_external_databases_assembly.get(
+                    self.serving_assembly[release], set()
+                )
+                if not ids.is_synonym_database(database)  # synonyms are no target (decision 56)
+            }
             allowed.update({ids.ENSEMBL_TYPE[ids.BACKBONE_FORM], ids.BASE_ENSEMBL_TYPE[ids.BACKBONE_FORM]})
             found = self._final_databases[release] = tuple(sorted(allowed))
         return found
@@ -387,6 +412,17 @@ class _GraphReader:
             (:py:func:`idtrack.graph.served_mask`, the graph's one rule for where a link counts).
         """
         return ReleaseSet.from_mask(served_mask(items, self.serving_line, exclude=exclude_databases))
+
+    def primary_mask(self, items: tuple) -> int:
+        """Return the releases at which an edge holds on the primary line, as a bit mask (every database counts).
+
+        Args:
+            items (tuple): ``(database, assembly, releases)`` of one cross-reference edge.
+
+        Returns:
+            int: Bit ``r`` set for every release ``r`` of :py:meth:`primary_releases`.
+        """
+        return served_mask(items, self.serving_line)
 
     def holds(self, items: tuple, release: int, database: str | None = None, any_assembly: bool = False) -> bool:
         """Tell whether an edge holds at a release on the primary line.
@@ -431,6 +467,16 @@ class _Search:
         self._xrefs: dict[tuple, list] = {}
         self._ranges: dict[str, list] = {}
         self._chains: dict[str, list] = {}
+        self._places: dict[Any, genes.GeneFacts] = {}
+        self._relations: dict[tuple, str] = {}
+        self._sides: dict[str, dict[str, frozenset[str]]] = {}
+        self._holders: dict[str, dict[str, int]] = {}
+        self._held_by_version: dict[str, dict[str, int]] = {}
+        #: Every bridge considered, per (gene left, gene entered): ``{middle node: rule}``.
+        self.bridge_checks: dict[tuple[str, str], dict[str, str]] = {}
+        #: Every history step the walk did not follow, as the walk would take it ``(gene, other, key)``, with its rule
+        #: (a key of :py:data:`idtrack.results.STEP_REASONS`).
+        self.refused_steps: dict[tuple[str, str, int], str] = {}
 
     def spend(self, amount: int = 1) -> None:
         """Count work against the budget of the conversion.
@@ -496,6 +542,101 @@ class _Search:
             self._ranges[n] = self.reader.active_ranges(n)
         return self._ranges[n]
 
+    def _versions(self, stable_id: str) -> list[str]:
+        """Return the gene versions of a stable id (backbone nodes of real genes)."""
+        reader = self.reader
+        return [v for v, _ in self.xrefs(stable_id, False) if reader.is_backbone(v) and reader.is_real_gene(v)]
+
+    def sides(self, stable_id: str) -> dict[str, frozenset[str]]:
+        """Return the sides of a stable id that Ensembl reused across the mitochondrial genome and a nuclear sequence.
+
+        A history step between two versions of the id that joins a gene of the mitochondrial genome and a gene of a
+        nuclear sequence (:py:func:`idtrack.graph.genes.joins_mitochondrial_and_nuclear`, read from the kinds of the
+        places of each version: decision 91) separates two genes that share the stable id (decision 100). The versions
+        joined by the other history steps of the id are one side.
+
+        Args:
+            stable_id (str): A stable gene id (the node of the gene id without version).
+
+        Returns:
+            dict[str, frozenset[str]]: ``{version: the versions of its side}``; empty for an id without such a step
+            (one gene: every version).
+        """
+        found = self._sides.get(stable_id)
+        if found is None:
+            graph = self.reader.graph
+            versions = self._versions(stable_id)
+            parent = {v: v for v in versions}
+
+            def root(v: str) -> str:
+                while parent[v] != v:
+                    parent[v] = parent[parent[v]]
+                    v = parent[v]
+                return v
+
+            reused = False
+            for version in versions:
+                for edge in graph.history_edges(version):
+                    if edge.node not in parent or not math.isfinite(edge.new_release):
+                        continue
+                    old, new = int(edge.old_release), int(edge.new_release)
+                    if genes.joins_mitochondrial_and_nuclear(graph, version, old, edge.node, new):
+                        reused = True
+                    else:
+                        parent[root(edge.node)] = root(version)
+            found = {}
+            if reused:
+                groups: dict[str, set[str]] = {}
+                for version in versions:
+                    groups.setdefault(root(version), set()).add(version)
+                found = {version: frozenset(groups[root(version)]) for version in versions}
+            self._sides[stable_id] = found
+        return found
+
+    def _side_of(self, n: str) -> tuple[str, frozenset[str] | None]:
+        """Return the gene a backbone node stands for: its stable id, and its side where the id was reused."""
+        stable_id = self.reader.base_id(n)
+        return stable_id, self.sides(stable_id).get(n)
+
+    def places(self, stable_id: str, side: frozenset[str] | None = None) -> genes.GeneFacts:
+        """Where a gene lies, over every version of its stable id (:py:func:`idtrack.graph.genes.facts_of_nodes`), once.
+
+        Args:
+            stable_id (str): A stable gene id (the node of the gene id without version).
+            side (frozenset[str] | None): For an id Ensembl reused across the mitochondrial genome and a nuclear
+                sequence, the versions of one side (:py:meth:`sides`): the places of those versions only.
+
+        Returns:
+            GeneFacts: Its places on the reference sequence by assembly, whether it lies outside the reference
+            sequence, whether the graph holds a place of it.
+        """
+        key: Any = stable_id if side is None else (stable_id, side)
+        found = self._places.get(key)
+        if found is None:
+            versions = self._versions(stable_id) if side is None else sorted(side)
+            found = self._places[key] = genes.facts_of_nodes(self.reader.graph, versions)
+        return found
+
+    def relation(self, n: str, other: str) -> str:
+        """Where two genes lie relative to each other, as stable ids (:py:func:`idtrack.graph.genes.relation`).
+
+        A stable id that Ensembl reused across the mitochondrial genome and a nuclear sequence is two genes: a node
+        stands for the versions of its side (:py:meth:`sides`); every other stable id is one gene over its versions.
+
+        Args:
+            n (str): Name of a backbone node.
+            other (str): Name of another backbone node.
+
+        Returns:
+            str: A key of :py:data:`idtrack.results.PLACE_RELATIONS`.
+        """
+        mine, theirs = self._side_of(n), self._side_of(other)
+        key = (mine, theirs) if repr(mine) <= repr(theirs) else (theirs, mine)
+        found = self._relations.get(key)
+        if found is None:
+            found = self._relations[key] = genes.relation(self.places(*mine), self.places(*theirs))
+        return found
+
     def range_at(self, n: str, release: int) -> tuple | None:
         """Return the active range of a backbone node that contains a release.
 
@@ -529,7 +670,8 @@ class Conversion:
         tie (bool): The best answer holds several pairs.
         decided_by (str | None): The criterion between the best answer and the runner-up.
         alternative_locus_genes (tuple[str, ...]): Copies outside the reference sequence left out.
-        no_target (bool): No gene reached has an id in the final database; the genes are the targets.
+        no_target (bool): No gene of the best answer (ranked as Ensembl genes) has an id in the final database; the
+            genes are the targets.
         no_target_genes (tuple[str, ...]): Genes without an id in the final database while others have one.
         reason (str | None): Why there is no candidate (a key of :py:data:`idtrack.results.REASONS`).
         path (ExplainedPath | None): The explanation, when asked for.
@@ -566,11 +708,19 @@ class Track:
     3. **History.** From those genes the search follows Ensembl's stable-id history (version changes, merges,
        splits, retirements) forward or backward in time until the target release. It is a best-first search over
        states ``(gene, release)``: every state is expanded once, so the work is bounded by the size of the part of
-       the history that the query can reach, and every call has a budget.
+       the history that the query can reach, and every call has a budget. A step between a gene of the mitochondrial
+       genome and a gene of a nuclear sequence is no lineage and is not followed (decision 91; the explained path
+       lists it among the refused steps).
     4. **Bridges.** Only when the history leads to no gene at the target release, the search may pass from a gene to
        another gene that carried the same external id (or the same transcript) at the same time or later (the gap in
        releases is reported), at most :py:attr:`idtrack.settings.SearchSettings.bridge_limit` times, and it uses as few
-       bridges as possible.
+       bridges as possible. A bridge is taken only where it is evidence that one gene became the other: never
+       through a synonym; where the two genes lie on the reference sequence of one assembly, only when their places
+       overlap there; from or to a copy outside the reference sequence, only through an id both carried at one
+       release that names one gene at each such release; elsewhere (their places cannot be compared), only when no
+       release gave the id to both
+       (:py:data:`idtrack.results.BRIDGE_RULES`). The explained path lists every bridge considered with the rule that
+       took or refused it (:py:class:`idtrack.results.BridgeCheck`).
     5. **Copies beside the reference sequence.** Genes on alternative loci and assembly patches, and LRG records,
        leave the answer when a gene of the reference sequence was reached too; they are reported apart.
     6. **Final conversion.** Each gene found is reported as itself or converted to the ids of ``final_database``
@@ -674,9 +824,11 @@ class Track:
         folded = [database for database in allowed if database.casefold() == value.strip().casefold()]
         if len(folded) == 1:
             return folded[0]
+        synonyms = " The synonyms a database records are no target database." if ids.is_synonym_database(value) else ""
         raise UnknownDatabaseError(
             f"`final_database`={value!r} is not a database of this graph at Ensembl release {to_release} (genome "
-            f"assembly {self._reader.serving_assembly[to_release]}); valid: {list(allowed)}.",
+            f"assembly {self._reader.serving_assembly[to_release]});{_renamed_note(self.graph, value)}{synonyms} "
+            f"valid: {list(allowed)}.",
             argument="final_database",
             value=value,
             allowed=allowed,
@@ -704,8 +856,14 @@ class Track:
         folded = [database for database in allowed if database.casefold() == value.strip().casefold()]
         if len(folded) == 1:
             return folded[0]
+        synonyms = (
+            f" A database's synonyms are read under its own name ({ids.public_name(value)!r})."
+            if ids.is_synonym_database(value)
+            else ""
+        )
         raise UnknownDatabaseError(
-            f"`from_database`={value!r} is not an external database of this graph; valid: {list(allowed)}.",
+            f"`from_database`={value!r} is not an external database of this graph;{_renamed_note(self.graph, value)}"
+            f"{synonyms} valid: {list(allowed)}.",
             argument="from_database",
             value=value,
             allowed=allowed,
@@ -736,7 +894,9 @@ class Track:
 
     # Starting release and entry onto the backbone
 
-    def _active_releases(self, search: _Search, node: str, database: str | None = None) -> tuple[frozenset, bool]:
+    def _active_releases(
+        self, search: _Search, node: str, database: str | None = None, spelt: Written | None = None
+    ) -> tuple[frozenset, bool]:
         """Return the releases at which a node is active.
 
         A versioned gene is active in its history ranges, a gene id without version where one of its own versions is,
@@ -748,6 +908,9 @@ class Track:
             node (str): The node.
             database (str | None): For an external id, the database it is meant as: only edges of that database
                 count.
+            spelt (Written | None): For an external id matched exactly as typed, or an accession read with a version:
+                only the releases at which an edge spells it so, or attaches that version, count
+                (:py:meth:`_spelt_edges`).
 
         Returns:
             tuple[frozenset, bool]: The releases, and ``True`` when they had to be taken from all assemblies.
@@ -763,7 +926,7 @@ class Track:
         if node_type == reader.backbone_type:
             return frozenset(of_gene(node)), False
 
-        edges = search.xrefs(node, False)
+        edges = search.xrefs(node, False) if spelt is None else self._spelt_edges(search, node, spelt)
         if database is not None:
             edges = [
                 (other, tuple(item for item in items if item[0] == database))
@@ -789,7 +952,13 @@ class Track:
         return frozenset(releases) & reader.release_set, True
 
     def _entries(
-        self, search: _Search, node: str, release: int, any_assembly: bool, database: str | None = None
+        self,
+        search: _Search,
+        node: str,
+        release: int,
+        any_assembly: bool,
+        database: str | None = None,
+        spelt: Written | None = None,
     ) -> tuple[list[tuple], dict[str, set]]:
         """Return the genes a node stands for at a release, each with the chain of edges that leads to it.
 
@@ -804,6 +973,10 @@ class Track:
             any_assembly (bool): ``True`` for a node that exists in an archive assembly only.
             database (str | None): For an external id, the database it is meant as: only the genes that this
                 database attaches the identifier to are entered.
+            spelt (Written | None): For an external id matched exactly as typed, or an accession read with a version:
+                only the genes that an edge spelling it so, or attaching that version, at the release reaches are
+                entered (:py:meth:`_spelt_edges`); every database that attaches the identifier to such a gene counts,
+                whatever its spelling or version.
 
         Returns:
             tuple[list[tuple], dict[str, set]]: ``(gene, steps)`` sorted by gene, where ``steps`` is the shortest
@@ -837,8 +1010,9 @@ class Track:
             if found:
                 return sorted(found.items()), attached
 
-        def walk(current: str, steps: tuple, depth: int, databases: frozenset, entered: bool) -> None:
-            for other, items in search.xrefs(current, False):
+        def walk(current: str, steps: tuple, depth: int, databases: frozenset, entered: bool, first: bool) -> None:
+            edges = self._spelt_edges(search, current, spelt) if depth == 1 and first and spelt is not None else None
+            for other, items in search.xrefs(current, False) if edges is None else edges:
                 if not reader.holds(items, release, any_assembly=any_assembly):
                     continue
                 if depth == 1:
@@ -852,18 +1026,31 @@ class Track:
                 step = steps + ((current, other, 0, release),)
                 if reader.is_backbone(other):
                     if reader.is_real_gene(other) and search.range_at(other, release) is not None:
-                        attached.setdefault(other, set()).update(databases)
-                        if entered:
-                            keep(other, step)
+                        if first:
+                            attached.setdefault(other, set()).update(databases)
+                            if entered:
+                                keep(other, step)
+                        elif other in attached:  # a gene entered through a link spelt as typed
+                            attached[other].update(databases)
                 elif depth < 3 and reader.node_type(other) != ids.EXTERNAL:
-                    walk(other, step, depth + 1, databases, entered)
+                    walk(other, step, depth + 1, databases, entered, first)
 
-        walk(node, (), 1, frozenset(), False)
+        walk(node, (), 1, frozenset(), False, True)
+        if spelt is not None:
+            # The genes are those of the links spelt as typed; every database that attaches the identifier to such a
+            # gene supports it, whatever its spelling (two spellings of one value for one gene are one value).
+            walk(node, (), 1, frozenset(), False, False)
         return sorted(found.items()), {gene: attached[gene] for gene in found}
 
     def _start(
-        self, search: _Search, node: str, from_release: int | None, to_release: int, database: str | None = None
-    ) -> tuple[int, list, dict[str, set], bool]:
+        self,
+        search: _Search,
+        node: str,
+        from_release: int | None,
+        to_release: int,
+        database: str | None = None,
+        spelt: Written | None = None,
+    ) -> tuple[int | None, list, dict[str, set], bool]:
         """Decide the release a query is read at and the genes it stands for there.
 
         Args:
@@ -872,21 +1059,58 @@ class Track:
             from_release (int | None): The release given by the caller, or ``None``.
             to_release (int): The target release.
             database (str | None): For an external id, the database it is meant as.
+            spelt (Written | None): How an external id was written, where that restricts its links.
 
         Returns:
-            tuple[int, list, dict[str, set], bool]: The starting release, the entries of :py:meth:`_entries` and
-            the databases that attach the node to each of them, and ``True`` when the node exists in an archive
-            assembly only.
+            tuple[int | None, list, dict[str, set], bool]: The starting release (``None`` for a node that is never
+            active), the entries of :py:meth:`_entries` and the databases that attach the node to each of them, and
+            ``True`` when the node exists in an archive assembly only.
 
         Raises:
             InactiveAtReleaseError: If ``from_release`` is given and the node is not active at it.
         """
-        active, any_assembly = self._active_releases(search, node, database)
+        active, any_assembly = self._active_releases(search, node, database, spelt)
         start = self._starting_release(node, active, from_release, to_release)
         if start is None:
-            return to_release, [], {}, any_assembly
-        entries, attached = self._entries(search, node, start, any_assembly, database)
+            return None, [], {}, any_assembly
+        entries, attached = self._entries(search, node, start, any_assembly, database, spelt)
         return start, entries, attached, any_assembly
+
+    def _spelt_edges(self, search: _Search, node: str, spelt: Written) -> list[tuple[str, tuple]]:
+        """Return the edges of an external node that carry it as written, each with the releases at which they do.
+
+        A string matched exactly as typed (``Tc``, a synonym of one mouse gene) means the identifier as the links
+        that write it so carry it, not as the links that write it otherwise (``tc``, a synonym of Noto): the graph
+        keeps one node for both spellings and the spelling of every link (:py:meth:`idtrack.TheGraph.spelling`). An
+        accession read with a version (``XM_003129161.3``) means the accession as the links that attached that version
+        carry it, at the releases at which they did (:py:meth:`idtrack.TheGraph.version_releases`).
+
+        Args:
+            search (_Search): Scratch memory of the conversion.
+            node (str): The external node.
+            spelt (Written): The spelling as typed (for a synonym, with the synonym prefix) and the version, either
+                ``None`` where it does not restrict.
+
+        Returns:
+            list[tuple[str, tuple]]: ``(other node, items)`` as :py:meth:`_Search.xrefs` gives them, with the releases
+            of each ``(database, assembly, releases)`` cut to those that carry it as written; edges with no such
+            release left out.
+        """
+        graph = self.graph
+        kept = []
+        for other, items in search.xrefs(node, False):
+            cut = []
+            for database, assembly, releases in items:
+                mask = releases.mask
+                if spelt.text is not None:
+                    mask = graph.spelt_releases(node, other, database, mask, spelt.text)
+                if mask and spelt.version is not None:
+                    mask = graph.version_releases(node, other, database, mask, spelt.version)
+                if mask:
+                    cut.append((database, assembly, ReleaseSet.from_mask(mask)))
+            if cut:
+                kept.append((other, tuple(cut)))
+        return kept
 
     @staticmethod
     def _starting_release(identifier: str, active: frozenset, from_release: int | None, to_release: int) -> int | None:
@@ -946,7 +1170,8 @@ class Track:
         """Return the chains of cross-reference edges that link a gene to other genes.
 
         A chain has one external id or one shared transcript in the middle. For each chain the releases at which
-        its two sides hold on the primary line are returned, so that the caller can place the bridge in time.
+        its two sides hold on the primary line are returned, so that the caller can place the bridge in time; the
+        caller then takes a chain it can place only where the rules take it (:py:meth:`_taken`).
 
         Args:
             search (_Search): Scratch memory of the conversion; the result is kept there per gene.
@@ -1024,6 +1249,174 @@ class Track:
         search._chains[gene] = chains
         return chains
 
+    def _taken(self, search: _Search, gene: str, other: str, middle: str) -> bool:
+        """Tell whether the rules take a bridge the walk can place in time, and record it with its rule.
+
+        Args:
+            search (_Search): Scratch memory of the conversion; every bridge decided is kept in
+                ``search.bridge_checks``.
+            gene (str): The gene the walk leaves.
+            other (str): The gene the walk would enter.
+            middle (str): The external id, or the transcript, that the two genes carry.
+
+        Returns:
+            bool: ``True`` when the rule of the bridge is one that takes it (:py:meth:`_bridge_rule`).
+        """
+        checks = search.bridge_checks.setdefault((gene, other), {})
+        rule = checks.get(middle)
+        if rule is None:
+            rule = checks[middle] = self._bridge_rule(search, gene, other, middle)
+        return rule in BRIDGE_RULES_TAKEN
+
+    def _bridge_rule(self, search: _Search, gene: str, other: str, middle: str) -> str:
+        """Decide whether a chain from one gene through an id to another gene is a bridge.
+
+        A bridge is evidence that one gene became the other only when the id leaves one gene for the other at the same
+        place, so the rules are, in order:
+
+        1. A synonym is no bridge (``synonym``): a synonym names other genes far more often than it stands for one.
+           Nor is any id between the two sides of a stable id that Ensembl reused across the mitochondrial genome and
+           a nuclear sequence (``mitochondrial_genome``, decision 100: two genes, as the history step between them is
+           refused); the places of such an id are compared per side (:py:meth:`_Search.sides`).
+        2. Where the two genes lie on the reference sequence of one assembly, or Ensembl's mapping of their two
+           assemblies carries the earlier place onto the later one, the bridge is taken when the places overlap
+           (``same_place``) and refused when they do not (``places_apart``), whatever else the id names; so is a
+           copy whose assembly exception's reference region shares no base with the other gene.
+        3. Where a gene lies outside the reference sequence (a patch, a haplotype, an alternative locus, an LRG
+           record) and the reference region its assembly exception replaces holds the other gene (or it has none: an
+           LRG record), places are not compared base by base (a copy outside that region lies apart: rule 2). Such a
+           copy stands for the gene whose names it carries while it exists: the
+           bridge is taken when the two stable ids carry the id at one release and, at every release at which both
+           carry it, the genes that carry it are one gene (:py:meth:`idtrack.TheGraph.count_genes` at that release: a
+           copy adds no gene) (``outside_reference``); it is refused when the id names several genes at such a release
+           (``copy_id_of_several_genes``: a family label or a shared alias does not say which gene the copy stands
+           for), and when the id came to the other gene only at another time (``copy_id_elsewhere``: a name Ensembl
+           moved to another gene after the copy's end, or before its start).
+        4. Elsewhere the places cannot be compared (the genes never lie on one assembly and no published mapping
+           carries one onto the other's assembly; or the graph holds no place of one of them). The bridge is refused
+           when the two stable ids
+           carry the id at one release (``shared_at_one_release``: a shared alias, a duplicated symbol or a family
+           label names two living genes at once, and the end of one says nothing about the other), and taken when no
+           release gives it to both (``never_shared``: the id left one gene for the other). On a built graph, which
+           holds a place of every gene version, only ``never_shared`` comes here: two stable ids that carry the id at
+           one release on the primary line both lie on that release's assembly, so rule 2 or 3 decides first;
+           ``shared_at_one_release`` decides for a graph without places (one made in memory).
+
+        Args:
+            search (_Search): Scratch memory of the conversion.
+            gene (str): The gene the walk leaves.
+            other (str): The gene the walk would enter.
+            middle (str): The external id, or the transcript, that the two genes carry.
+
+        Returns:
+            str: A key of :py:data:`idtrack.results.BRIDGE_RULES`.
+        """
+        if middle.startswith(ids.SYNONYM_PREFIX):
+            return "synonym"
+        reader = self._reader
+        sides = search.sides(reader.base_id(gene)) if reader.base_id(gene) == reader.base_id(other) else {}
+        if sides and sides.get(gene) != sides.get(other):
+            # the two sides of an id Ensembl reused across the mitochondrial genome and a nuclear sequence (decision
+            # 100): two genes, joined by no id, as the step between them joins nothing (decision 91)
+            return "mitochondrial_genome"
+        relation = search.relation(gene, other)
+        if relation in ("same_place", "places_apart"):
+            return relation
+        mine, theirs = reader.base_id(gene), reader.base_id(other)
+        holders = self._holders(search, middle) if mine != theirs else {}
+        shared = self._held(search, middle, gene, holders) & self._held(search, middle, other, holders)
+        if relation == "outside_reference":
+            if mine == theirs:
+                return "outside_reference"
+            if not shared:
+                return "copy_id_elsewhere"
+            return "outside_reference" if self._one_gene_holds(holders, shared) else "copy_id_of_several_genes"
+        return "shared_at_one_release" if shared else "never_shared"
+
+    def _one_gene_holds(self, holders: dict[str, int], releases: int) -> bool:
+        """Tell whether, at every release of a mask, the genes that carry an id there are one gene.
+
+        At a release, the holders are counted by the one rule of a gene at that release
+        (:py:meth:`idtrack.TheGraph.count_genes` with ``release``): ids that live then are one gene only where their
+        places overlap then, and a holder that lies outside the reference sequence at that release is a copy and adds
+        no gene (copies alone are one gene).
+
+        Args:
+            holders (dict[str, int]): Per stable gene id, the releases at which it carries the id
+                (:py:meth:`_holders`).
+            releases (int): A bit mask of releases.
+
+        Returns:
+            bool: ``True`` when the holders of each release of the mask are at most one gene.
+        """
+        for release in ReleaseSet.from_mask(releases):
+            group = [stable_id for stable_id, mask in holders.items() if mask >> release & 1]
+            if self.graph.count_genes(group, release=release) > 1:
+                return False
+        return True
+
+    def _holders(self, search: _Search, middle: str) -> dict[str, int]:
+        """Return the releases at which each stable id carries an id, on the primary line.
+
+        Args:
+            search (_Search): Scratch memory of the conversion; the result is kept there per id.
+            middle (str): An external id or a transcript.
+
+        Returns:
+            dict[str, int]: Per stable gene id, the bit mask of the releases at which the id is attached (by any
+            database) to one of its versions: to the gene itself, or to its transcript or translation.
+        """
+        found = search._holders.get(middle)
+        if found is not None:
+            return found
+        reader = self._reader
+        found = {}
+        by_version: dict[str, int] = {}
+
+        def walk(node: str, mask: int, depth: int) -> None:
+            for upper, items in search.xrefs(node, False):
+                held = mask & reader.primary_mask(items)
+                if not held:
+                    continue
+                if reader.is_backbone(upper):
+                    if reader.is_real_gene(upper):
+                        stable_id = reader.base_id(upper)
+                        found[stable_id] = found.get(stable_id, 0) | held
+                        by_version[upper] = by_version.get(upper, 0) | held
+                elif depth < 3 and reader.node_type(upper) != ids.EXTERNAL:
+                    walk(upper, held, depth + 1)
+
+        walk(middle, -1, 1)
+        search._holders[middle] = found
+        search._held_by_version[middle] = by_version
+        return found
+
+    def _held(self, search: _Search, middle: str, gene: str, holders: dict[str, int]) -> int:
+        """Return the releases at which the gene a node stands for carries an id, on the primary line.
+
+        The gene is its stable id (:py:meth:`_holders`), or, for an id Ensembl reused across the mitochondrial genome
+        and a nuclear sequence, the versions of the node's side (:py:meth:`_Search.sides`, decision 100).
+
+        Args:
+            search (_Search): Scratch memory of the conversion (after :py:meth:`_holders` of the id).
+            middle (str): The external id or transcript.
+            gene (str): A gene version.
+            holders (dict[str, int]): :py:meth:`_holders` of the id (empty where no release needs comparing).
+
+        Returns:
+            int: A bit mask of releases.
+        """
+        if not holders:
+            return 0
+        stable_id, side = search._side_of(gene)
+        if side is None:
+            return holders.get(stable_id, 0)
+        by_version = search._held_by_version.get(middle, {})
+        mask = 0
+        for version in side:
+            mask |= by_version.get(version, 0)
+        return mask
+
     @staticmethod
     def _place_bridge(near: tuple, far: tuple, low: int, high: int, target: int, reverse: bool) -> tuple | None:
         """Place a bridge in time.
@@ -1084,20 +1477,29 @@ class Track:
 
         Returns:
             dict[str, dict]: Per destination gene: ``entry_gene`` (the entry gene its path starts from),
-            ``external_jump``, ``external_gap``, ``external_step``, ``score``, ``ensembl_step`` and ``the_path``.
+            ``entry_genes`` (every entry gene from which a path of the search reaches it, the path's own among them:
+            several where the history merges genes), ``external_jump``, ``external_gap``, ``external_step``,
+            ``unscored_steps``, ``score``, ``ensembl_step`` and ``the_path``.
         """
         reader = self._reader
         reverse = start > to_release
         bridge_limit = int(search.settings.bridge_limit) if allow_bridges else 0
 
-        # cost = (bridges, bridge gap, external steps, -score, history steps); state = (gene, release, bridges, beamed)
+        # cost = (bridges, bridge gap, external steps, steps without a score, -score, history steps);
+        # state = (gene, release, bridges, beamed)
         heap: list = []
         settled: dict[tuple, tuple] = {}
         destinations: dict[str, tuple] = {}
+        # Every step the search considered, also into a state already reached (one path is kept per state), and every
+        # state that arrived at a gene: the entry genes whose paths reach a gene are read from them (decision 106).
+        children: dict[tuple, set] = {}
+        arrivals: dict[str, set] = {}
         counter = 0
 
         def push(cost: tuple, state: tuple, parent: tuple | None, steps: tuple) -> None:
             nonlocal counter
+            if parent is not None:
+                children.setdefault(parent, set()).add(state)
             if state not in settled:
                 counter += 1
                 heapq.heappush(heap, (cost, state, counter, parent, steps))
@@ -1119,6 +1521,7 @@ class Track:
             if not reader.is_real_gene(gene):
                 return
             candidate = (cost, state, steps)
+            arrivals.setdefault(gene, set()).add(state)
             if gene not in destinations or candidate[0] < destinations[gene][0]:
                 destinations[gene] = candidate
 
@@ -1128,7 +1531,7 @@ class Track:
             if found is None:
                 return
             first, last = found
-            n_bridges, gap, external_steps, negative_score, history_steps = cost
+            n_bridges, gap, external_steps, unscored, negative_score, history_steps = cost
 
             if (not reverse and to_release <= last) or (reverse and to_release >= first):
                 if not reverse:
@@ -1137,7 +1540,14 @@ class Track:
                     factor, loop_steps = loops_passed(gene, to_release, release)
                 arrive(
                     gene,
-                    (n_bridges, gap, external_steps, negative_score * factor, history_steps + len(loop_steps)),
+                    (
+                        n_bridges,
+                        gap,
+                        external_steps,
+                        unscored,
+                        negative_score * factor,
+                        history_steps + len(loop_steps),
+                    ),
                     state,
                     loop_steps,
                 )
@@ -1157,11 +1567,17 @@ class Track:
                     step, entered = (gene, other, key), old
                 if math.isinf(entered):
                     continue
+                if self._joins_mitochondrial_and_nuclear(search, gene, other, old, new, key, reverse):
+                    continue  # decision 91: no lineage between the mitochondrial genome and a nuclear sequence
+                # decision 57: Ensembl's score 0 between two different ids (stored as no score) is no measured score;
+                # such a step ranks a path below every path whose scores are measured
+                no_score = weight != weight and reader.base_id(other) != reader.base_id(gene)
                 push(
                     (
                         n_bridges,
                         gap,
                         external_steps,
+                        unscored + no_score,
                         negative_score * factor * _weight(weight),
                         history_steps + len(loop_steps) + 1,
                     ),
@@ -1184,7 +1600,7 @@ class Track:
         def bridge_out(cost: tuple, state: tuple) -> None:
             gene, release, bridges, _ = state
             first, last = search.range_at(gene, release)  # type: ignore[misc]
-            n_bridges, gap, external_steps, negative_score, history_steps = cost
+            n_bridges, gap, external_steps, unscored, negative_score, history_steps = cost
             # The gene is one entity throughout its active range: evidence from any release of that range counts.
             if not reverse:
                 low, high = int(first), int(min(last, to_release))
@@ -1192,7 +1608,7 @@ class Track:
                 low, high = int(max(first, to_release)), int(min(last, reader.snapshot_release))
             for other, near, far, near_edges, far_edges in self._bridges(search, gene):
                 placed = self._place_bridge(near, far, low, high, to_release, reverse)
-                if placed is None:
+                if placed is None or not self._taken(search, gene, other, far_edges[0][0]):
                     continue
                 left, entered = placed
                 steps = tuple((u, v, 0, left) for u, v in near_edges) + tuple((u, v, 0, entered) for u, v in far_edges)
@@ -1201,6 +1617,7 @@ class Track:
                         n_bridges + 1,
                         gap + abs(entered - left),
                         external_steps + len(near_edges) + len(far_edges),
+                        unscored,
                         negative_score,
                         history_steps,
                     ),
@@ -1210,7 +1627,7 @@ class Track:
                 )
 
         for gene, steps in entries:
-            push((0, 0, len(steps), -1.0, 0), (gene, start, 0, False), None, steps)
+            push((0, 0, len(steps), 0, -1.0, 0), (gene, start, 0, False), None, steps)
 
         level_states: list = []
         run(level_states)
@@ -1221,6 +1638,16 @@ class Track:
                 bridge_out(cost, state)
             run(level_states)
             level += 1
+
+        # The entry genes that reach each state, carried along every step considered until nothing grows.
+        reaching: dict[tuple, set] = {}
+        pending = [((gene, start, 0, False), gene) for gene, _ in entries]
+        while pending:
+            state, entry = pending.pop()
+            if entry in reaching.setdefault(state, set()):
+                continue
+            reaching[state].add(entry)
+            pending.extend((child, entry) for child in children.get(state, ()))
 
         result: dict[str, dict] = {}
         for gene in sorted(destinations):
@@ -1235,14 +1662,52 @@ class Track:
                 cursor = parent
             result[gene] = {
                 "entry_gene": entry_gene,
+                "entry_genes": tuple(sorted(set().union(*(reaching.get(each, set()) for each in arrivals[gene])))),
                 "external_jump": cost[0],
                 "external_gap": cost[1],
                 "external_step": cost[2],
-                "score": -cost[3],
-                "ensembl_step": cost[4],
+                "unscored_steps": cost[3],
+                "score": -cost[4],
+                "ensembl_step": cost[5],
                 "the_path": tuple(path) if path else ((None, gene, None),),
             }
         return result
+
+    def _joins_mitochondrial_and_nuclear(
+        self, search: _Search, gene: str, other: str, old: float, new: float, key: int, reverse: bool
+    ) -> bool:
+        """Tell whether a history step joins a gene of the mitochondrial genome and a gene of a nuclear sequence.
+
+        At assembly changes Ensembl gave the ids of mitochondrial genes to nuclear genes (rhesus MT-ND1 to a gene of
+        chromosome 8 of Mmul_10); such a step is no lineage (decision 91): the walk does not follow it, the id has no
+        successor across it (the other rules answer, such as a bridge), and the step is recorded with its rule for the
+        explained path. The rule reads the kinds of the places of the two versions
+        (:py:func:`idtrack.graph.genes.joins_mitochondrial_and_nuclear`, from Ensembl's sequence regions). A version
+        without a place there is no evidence either way, and the step is followed. Every other move of place is
+        followed (decision 89). The versions on the two sides of such a step are two genes that share a stable id by
+        Ensembl's reuse (:py:meth:`_Search.sides`): bridges compare the places of each side, and a bridge between the
+        two sides is refused like the step (decision 100).
+
+        Args:
+            search (_Search): Scratch memory of the conversion; a refused step is recorded there.
+            gene (str): The version the walk stands on.
+            other (str): The version the step leads to.
+            old (float): The old side of the event (the last release of its earlier version).
+            new (float): The new side of the event (the first release of its later version).
+            key (int): The key of the history edge.
+            reverse (bool): Whether the walk goes back in time.
+
+        Returns:
+            bool: ``True`` when the step is refused.
+        """
+        older, newer = (other, gene) if reverse else (gene, other)
+        reader = self._reader
+        if not (reader.is_real_gene(older) and reader.is_real_gene(newer)):
+            return False
+        if not genes.joins_mitochondrial_and_nuclear(self.graph, older, int(old), newer, int(new)):
+            return False
+        search.refused_steps[(gene, other, int(key))] = "mitochondrial_genome"
+        return True
 
     # Final conversion
 
@@ -1353,7 +1818,13 @@ class Track:
         targets, confidence = self._final_targets(search, gene, database, target)
         if database == reader.base_type:
             return sorted(targets), confidence
-        return sorted(self.graph.spelling(target_id, database, target) for target_id in targets), confidence
+        return (
+            sorted(
+                self.graph.spelling(target_id, database, target, via=_linked_from(steps))
+                for target_id, steps in targets.items()
+            ),
+            confidence,
+        )
 
     def _node_scores(self, search: _Search, gene: str, release: int) -> list[int]:
         """Count how richly a gene is annotated at a release.
@@ -1398,10 +1869,48 @@ class Track:
 
     # The conversion
 
+    def _bridge_report(self, search: _Search) -> tuple[BridgeCheck, ...]:
+        """Return every bridge the search considered, per pair of genes, with the rule of each id between them.
+
+        Args:
+            search (_Search): Scratch memory of the conversion.
+
+        Returns:
+            tuple[BridgeCheck, ...]: Ordered by source and target; the ids of each in order.
+        """
+        return tuple(
+            BridgeCheck(
+                source=source,
+                target=target,
+                places=search.relation(source, target),
+                taken=any(rule in BRIDGE_RULES_TAKEN for rule in through.values()),
+                through=tuple(sorted(through.items())),
+            )
+            for (source, target), through in sorted(search.bridge_checks.items())
+        )
+
+    def _explained_nothing(self, search: _Search, start: int, target: int, explain: bool) -> ExplainedPath | None:
+        """Return the explanation of a search that found no candidate: the bridges it considered (with ``explain``)."""
+        if not explain:
+            return None
+        builder = PathBuilder(self.graph, start > target, target)
+        builder.bridges(self._bridge_report(search))
+        builder.refused(search.refused_steps)
+        return builder.result()
+
     def _nothing(
-        self, node: str, start: int | None, inferred: bool, to_release: int, reason: str, explain: bool
+        self,
+        node: str,
+        start: int | None,
+        inferred: bool,
+        to_release: int,
+        reason: str,
+        explain: bool,
+        path: ExplainedPath | None = None,
     ) -> Conversion:
         """Return the conversion of an identifier that leads to no candidate."""
+        if explain and path is None:
+            path = ExplainedPath(nodes=(), steps=())
         return Conversion(
             graph_id=node,
             from_release=start,
@@ -1416,7 +1925,7 @@ class Track:
             no_target=False,
             no_target_genes=(),
             reason=reason,
-            path=ExplainedPath(nodes=(), steps=()) if explain else None,
+            path=path if explain else None,
         )
 
     def convert(
@@ -1443,12 +1952,19 @@ class Track:
         Search: from the genes the identifier stands for, Ensembl's stable-id history is followed to the target
         release. Only when that leads to no gene, and ``allow_bridges`` allows it, the search passes through an
         external id or transcript that two genes carried at the same time or one after the other, with as few such
-        bridges as possible (:py:attr:`idtrack.results.Candidate.bridges`: 0 is history only).
+        bridges as possible (:py:attr:`idtrack.results.Candidate.bridges`: 0 is history only). A bridge is taken only
+        where it is evidence that one gene became the other (never through a synonym; on one assembly only between
+        genes whose places overlap; from or to a copy outside the reference sequence only through an id both carried
+        at one release that names one gene at each such release; elsewhere only through an id that no release gave to
+        both:
+        :py:data:`idtrack.results.BRIDGE_RULES`).
 
-        Final conversion: with ``final_database`` each gene found is converted to the ids of that database attached
-        to it at the target release. One result has one final database: genes that have such an id are returned
-        with it; only if none has one, the genes themselves are returned (``no_target``), or nothing with
-        ``return_ensembl_alternative=False``.
+        Final conversion: with ``final_database`` the answer is first a gene: the genes found are ranked as Ensembl
+        genes (below), and a target in the final database is an id of that database attached at the target release to
+        a gene of that best answer. One result has one final database: the genes of the best answer that have such an
+        id are returned with it (where only some of a tie have one, those); if none of them has one, the genes
+        themselves are returned (``no_target``), or nothing with ``return_ensembl_alternative=False``. Another gene
+        the search reached is never answered by its id (it stays a candidate of the view ``all`` where it has one).
 
         Copies beside the reference sequence: Ensembl also annotates genes on alternative loci (haplotypes) and
         assembly patches, and LRG records (``LRG_<number>``, fixed reference sequences of single genes), each with
@@ -1464,12 +1980,15 @@ class Track:
         reaches.
 
         Ranking (:py:mod:`idtrack.engine.ranking`): every (gene, target) pair is ranked by the confidence of the
-        final conversion, the number of bridges, the release gap of the bridges, the support of the query on the
+        final conversion, the number of bridges, the release gap of the bridges, the query being the entry gene's
+        display name at the starting release (Ensembl's own name of the gene there:
+        :py:meth:`idtrack.graph.TheGraph.display_releases`), the support of the query on the
         entry gene (the number of databases that attach the identifier to that gene at the starting release, to the
-        gene itself or to one of its transcripts or translations), the path score, being the query itself, the
+        gene itself or to one of its transcripts or translations), both the best over every entry gene from which the
+        search reaches the gene (several where the history merges genes: decision 106), the path score, being the query itself, the
         number of cross-reference and history steps, and the ids. The best answer: the queried gene id's own version
         at the target release when the search reached it; otherwise the entry genes with the best confidence,
-        bridges, gap and support each contribute their best successor (by score, then being the query itself, then,
+        bridges, gap, display name and support each contribute their best successor (by score, then being the query itself, then,
         between successors of the one gene that are still equal, the richest annotation). If more than one gene or
         target remains, the answer is a tie. The candidates come best first, the pairs of one gene together.
 
@@ -1484,10 +2003,11 @@ class Track:
             final_database (str | None): The database to convert the genes into. ``None`` or ``ensembl_gene``:
                 the genes themselves; ``base_ensembl_gene``: gene ids without version; else an external database of
                 the genome assembly of the target release.
-            from_database (str | None): The external database the identifier is meant as: only the genes that this
-                database attaches it to are entered, and an identifier that is not an id of that database (an
-                Ensembl id, an id of other databases only) has no conversion. Between the genes entered, the one that
-                more databases attach the identifier to is still the better supported. ``None``: all databases.
+            from_database (str | None): The external database the identifier is meant as (its ids, and where none of
+                them matches, the synonyms it records): only the genes that this database attaches it to are entered,
+                and an identifier that is not an id of that database (an Ensembl id, an id of other databases only)
+                has no conversion. Between the genes entered, the one that more databases attach the identifier to is
+                still the better supported. ``None``: all databases.
             allow_bridges (bool): Allow bridges through external ids when the history leads to no gene.
             return_ensembl_alternative (bool): When no gene found has an id in ``final_database``, return the genes
                 themselves instead of nothing.
@@ -1505,7 +2025,9 @@ class Track:
                 is not an external database of the graph.
             InactiveAtReleaseError: If ``from_release`` is given and the identifier is not active at that release.
             UnknownVersionError: If the identifier is an Ensembl id with a version that the graph does not hold and
-                that cannot be newer than the graph.
+                that cannot be newer than the graph, or an accession with a version that its links never attached and
+                that cannot be newer than the graph (below the latest, or of an accession not attached at the last
+                release).
             SearchBudgetExceededError: If the search needs more states or time than the budget of the call.
         """
         _arguments.string(identifier, "identifier")
@@ -1521,6 +2043,66 @@ class Track:
             explain=_arguments.boolean(explain, "explain"),
             search=self._check_search(search),
         )
+
+    def _read(
+        self, identifier: str, given: int | None, from_database: str | None, target: int
+    ) -> tuple[str | None, Written | None, tuple, tuple]:
+        """Return which node a string means for a conversion (:py:meth:`idtrack.TheGraph.resolve_name`).
+
+        Args:
+            identifier (str): The string as read.
+            given (int | None): The release given, or ``None``.
+            from_database (str | None): The database named as its source.
+            target (int): The target release.
+
+        Returns:
+            tuple[str | None, Written | None, tuple, tuple]: The node (``None`` when no node is named so); how it was
+            written where that restricts its links (:py:class:`Written`: the typed spelling where the string matched
+            exactly a node spelt otherwise too, only the links spelt so being the identifier, the case step taking
+            all; the version of an accession read with one); and for a string that names no node the versions it
+            stands for (a transcript or translation id without version) and the versions held of an id or accession
+            written with a version the graph does not have.
+        """
+        resolved, how = self._reader.resolve_name(identifier, given, from_database, target)
+        if resolved is not None:
+            text = None
+            if how in ("exact", "synonym:exact") and self.graph.respelled(resolved):
+                text = identifier if how == "exact" else f"{ids.SYNONYM_PREFIX}{identifier}"
+            version = self.graph.reading_version(identifier, resolved, how) if how is not None else None
+            return resolved, (None if text is None and version is None else Written(text, version)), (), ()
+        held = tuple(self.graph.known_versions(identifier))
+        return None, None, (() if held else tuple(self.graph.versions_of(identifier))), held
+
+    def reads_at(self, identifier: str, release: int, to_release: int, from_database: str | None = None) -> bool:
+        """Tell whether a conversion reads a string at a release given (:py:meth:`convert` raises otherwise).
+
+        The string is read at the release where the node it means there is active then
+        (:py:meth:`_active_releases`: an id that only an archive assembly has is active wherever its links hold); a
+        transcript or translation id without version, where one of its versions is. A string that names nothing
+        raises no such error: ``True``.
+
+        Args:
+            identifier (str): The string as read.
+            release (int): The release given.
+            to_release (int): The target release.
+            from_database (str | None): The database named as its source.
+
+        Returns:
+            bool: ``False`` when the graph does not hold the string at the release (it is read by the rule without a
+            release).
+        """
+        node, spelt, versions, _ = self._read(identifier, release, from_database, to_release)
+        if node is None:
+            if not versions:
+                return True
+            memory = _Search(self._reader, identifier, self.search)
+            return any(release in self._active_releases(memory, version)[0] for version in versions)
+        memory = _Search(self._reader, node, self.search)
+        if from_database is not None and self._reader.node_type(node) != ids.EXTERNAL:
+            return True  # not an id of a database: the conversion says so, wherever it is read
+        if from_database is not None and node.startswith(ids.SYNONYM_PREFIX):
+            from_database = ids.SYNONYM_PREFIX + from_database
+        return release in self._active_releases(memory, node, from_database, spelt)[0]
 
     def _convert(
         self,
@@ -1543,22 +2125,18 @@ class Track:
         reader = self._reader
         target, given = to_release, from_release
         database = None if final_database == ids.GENE else final_database
-        node: str = identifier
-        versions: tuple = ()
-        resolved, _ = reader.resolve_name(identifier, given, from_database, target)
-        if resolved is not None:
-            node = resolved
-        else:
-            held = self.graph.known_versions(identifier)
+        resolved, spelt, versions, held = self._read(identifier, given, from_database, target)
+        node: str = identifier if resolved is None else resolved
+        if resolved is None:
             if held:
                 raise UnknownVersionError(identifier, held)
-            # A transcript or translation id without version has no node of its own: it stands for a version.
-            versions = self.graph.versions_of(identifier)
             if not versions:
                 return self._nothing(identifier, None, given is None, target, "not_in_graph", explain)
 
         if from_database is not None and (versions or reader.node_type(node) != ids.EXTERNAL):
             return self._nothing(node, None, given is None, target, "not_an_id_of_database", explain)
+        if from_database is not None and node.startswith(ids.SYNONYM_PREFIX):
+            from_database = ids.SYNONYM_PREFIX + from_database  # the synonyms of the database named (decision 56)
 
         memory = _Search(reader, node, search)
         read_at = given
@@ -1568,56 +2146,98 @@ class Track:
                 return self._nothing(identifier, None, given is None, target, "never_active", explain)
             node, read_at = chosen
             memory.identifier = node
-        start, entries, attached, _ = self._start(memory, node, read_at, target, from_database)
-        if not entries:
-            return self._nothing(node, None, given is None, target, "no_gene_at_start", explain)
+        start, entries, attached, _ = self._start(memory, node, read_at, target, from_database, spelt)
+        if start is None or not entries:
+            # read at its starting release (where it has one), it stands for no gene there
+            return self._nothing(node, start, given is None, target, "no_gene_at_start", explain)
         # Through which databases the query belongs to each entry gene at the starting release: every database that
         # attaches it to the gene itself or to a transcript or translation of the gene. A named database says which
         # genes are entered (`_start`); the support of an entry gene is every database that attaches the identifier
         # to it, named or not: what the other databases say about a gene is evidence all the same.
         read_through = set().union(*attached.values()) if attached else set()
-        from_databases = sorted(read_through if from_database is None else read_through & {from_database})
+        from_databases = sorted(
+            {ids.public_name(d) for d in (read_through if from_database is None else read_through & {from_database})}
+        )
         support = {gene: max(1, len(attached.get(gene, ()))) for gene, _ in entries}
+        if identifier.isdigit() and len(support) > 1:
+            # decision 86: a number is an id of every database whose ids are numbers; the databases of one gene are no
+            # evidence against a gene that other databases (other numbers spelt alike) attach it to
+            strongest = max(sorted(support), key=lambda gene: support[gene])
+            for gene in support:
+                if not attached.get(gene, set()) & attached.get(strongest, set()):
+                    support[gene] = support[strongest]
+        authorities = self.graph.authority_databases
+        authority = {gene: bool(attached.get(gene, set()) & authorities) for gene, _ in entries}
+        # Ensembl's display name of a gene at the starting release: its own statement of the gene's name there, which
+        # ranks a gene first among the genes that carry the name (decided before support: :py:mod:`ranking`), for the
+        # string as typed (decision 102: its letter case is evidence where it has both cases)
+        external = reader.node_type(node) == ids.EXTERNAL
+        typed = identifier
+        if spelt is not None and spelt.version is not None:
+            suffix = ids.NUMBERED_SUFFIX.match(identifier)
+            typed = suffix.group(1) if suffix is not None else identifier
+        display = {gene: self.graph.display_rank(node, gene, start, typed) if external else 2 for gene, _ in entries}
         found = self._search_paths(memory, entries, start, target, allow_bridges)
         if not found:
-            return self._nothing(node, start, given is None, target, "no_path_to_target", explain)
+            explained = self._explained_nothing(memory, start, target, explain)
+            return self._nothing(node, start, given is None, target, "no_path_to_target", explain, explained)
 
         found, own, alternative_locus_genes = self._without_copies(node, versions, found, target)
-        finals = self._finals(memory, found, database, target, return_ensembl_alternative)
-        if finals is None:
-            return self._nothing(node, start, given is None, target, "no_id_in_final_database", explain)
-        per_gene, final_name, no_target, without_target = finals
-
-        # An external id is reported as its database wrote it at the target release: the node name is the graph's one
-        # spelling of the id, and a database may write it with other letter case, also from release to release.
-        spell_as = None if no_target or database is None or database == reader.base_type else database
+        entry_of = {gene: record["entry_gene"] for gene, record in found.items()}
+        # Decision 106: where the history merges several entry genes into one gene, the query is that gene's display
+        # name and supported on it as on the best of them, not only as on the entry gene of the one path kept.
+        display_of = {gene: min(display[entry] for entry in record["entry_genes"]) for gene, record in found.items()}
+        support_of = {gene: max(support[entry] for entry in record["entry_genes"]) for gene, record in found.items()}
         query_base = node if reader.node_type(node) == reader.base_type else None
 
         def is_query(gene: str, target_id: str) -> bool:
             return target_id == node or (query_base is not None and reader.base_id(gene) == query_base)
 
-        pairs = []
-        for gene, (targets, confidence) in per_gene.items():
+        def pair_of(gene: str, target_id: str, confidence: int | None) -> ranking.Pair:
             record = found[gene]
-            for target_id in targets:
-                pairs.append(
-                    ranking.make_pair(
-                        own=gene in own,
-                        confidence=confidence,
-                        bridges=record["external_jump"],
-                        gap=record["external_gap"],
-                        support=support[record["entry_gene"]],
-                        score=record["score"],
-                        same_as_query=is_query(gene, target_id),
-                        external_steps=record["external_step"],
-                        history_steps=record["ensembl_step"],
-                        gene=gene,
-                        target=target_id,
-                    )
-                )
-        pairs.sort()
-        entry_of = {gene: record["entry_gene"] for gene, record in found.items()}
-        best, counts = ranking.select_best(pairs, own, entry_of, lambda gene: self._node_scores(memory, gene, target))
+            return ranking.make_pair(
+                own=gene in own,
+                confidence=confidence,
+                bridges=record["external_jump"],
+                gap=record["external_gap"],
+                support=support_of[gene],
+                unscored=record["unscored_steps"],
+                score=record["score"],
+                same_as_query=is_query(gene, target_id),
+                external_steps=record["external_step"],
+                history_steps=record["ensembl_step"],
+                gene=gene,
+                target=target_id,
+                display_rank=display_of[gene],
+            )
+
+        def annotation(gene: str) -> list[int]:
+            return self._node_scores(memory, gene, target)
+
+        # The answer is a gene before it is an id of a database: the genes of the best answer are ranked as Ensembl
+        # genes, and a target in a final database is an id attached to one of them; where none of them has one, the
+        # genes are the answer (no_target), and another gene the search reached is never answered by its id (I151).
+        answered: set[str] | None = None
+        if database is not None:
+            gene_pairs = sorted(pair_of(gene, gene, 0) for gene in found)
+            answered = {pair.gene for pair in ranking.select_best(gene_pairs, own, entry_of, annotation)[0]}
+        finals = self._finals(memory, found, database, target, return_ensembl_alternative, answered)
+        if finals is None:
+            explained = self._explained_nothing(memory, start, target, explain)
+            return self._nothing(node, start, given is None, target, "no_id_in_final_database", explain, explained)
+        per_gene, final_name, no_target, without_target = finals
+
+        # An external id is reported as its database wrote it at the target release: the node name is the graph's one
+        # spelling of the id, and a database may write it with other letter case, also from release to release.
+        spell_as = None if no_target or database is None or database == reader.base_type else database
+        pairs = sorted(
+            pair_of(gene, target_id, confidence)
+            for gene, (targets, confidence) in per_gene.items()
+            for target_id in targets
+        )
+        # the best answer is among the pairs of the genes answered (all pairs where the targets are the genes)
+        leading_pairs = pairs if answered is None or no_target else [pair for pair in pairs if pair.gene in answered]
+        best, counts = ranking.select_best(leading_pairs, own, entry_of, annotation)
         ordered = ranking.ranked(pairs, best)
         decided = ranking.decided_by(ordered, best, own, entry_of, counts)
         leading = set(best)
@@ -1628,7 +2248,11 @@ class Track:
         for pair in ordered:
             gene, target_id = pair.gene, pair.target
             record = found[gene]
-            reported = target_id if spell_as is None else self.graph.spelling(target_id, spell_as, target)
+            reported = (
+                target_id
+                if spell_as is None
+                else self.graph.spelling(target_id, spell_as, target, via=_linked_from(per_gene[gene][0][target_id]))
+            )
             path: tuple[int, ...] = ()
             final_path: tuple[int, ...] = ()
             if builder is not None:
@@ -1639,13 +2263,18 @@ class Track:
                 target=reported,
                 best=pair in leading,
                 entry_gene=record["entry_gene"],
-                entry_support=support[record["entry_gene"]],
+                entry_databases=tuple(sorted({ids.public_name(d) for d in attached.get(record["entry_gene"], ())})),
+                authority=authority[record["entry_gene"]],
+                display_name=display_of[gene] < 2,
+                display_rank=display_of[gene],
+                entry_support=support_of[gene],
                 own_version=gene in own,
                 final_confidence=per_gene[gene][1],
                 bridges=int(record["external_jump"]),
                 bridge_gap=int(record["external_gap"]),
                 score=float(record["score"]),
-                same_as_query=pair.within[1] == 0,
+                unscored_steps=int(record["unscored_steps"]),
+                same_as_query=pair.within[2] == 0,
                 external_steps=int(record["external_step"]),
                 history_steps=int(record["ensembl_step"]),
                 annotation=None if gene not in counts else tuple(counts[gene]),
@@ -1673,16 +2302,24 @@ class Track:
             no_target=no_target,
             no_target_genes=tuple(without_target),
             reason=None,
-            path=None if builder is None else builder.result(),
+            path=None if builder is None else self._explained(builder, memory),
         )
+
+    def _explained(self, builder: PathBuilder, search: _Search) -> ExplainedPath:
+        """Return the explanation of a conversion with candidates: their paths, the bridges and the steps refused."""
+        builder.bridges(self._bridge_report(search))
+        builder.refused(search.refused_steps)
+        return builder.result()
 
     def _without_copies(
         self, node: str, versions: tuple, found: dict[str, dict], target: int
     ) -> tuple[dict[str, dict], set[str], list[str]]:
         """Take the copies outside the reference sequence out of an answer that holds a gene of the reference sequence.
 
-        The graph's mark says which genes these are. The queried gene id's own version at the target release is
-        never taken out: an id that exists at the target release is its own answer.
+        The graph's mark says which genes these are. The Y copy of a pseudoautosomal gene (a gene in a pseudoautosomal
+        region of Y at the place of its gene on X, :py:meth:`idtrack.graph.TheGraph.y_copies`) is taken out likewise
+        beside that gene (decision 95). The queried gene id's own version at the target
+        release is never taken out: an id that exists at the target release is its own answer.
 
         Args:
             node: The query node.
@@ -1705,31 +2342,49 @@ class Track:
         if copies and any(not self.graph.is_non_reference(gene, target) for gene in found):
             alternative_locus_genes = copies
             found = {gene: record for gene, record in found.items() if gene not in set(copies)}
+        # Decision 95: the Y copy of a pseudoautosomal gene, beside its gene on X, is listed apart as a copy is.
+        y_copies = self.graph.y_copies(found, target) - own
+        if y_copies:
+            alternative_locus_genes = sorted(set(alternative_locus_genes) | y_copies)
+            found = {gene: record for gene, record in found.items() if gene not in y_copies}
         return found, own, alternative_locus_genes
 
     def _finals(
-        self, search: _Search, found: dict[str, dict], database: str | None, target: int, ensembl_alternative: bool
+        self,
+        search: _Search,
+        found: dict[str, dict],
+        database: str | None,
+        target: int,
+        ensembl_alternative: bool,
+        answered: set[str] | None = None,
     ) -> tuple[dict[str, tuple], str, bool, list[str]] | None:
         """Convert the genes found to the final database: one database and one confidence for the whole result.
+
+        A target in the final database is an id attached to a gene of the answer (``answered``: the genes of the best
+        answer ranked as Ensembl genes). Where none of them has one, the genes are the targets (``no_target``): a gene
+        of a lower rank is never answered by its id. Where some have one, the genes of the answer with an id at the
+        best confidence are the answer, and every gene with an id at that confidence is a candidate.
 
         Args:
             search: Scratch memory of the conversion.
             found: The genes and their records.
             database: The final database (``None``: the genes themselves).
             target: The target release.
-            ensembl_alternative: Return the genes when none has an id in the database.
+            ensembl_alternative: Return the genes when none of the answer has an id in the database.
+            answered: The genes of the best answer as Ensembl genes; ``None``: every gene found.
 
         Returns:
             tuple | None: ``({gene: ({target: steps}, confidence)}, final database, no_target, genes without
-            target)``; ``None`` when no gene has an id and ``ensembl_alternative`` is false.
+            target)``; ``None`` when no gene of the answer has an id and ``ensembl_alternative`` is false.
         """
         gene_form = ids.GENE
         if database is None:
             return {gene: ({gene: ()}, 0) for gene in found}, gene_form, False, []
         converted = {gene: self._final_targets(search, gene, database, target) for gene in found}
         with_target = {gene: value for gene, value in converted.items() if value[0]}
-        if with_target:
-            best_confidence = min(value[1] for value in with_target.values())
+        leading = {gene: value for gene, value in with_target.items() if answered is None or gene in answered}
+        if leading:
+            best_confidence = min(value[1] for value in leading.values())
             finals = {gene: value for gene, value in with_target.items() if value[1] == best_confidence}
             without = sorted(gene for gene, value in converted.items() if not value[0])
             return finals, database, False, without
@@ -1812,7 +2467,10 @@ class Track:
 
 
 def _weight(weight: float) -> float:
-    """Return the mapping score of a history edge, 1.0 where Ensembl gives none.
+    """Return the mapping score of a history edge as a factor of a path's score, 1.0 where Ensembl gives none.
+
+    A step between two different ids without a score (Ensembl writes 0 where it measured nothing) is counted apart,
+    before the product of the scores (decision 57; :py:attr:`idtrack.results.Candidate.unscored_steps`).
 
     Args:
         weight (float): The ``weight`` of a history edge (NaN when the event has no score).
@@ -1839,6 +2497,18 @@ def _to_ranges(releases: frozenset) -> list[list[int]]:
         else:
             ranges.append([r, r])
     return ranges
+
+
+def _renamed_note(graph: Any, database: Any) -> str:
+    """Return the sentence that names the graph's name of a database name Ensembl used and the graph does not."""
+    renamed = getattr(graph, "renamed_databases", None) or {}
+    new = renamed.get(database) if isinstance(database, str) else None
+    return f" It is named {new!r} in this graph." if new else ""
+
+
+def _linked_from(steps: tuple) -> str | None:
+    """Return the Ensembl id from which the last step of a final conversion reaches the external id (``None``: none)."""
+    return steps[-1][0] if steps else None
 
 
 __all__ = ["SOURCE_MODES", "Conversion", "Track"]

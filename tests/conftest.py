@@ -280,3 +280,36 @@ def _fresh_species_cache(monkeypatch):
 
     monkeypatch.setattr(VerifyOrganism, "_species_cache", {})
     monkeypatch.setattr(settings.ENSEMBL, "rest_retry_wait", 0.0)
+
+
+# =============================================================================
+# NO DOWNLOAD OF ASSEMBLY MAPPINGS, NO DATABASE FILING ON SYNTHETIC TABLES
+# =============================================================================
+
+
+@pytest.fixture(autouse=True)
+def _no_assembly_chain_download(monkeypatch):
+    """Answer that Ensembl publishes no mapping of two assemblies, so that no test build fetches a chain file.
+
+    And that no database continues a selected one (decision 104): the synthetic tables of the unit tests hold only the
+    tables their test reads. A manager of a repository that reads the cut real tables (which hold every table a build
+    reads) gets both from them; a test of either rule puts back the method it tests
+    (``tests._real_tables.REAL_METHODS``).
+    """
+    from idtrack.build import continuity
+    from idtrack.build.database_manager import DatabaseManager
+    from tests import _real_tables
+
+    def served(manager) -> bool:  # a manager of a repository that reads the cut real tables
+        return os.path.realpath(str(manager.local_repository)) in _real_tables._SERVED
+
+    monkeypatch.setattr(
+        DatabaseManager,
+        "assembly_chain",
+        lambda self, earlier, later: _real_tables._replayed_chain(self, earlier, later) if served(self) else None,
+    )
+    monkeypatch.setattr(
+        DatabaseManager,
+        "database_filing",
+        lambda self: _real_tables.REAL_METHODS["database_filing"](self) if served(self) else continuity.Filing(),
+    )

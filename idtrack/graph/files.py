@@ -1,10 +1,10 @@
 """Graph files: their names, the identity a file records, and finding the files of a folder.
 
 A graph file's name tells graphs apart that can sit in one folder:
-``graph_<organism>_assembly<primary assembly>_min<first>_max<last>[_narrow][_forms<a-b>][_extall].npz``. What a name
-does not say (the selection of external databases, the organism table, the format version) is in the manifest inside
-the file (:py:meth:`idtrack.graph.TheGraph.load` checks it). Nothing here needs the network, a table or PyYAML: the
-selection of external databases is given as parsed content.
+``graph_<organism>_assembly<primary assembly>_min<first>_max<last>[_sessions][_forms<a-b>][_extall].npz``. What a
+name does not say (the selection of external databases, the organism table, the format version) is in the record inside
+the file (:py:class:`idtrack.graph.GraphRecord`; :py:meth:`idtrack.graph.TheGraph.load` checks it). Nothing here
+needs the network, a table or PyYAML: the selection of external databases is given as parsed content.
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from idtrack import organisms
 
 GRAPH_FILE_NAME = re.compile(
     r"^graph_(?P<organism>.+)_assembly(?P<assembly>-?[0-9]+)(?:_min(?P<first_release>[0-9]+))?"
-    r"(?:_max(?P<snapshot_release>[0-9]+))?(?P<narrow>_narrow)?(?:_forms(?P<forms>[a-z-]+))?(?P<extall>_extall)?\.npz$"
+    r"(?:_max(?P<snapshot_release>[0-9]+))?(?P<sessions>_sessions)?(?:_forms(?P<forms>[a-z-]+))?(?P<extall>_extall)?\.npz$"
 )
 
 
@@ -34,9 +34,9 @@ def graph_file_path(
     assembly: int,
     first_release: int | float | None,
     snapshot_release: int | float | None,
-    narrow: bool = True,
+    session_details: bool = False,
     forms: list[str] | None = None,
-    narrow_external: bool = True,
+    all_external: bool = False,
 ) -> str:
     """Return the path of a graph file; needs no manager and no network.
 
@@ -46,9 +46,9 @@ def graph_file_path(
         assembly: Primary assembly of the graph (key of the organism table).
         first_release: First release of the window (infinity or ``None`` for no limit).
         snapshot_release: Last release of the window (infinity or ``None`` for no limit).
-        narrow: See :py:meth:`idtrack.build.GraphMaker.construct_graph`.
+        session_details: See :py:meth:`idtrack.build.GraphMaker.construct_graph`.
         forms: The forms if they are not all forms; ``None`` for all.
-        narrow_external: See :py:meth:`idtrack.build.GraphMaker.construct_graph`.
+        all_external: See :py:meth:`idtrack.build.GraphMaker.construct_graph`.
 
     Returns:
         str: The path.
@@ -56,10 +56,10 @@ def graph_file_path(
     first, last = _limit(first_release), _limit(snapshot_release)
     min_ext = "" if first is None else f"_min{first}"
     max_ext = "" if last is None else f"_max{last}"
-    narrow_ext = "_narrow" if narrow else ""
+    sessions_ext = "_sessions" if session_details else ""
     forms_ext = f"_forms{'-'.join(forms)}" if forms else ""
-    external_ext = "" if narrow_external else "_extall"
-    name = f"graph_{organism}_assembly{int(assembly)}{min_ext}{max_ext}{narrow_ext}{forms_ext}{external_ext}.npz"
+    external_ext = "_extall" if all_external else ""
+    name = f"graph_{organism}_assembly{int(assembly)}{min_ext}{max_ext}{sessions_ext}{forms_ext}{external_ext}.npz"
     return os.path.join(local_repository, name)
 
 
@@ -72,8 +72,8 @@ def list_graph_files(local_repository: str, organism: str | None = None) -> list
 
     Returns:
         list[dict]: One entry per file, sorted by name: ``path``, ``organism``, ``assembly``,
-        ``first_release``, ``snapshot_release`` (``None`` where the name has no limit), ``narrow``, ``forms`` (``None``
-        for all forms) and ``narrow_external``.
+        ``first_release``, ``snapshot_release`` (``None`` where the name has no limit), ``session_details``, ``forms``
+        (``None`` for all forms) and ``all_external``.
     """
     found: list[dict[str, Any]] = []
     if not os.path.isdir(local_repository):
@@ -91,9 +91,9 @@ def list_graph_files(local_repository: str, organism: str | None = None) -> list
                 "snapshot_release": (
                     None if match.group("snapshot_release") is None else int(match.group("snapshot_release"))
                 ),
-                "narrow": match.group("narrow") is not None,
+                "session_details": match.group("sessions") is not None,
                 "forms": None if match.group("forms") is None else match.group("forms").split("-"),
-                "narrow_external": match.group("extall") is None,
+                "all_external": match.group("extall") is not None,
             }
         )
     return found
@@ -103,7 +103,9 @@ def selection_fingerprint(content: dict | None, organism: str, forms: list[str],
     """Return a digest of the selection of external databases that takes effect in a graph.
 
     Of a parsed externals YAML this is, per form, database and assembly, the included releases that lie in the
-    window of the graph and in the release range the organism table gives the assembly. An entry that can never
+    window of the graph and in the release range the organism table gives the assembly; a release of the window after
+    the last release the file lists takes the selection of that last release, as the build does
+    (:py:meth:`idtrack.ExternalDatabases.settings_release`). An entry that can never
     produce an edge (a database that is not included, a release outside the window, an assembly at releases it does
     not have, an assembly the organism does not have) is not part of the identity of a graph: tidying such entries in
     a YAML file leaves the graphs built with it readable.
@@ -120,6 +122,14 @@ def selection_fingerprint(content: dict | None, organism: str, forms: list[str],
     """
     table = organisms.ORGANISM_TABLE[organism]
     selected = (content or {}).get(organism) or {}
+    listed = {
+        int(x)
+        for per_form in selected.values()
+        for entry in (per_form or {}).values()
+        for item in ((entry or {}).get("Assembly") or {}).values()
+        for x in str(item["Ensembl release"]).split(",")
+    }
+    last_listed = max(listed) if listed else None
     selection = []
     for form in sorted(forms):
         for database in sorted(selected.get(form) or {}):
@@ -129,14 +139,39 @@ def selection_fingerprint(content: dict | None, organism: str, forms: list[str],
                 if not item.get("Include") or int(assembly) not in table:
                     continue
                 lowest, highest = table[int(assembly)]["ReleaseRange"]
+                own = {int(x) for x in str(item["Ensembl release"]).split(",")}
+                if last_listed in own and not math.isinf(last):
+                    own |= set(range(last_listed + 1, int(last) + 1))  # later releases take the last settings
                 releases = sorted(
-                    r
-                    for r in {int(x) for x in str(item["Ensembl release"]).split(",")}
-                    if first <= r <= last and lowest <= r and (highest is None or r <= highest)
+                    r for r in own if first <= r <= last and lowest <= r and (highest is None or r <= highest)
                 )
                 if releases:
                     selection.append([form, str(database), int(assembly), releases])
     return hashlib.sha256(json.dumps(selection, sort_keys=True).encode("utf-8")).hexdigest()[:20]
+
+
+def content_digest(path: str) -> str | None:
+    """Return the content digest a graph file records, reading its record alone (not the graph).
+
+    Args:
+        path: A graph file (:py:meth:`idtrack.graph.TheGraph.save`).
+
+    Returns:
+        str | None: :py:attr:`idtrack.graph.GraphRecord.content_digest`; ``None`` when the file cannot be read as a
+        graph file of this format (its loading says why).
+    """
+    import zipfile
+    import zlib
+
+    import numpy as np
+
+    try:
+        with np.load(path, allow_pickle=False) as arrays:
+            document = json.loads(arrays["document"].tobytes().decode("utf-8"))
+        digest = document["record"]["content_digest"]
+    except (OSError, ValueError, KeyError, TypeError, zipfile.BadZipFile, EOFError, zlib.error):
+        return None
+    return digest if isinstance(digest, str) else None
 
 
 def table_fingerprint(organism: str) -> str:

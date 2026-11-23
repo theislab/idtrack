@@ -43,6 +43,12 @@ def _direct_url(dist: metadata.Distribution) -> dict:
         return {}
 
 
+#: What a graph records as the version that built it when the code ran from a source folder that is not an installed
+#: idtrack: such code has no released version (the version written in its ``pyproject.toml`` names a release, not
+#: the state of the folder), and only the git commit, where it is recorded, names the code that built the graph.
+SOURCE_FOLDER_BUILD = "none: built from a source folder, not an installed idtrack"
+
+
 def package_version() -> str:
     """Return the version of the running idtrack (``"unknown"`` when it is not the installed distribution).
 
@@ -51,6 +57,17 @@ def package_version() -> str:
     """
     dist = _distribution()
     return "unknown" if dist is None else str(dist.version)
+
+
+def build_version() -> str:
+    """Return the version a graph records as the one that built it.
+
+    Returns:
+        str: The version of the installed idtrack that runs, or :py:data:`SOURCE_FOLDER_BUILD` when the code runs from
+        a source folder that is not installed (the graph then names its code by the commit alone).
+    """
+    dist = _distribution()
+    return SOURCE_FOLDER_BUILD if dist is None else str(dist.version)
 
 
 def _git_commit(root: str) -> str | None:

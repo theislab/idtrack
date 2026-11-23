@@ -29,6 +29,12 @@ def _synthetic_mysql_tables() -> _SyntheticMySQL:
             "gene_id": [1, 2],
             "stable_id": ["ENSG00000000001", "ENSG00000000002"],
             "version": [1, 1],
+            "seq_region_id": [1, 1],
+            "biotype": ["protein_coding"] * 2,
+            "display_xref_id": [np.nan] * 2,
+            "seq_region_start": [100, 300],
+            "seq_region_end": [200, 400],
+            "seq_region_strand": [1, 1],
         }
     )
 
@@ -87,6 +93,7 @@ def _synthetic_mysql_tables() -> _SyntheticMySQL:
             "external_db_id": [1, 2],
             "dbprimary_acc": ["P12345", "7157"],
             "display_label": ["TP53", "BRCA1"],
+            "version": ["3", "0"],
         }
     )
     external_db = pd.DataFrame(
@@ -323,7 +330,8 @@ def test_external_db_all_and_filter_modes(synthetic_dm):
         {
             "give_list_for_case": staticmethod(
                 lambda give_type: ["UniProt", "EntrezGene", f"{ids.SYNONYM_PREFIX}UniProt"]
-            )
+            ),
+            "settings_release": staticmethod(lambda: 100),  # the YAML lists the manager's release
         },
     )()
 

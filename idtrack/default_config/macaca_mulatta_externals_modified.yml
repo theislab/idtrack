@@ -75,18 +75,16 @@ macaca_mulatta:
                 "1":
                     Ensembl release: 51,52,53,54,55,56,57,58,59,60
                     Include: false
-        NCBI gene:
-            Assembly:
-                "10":
-                    Ensembl release: 98,99
-                    Include: true
-                "801":
-                    Ensembl release: 88,89,90,91,92,93,94,95,96,97
-                    Include: true
         NCBI gene (formerly Entrezgene):
             Assembly:
+                "1":
+                    Ensembl release: 63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85
+                    Include: true
                 "10":
-                    Ensembl release: 100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Ensembl release: 98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Include: true
+                "801":
+                    Ensembl release: 86,87,88,89,90,91,92,93,94,95,96,97
                     Include: true
         RFAM:
             Assembly:
@@ -98,6 +96,17 @@ macaca_mulatta:
                     Include: true
                 "801":
                     Ensembl release: 86,87,88,89,90,91,92,93,94,95,96,97
+                    Include: true
+        RFAM label:
+            Assembly:
+                "1":
+                    Ensembl release: 63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85
+                    Include: true
+                "10":
+                    Ensembl release: 98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Include: true
+                "801":
+                    Ensembl release: 86,87,88,89,90,91
                     Include: true
         UniGene:
             Assembly:
@@ -155,7 +164,7 @@ macaca_mulatta:
                 "801":
                     Ensembl release: 86,87,88,89,90,91,92,93,94,95,96,97
                     Include: false
-        miRBase:
+        WikiGene label:
             Assembly:
                 "1":
                     Ensembl release: 63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85
@@ -166,13 +175,27 @@ macaca_mulatta:
                 "801":
                     Ensembl release: 86,87,88,89,90,91,92,93,94,95,96,97
                     Include: false
-        synonym_id::EntrezGene:
+        miRBase:
             Assembly:
                 "1":
                     Ensembl release: 63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85
                     Include: true
+                "10":
+                    Ensembl release: 98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Include: true
                 "801":
-                    Ensembl release: 86,87
+                    Ensembl release: 86,87,88,89,90,91,92,93,94,95,96,97
+                    Include: true
+        miRBase label:
+            Assembly:
+                "1":
+                    Ensembl release: 63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85
+                    Include: true
+                "10":
+                    Ensembl release: 98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Include: true
+                "801":
+                    Ensembl release: 86,87,88,89,90,91,92,93,94,95,96,97
                     Include: true
         synonym_id::HGNC (automatic):
             Assembly:
@@ -195,18 +218,16 @@ macaca_mulatta:
                 "801":
                     Ensembl release: 86,87,88,89,90,91,92,93,94,95,96,97
                     Include: true
-        synonym_id::NCBI gene:
-            Assembly:
-                "10":
-                    Ensembl release: 98,99
-                    Include: true
-                "801":
-                    Ensembl release: 88,89,90,91,92,93,94,95,96,97
-                    Include: true
         synonym_id::NCBI gene (formerly Entrezgene):
             Assembly:
+                "1":
+                    Ensembl release: 63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85
+                    Include: true
                 "10":
-                    Ensembl release: 100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Ensembl release: 98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Include: true
+                "801":
+                    Ensembl release: 86,87,88,89,90,91,92,93,94,95,96,97
                     Include: true
         synonym_id::UniProtKB Gene Name:
             Assembly:
@@ -239,7 +260,7 @@ macaca_mulatta:
             Assembly:
                 "1":
                     Ensembl release: 70,71,72
-                    Include: false
+                    Include: true
         EntrezGene transcript name:
             Assembly:
                 "1":
@@ -293,10 +314,7 @@ macaca_mulatta:
         HGNC transcript name:
             Assembly:
                 "1":
-                    Ensembl release: 70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85
-                    Include: false
-                "801":
-                    Ensembl release: 86,87,88,89,90,91,92,93,94,95,96,97
+                    Ensembl release: 70,71,72
                     Include: false
         HGNC_automatic_gene:
             Assembly:
@@ -339,10 +357,20 @@ macaca_mulatta:
                 "1":
                     Ensembl release: "48"
                     Include: false
+        NCBI gene (formerly Entrezgene):
+            Assembly:
+                "1":
+                    Ensembl release: 70,71,72
+                    Include: true
         RFAM:
             Assembly:
                 "1":
                     Ensembl release: 48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,70,71
+                    Include: false
+        RFAM label:
+            Assembly:
+                "1":
+                    Ensembl release: 48,49,50,51,52,53,54,55,56,57,58,59,60,61,62
                     Include: false
         RFAM transcript name:
             Assembly:
@@ -497,8 +525,14 @@ macaca_mulatta:
                     Include: true
         Transcript name:
             Assembly:
+                "1":
+                    Ensembl release: 73,74,75,76,77,78,79,80,81,82,83,84,85
+                    Include: false
                 "10":
                     Ensembl release: 98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Include: false
+                "801":
+                    Ensembl release: 86,87,88,89,90,91,92,93,94,95,96,97
                     Include: false
         UniGene:
             Assembly:
@@ -521,12 +555,12 @@ macaca_mulatta:
                 "1":
                     Ensembl release: 70,71
                     Include: false
-        Uniprot/Varsplic:
+        UniProtKB/SpliceVariant:
             Assembly:
                 "1":
                     Ensembl release: "48"
                     Include: false
-        UniprotKB/SpliceVariant:
+        Uniprot/Varsplic:
             Assembly:
                 "1":
                     Ensembl release: "48"
@@ -563,6 +597,11 @@ macaca_mulatta:
                     Ensembl release: 98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
         miRBase:
+            Assembly:
+                "1":
+                    Ensembl release: 48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,70,71
+                    Include: false
+        miRBase label:
             Assembly:
                 "1":
                     Ensembl release: 48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,70,71
@@ -636,22 +675,17 @@ macaca_mulatta:
             Assembly:
                 "1":
                     Ensembl release: 48,49,50,51,52,53,54,55,56,57,58,59,60,61,62
-                    Include: false
+                    Include: true
         European Nucleotide Archive:
             Assembly:
                 "1":
-                    Ensembl release: 61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85
+                    Ensembl release: 59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85
                     Include: false
                 "10":
                     Ensembl release: 98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
                 "801":
                     Ensembl release: 86,87,88,89,90,91,92,93,94,95,96,97
-                    Include: false
-        European Nucleotide Archive (was EMBL):
-            Assembly:
-                "1":
-                    Ensembl release: 59,60
                     Include: false
         GO:
             Assembly:
@@ -669,7 +703,7 @@ macaca_mulatta:
         INSDC protein ID:
             Assembly:
                 "1":
-                    Ensembl release: 71,72,73,74,75,76,77,78,79,80,81,82,83,84,85
+                    Ensembl release: 48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85
                     Include: false
                 "10":
                     Ensembl release: 98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
@@ -677,18 +711,13 @@ macaca_mulatta:
                 "801":
                     Ensembl release: 86,87,88,89,90,91,92,93,94,95,96,97
                     Include: false
-        KEGG:
-            Assembly:
-                "801":
-                    Ensembl release: 86,87,88
-                    Include: false
         KEGG Pathway and Enzyme:
             Assembly:
                 "10":
                     Ensembl release: 98,99,100,101,102,103,104
                     Include: false
                 "801":
-                    Ensembl release: 89,90,91,92,93,94,95,96,97
+                    Ensembl release: 86,87,88,89,90,91,92,93,94,95,96,97
                     Include: false
         KEGG_Enzyme:
             Assembly:
@@ -725,6 +754,11 @@ macaca_mulatta:
                 "801":
                     Ensembl release: 86,87,88,89,90,91,92,93,94,95
                     Include: false
+        NCBI gene (formerly Entrezgene):
+            Assembly:
+                "1":
+                    Ensembl release: 48,55,56,57,58,59,60,61,62
+                    Include: true
         PDB:
             Assembly:
                 "1":
@@ -735,11 +769,6 @@ macaca_mulatta:
                     Include: false
                 "801":
                     Ensembl release: 86,87,88,89,90,91,92,93,94,95,96,97
-                    Include: false
-        Protein ID:
-            Assembly:
-                "1":
-                    Ensembl release: 48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70
                     Include: false
         Reactome:
             Assembly:
@@ -875,6 +904,11 @@ macaca_mulatta:
                 "1":
                     Ensembl release: 55,56,57,58,59,60,61,62
                     Include: false
+        WikiGene label:
+            Assembly:
+                "1":
+                    Ensembl release: 55,56,57,58,59,60,61,62
+                    Include: false
         goslim_goa:
             Assembly:
                 "1":
@@ -891,11 +925,11 @@ macaca_mulatta:
                 "801":
                     Ensembl release: 86,87,88,89,90,91,92,93,94,95,96,97
                     Include: false
-        synonym_id::EntrezGene:
+        synonym_id::NCBI gene (formerly Entrezgene):
             Assembly:
                 "1":
                     Ensembl release: 48,55,56,57,58,59,60,61,62
-                    Include: false
+                    Include: true
         synonym_id::UniProtKB/Swiss-Prot:
             Assembly:
                 "1":

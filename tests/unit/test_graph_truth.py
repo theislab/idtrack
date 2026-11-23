@@ -18,9 +18,11 @@ import numpy as np
 import pandas as pd
 import pytest
 
+import idtrack.graph.graph as graph_module
+import idtrack.graph.record
 from idtrack import ids, organisms
 from idtrack.build.builder import GraphMaker
-from idtrack.build.database_manager import DatabaseManager
+from idtrack.build.database_manager import ASSEMBLY_EXCEPTION_COLUMNS, DatabaseManager
 from idtrack.engine.track import Conversion, Track
 from idtrack.errors import (
     ArgumentTypeError,
@@ -29,6 +31,7 @@ from idtrack.errors import (
     GraphMismatchError,
     HistoryValidationError,
     IntegrityError,
+    InvalidArgumentError,
     UnknownDatabaseError,
     UnknownIdentifierError,
 )
@@ -80,7 +83,16 @@ class World:
     """A synthetic organism served to ``DatabaseManager`` in place of Ensembl."""
 
     def __init__(
-        self, organism, assemblies, events=(), sessions=(), externals=None, unversioned=False, non_reference=None
+        self,
+        organism,
+        assemblies,
+        events=(),
+        sessions=(),
+        externals=None,
+        unversioned=False,
+        non_reference=None,
+        places=None,
+        transcripts=None,
     ):
         """Describe the organism: gene tables per assembly and release, events, sessions, external ids, regions."""
         self.organism = organism
@@ -90,6 +102,8 @@ class World:
         self.externals = externals or {}  # {release: [(graph id, external id, database, assembly), ...]}
         self.unversioned = unversioned  # True, or the releases whose gene ids carry no version
         self.non_reference = non_reference or {}  # {assembly: {release: [gene id on a patch, ...]}}
+        self.places = places or {}  # {gene id: (start, end)}: a place of its own, on the forward strand
+        self.transcripts = transcripts or {}  # {release: {transcript id: gene id}}: more transcripts, version 1
 
     def core_index(self, *, organism, assembly, **_):
         """Return the core-database index of an assembly, as ``DatabaseManager._get_core_db_index`` does.
@@ -126,8 +140,26 @@ class World:
                     "version": [np.nan] * len(genes) if self.without_versions(release) else list(genes.values()),
                     # sequence region 1 is a chromosome, region 2 a patch beside the reference sequence
                     "seq_region_id": [2 if gene in beside else 1 for gene in genes],
+                    "biotype": ["protein_coding"] * len(genes),
+                    "display_xref_id": [np.nan] * len(genes),
+                    # gene k (in the order of the table) lies at 1000 k to 1000 k + 500 on the forward strand,
+                    # moved by the version, so that a new version has a new place
+                    "seq_region_start": [
+                        self.places[g][0] if g in self.places else 1000 * (k + 1) + int(v or 0)
+                        for k, (g, v) in enumerate(genes.items())
+                    ],
+                    "seq_region_end": [
+                        self.places[g][1] if g in self.places else 1000 * (k + 1) + 500 for k, g in enumerate(genes)
+                    ],
+                    "seq_region_strand": [1] * len(genes),
                 }
             )
+        if table_key == "seq_region":  # both in the chromosome coordinate system, as Ensembl keeps patches
+            return pd.DataFrame({"seq_region_id": [1, 2], "name": ["1", "CHR_PATCH_1"], "coord_system_id": [1, 1]})
+        if table_key == "coord_system":
+            return pd.DataFrame({"coord_system_id": [1], "name": ["chromosome"]})
+        if table_key == "assembly_exception":  # the patch's place on the reference sequence is not given
+            return pd.DataFrame(columns=ASSEMBLY_EXCEPTION_COLUMNS)
         if table_key == "attrib_type":
             return pd.DataFrame({"attrib_type_id": [6, 16], "code": ["toplevel", "non_ref"]})
         if table_key == "seq_region_attrib":
@@ -136,7 +168,7 @@ class World:
             # one transcript and one translation per gene, named after it (ENSG1 -> ENST1 -> ENSP1), version 1
             genes = list(self.assemblies[assembly][release])
             letter, parent = ("T", "gene_id") if table_key == "transcript" else ("P", "transcript_id")
-            return pd.DataFrame(
+            frame = pd.DataFrame(
                 {
                     f"{table_key}_id": list(range(1, len(genes) + 1)),
                     "stable_id": [g[::-1].replace("G", letter, 1)[::-1] for g in genes],
@@ -144,6 +176,23 @@ class World:
                     parent: list(range(1, len(genes) + 1)),
                 }
             )
+            more = self.transcripts.get(release, {}) if table_key == "transcript" else {}
+            if more:  # a transcript of the gene given, at this release (internal ids after the default ones)
+                frame = pd.concat(
+                    [
+                        frame,
+                        pd.DataFrame(
+                            {
+                                "transcript_id": list(range(len(genes) + 1, len(genes) + 1 + len(more))),
+                                "stable_id": list(more),
+                                "version": [1] * len(more),
+                                "gene_id": [genes.index(gene) + 1 for gene in more.values()],
+                            }
+                        ),
+                    ],
+                    ignore_index=True,
+                )
+            return frame
         if table_key == "stable_id_event":
             return pd.DataFrame(
                 {
@@ -169,6 +218,8 @@ class World:
                     "created": ["2020-01-01"] * len(self.sessions),
                 }
             )
+        if table_key == "external_db":  # the world names its external ids by their databases' names directly
+            return pd.DataFrame(columns=["external_db_id", "db_name", "db_display_name"])
         return pd.DataFrame()
 
     def without_versions(self, release):
@@ -178,20 +229,30 @@ class World:
     def external_rows(self, manager):
         """Return the external-identifier table of the manager's release."""
         release = int(manager.release)
-        rows = [
-            {
-                "release": release,
-                "graph_id": graph_id,
-                "id_db": external_id,
-                "name_db": database,
-                "ensembl_identity": np.nan,
-                "xref_identity": np.nan,
-                "assembly": assembly,
-            }
-            for graph_id, external_id, database, assembly, *form in self.externals.get(release, [])
-            if (form[0] if form else "gene") == manager.form
-        ]
-        columns = ["release", "graph_id", "id_db", "name_db", "ensembl_identity", "xref_identity", "assembly"]
+        rows = []
+        for graph_id, external_id, database, assembly, *rest in self.externals.get(release, []):
+            # an optional form, then an optional dict of the row's facts: {"version": 3, "display": True}
+            form = next((part for part in rest if isinstance(part, str)), "gene")
+            facts = next((part for part in rest if isinstance(part, dict)), {})
+            if form != manager.form:
+                continue
+            rows.append(
+                {
+                    "release": release,
+                    "graph_id": graph_id,
+                    "id_db": external_id,
+                    "name_db": database,
+                    "ensembl_identity": np.nan,
+                    "xref_identity": np.nan,
+                    "version": int(facts.get("version", 0)),
+                    "is_display": bool(facts.get("display", False)),
+                    "assembly": assembly,
+                }
+            )
+        columns = [
+            "release", "graph_id", "id_db", "name_db", "ensembl_identity", "xref_identity", "version", "is_display",
+            "assembly",
+        ]  # fmt: skip
         return pd.DataFrame(rows, columns=columns)
 
     def install(self, monkeypatch):
@@ -206,7 +267,7 @@ class World:
             df = world.table(self, table_key)
             return df.copy(deep=True) if usecols is None or not len(df.columns) else df.loc[:, usecols].copy(deep=True)
 
-        def create_external_all(self, narrow_external=True, **kwargs):
+        def create_external_all(self, all_external=False, **kwargs):
             return world.external_rows(self)
 
         monkeypatch.setattr(
@@ -272,9 +333,7 @@ def test_session_recorded_with_wrong_releases_is_placed_where_the_ids_change(mon
         HistoryEdge("ENSSSCG2.1", 106, 107, 0.9, 0),
     )
     assert not g.is_active("ENSSSCG2.1", 104) and not g.is_active("ENSSSCG2.1", 106)
-    assert g.manifest["history"]["corrections"] == [
-        {"recorded": [106, 104], "used": [106, 107], "events": 1, "edges": 1}
-    ]
+    assert g.record.history["corrections"] == [{"recorded": [106, 104], "used": [106, 107], "events": 1, "edges": 1}]
 
 
 def test_session_over_a_gap_is_placed_at_the_transition_of_the_ids(monkeypatch, tmp_path):
@@ -283,15 +342,15 @@ def test_session_over_a_gap_is_placed_at_the_transition_of_the_ids(monkeypatch, 
 
     (edge,) = (e for e in g.history_edges("ENSSSCG1.1") if e.node == "ENSSSCG2.1")
     assert (edge.old_release, edge.new_release) == (106, 107)
-    assert g.manifest["history"]["corrections"][0]["used"] == [106, 107]
+    assert g.record.history["corrections"][0]["used"] == [106, 107]
 
 
 def test_correctly_recorded_session_is_not_a_correction(monkeypatch, tmp_path):
     """A session whose recorded releases agree with the id tables is used as recorded."""
     g = build(pig_like(106, 107), monkeypatch, tmp_path, 111)
 
-    assert g.manifest["history"]["corrections"] == []
-    assert g.manifest["history"]["event_edges"] == 1
+    assert g.record.history["corrections"] == []
+    assert g.record.history["event_edges"] == 1
 
 
 def test_every_history_edge_agrees_with_the_id_tables(monkeypatch, tmp_path):
@@ -415,6 +474,42 @@ def test_event_that_fits_no_release_pair_stops_the_build(monkeypatch, tmp_path):
         GraphMaker(world.manager(tmp_path, 38)).construct_graph(forms=["gene"])
 
 
+def test_session_that_two_pairs_fit_equally_stops_the_build(monkeypatch, tmp_path):
+    """Decision 66: a session whose events fit two pairs equally, the recorded one not among them, is refused.
+
+    No such session exists in the five organisms' graphs; under the earlier rule the build took the pair nearest to
+    the recorded old release (here 101 to 102) without a word.
+    """
+    genes = lifetimes({"G1": [(101, 102, 1)], "G2": [(102, 103, 1)], "G9": [(100, 103, 1)]})
+    world = World("homo_sapiens", {38: genes}, events=[(1, "G1", 1, "G2", 1, 0.9)], sessions=[(1, 100, 101)])
+    world.install(monkeypatch)
+
+    with pytest.raises(HistoryValidationError, match="101 to 102, 102 to 103 equally well"):
+        GraphMaker(world.manager(tmp_path, 38)).construct_graph(forms=["gene"])
+
+
+def test_event_naming_a_version_that_did_not_exist_is_placed_with_the_version_of_the_release(monkeypatch, tmp_path):
+    """Decision 76: Ensembl's event names the gene; a version the id did not have at the old release is its slip.
+
+    ``G1`` had version 1 at 100 and version 2 at 101; the session 101 to 102 splits it into ``G2`` and ``G3``, and
+    the event to ``G3`` names version 1 (human ``ENSG00000233776`` at 107 to 108). The event is placed as
+    ``G1.2 -> G3.1``, counted and listed in the report; under the earlier rule it was left out as contradicting the
+    id tables, so ``G1.2`` reached ``G2`` only.
+    """
+    genes = lifetimes({"G1": [(100, 100, 1), (101, 101, 2)], "G2": [(102, 103, 1)], "G3": [(102, 103, 1)]})
+    events = [(1, "G1", 2, "G2", 1, 0.8), (1, "G1", 1, "G3", 1, 0.7)]
+    g = build(World("homo_sapiens", {38: genes}, events=events, sessions=[(1, 101, 102)]), monkeypatch, tmp_path, 38)
+
+    assert ("G3.1", 101, 102, 0.7, 0) in g.history_edges("G1.2")
+    assert {edge.node for edge in g.history_edges("G1.2")} >= {"G2.1", "G3.1"}
+    report = g.record.history
+    assert report["events_placed_with_the_version_of_the_release"] == [
+        {"event": ["G1.1", "G3.1"], "placed": ["G1.2", "G3.1"], "releases": [101, 102]}
+    ]
+    assert report["events_contradicting_tables"] == 0
+    assert set(genes_of(Track(g).convert("G1.2", from_release=101, to_release=103))) == {"G2.1", "G3.1"}
+
+
 def test_id_history_computed_for_another_window_stops_the_build(monkeypatch, tmp_path):
     """A stored id-history table that starts later than Ensembl's sessions lost history: never build from it."""
     genes = lifetimes({"G1": [(100, 100, 1)], "G2": [(101, 103, 1)], "G3": [(100, 102, 1)], "G4": [(103, 103, 1)]})
@@ -463,6 +558,40 @@ def test_open_range_of_a_version_is_an_error():
         g.active_ranges("G.1")
 
 
+def test_a_mirbase_entry_on_a_transcript_counts_for_the_gene_that_holds_it_then(monkeypatch, tmp_path):
+    """Decision 108: a link read on a transcript counts for the gene that holds the transcript at the link's releases.
+
+    ``MI0000010`` is on transcript ENSSSCT10 at 113, which gene 1 holds then, and on gene 1 itself at 114 and 115; from
+    114 Ensembl puts the transcript in gene 2 (human: the miRNA transcript ENST00000384838 of ENSG00000207570, which
+    ``MI0000467`` is on at 48 to 62, is later also a transcript of its host gene ENSG00000245526). One gene at each
+    release: the entry stays. ``MI0000011`` names genes 1 and 2 at 114 at once: left out. Fails if a transcript counts
+    for every gene it ever belonged to (``MI0000010`` left out with 36 human entries such as hsa-mir-21).
+    """
+    genes = lifetimes({"ENSSSCG1": [(113, 115, 1)], "ENSSSCG2": [(113, 115, 1)]})
+    externals = {
+        113: [("ENSSSCT10.1", "MI0000010", "miRBase", 111, "transcript")],
+        114: [
+            ("ENSSSCG1.1", "MI0000010", "miRBase", 111),
+            ("ENSSSCG1.1", "MI0000011", "miRBase", 111),
+            ("ENSSSCG2.1", "MI0000011", "miRBase", 111),
+        ],
+        115: [("ENSSSCG1.1", "MI0000010", "miRBase", 111)],
+    }
+    world = World(
+        "sus_scrofa",
+        {111: genes},
+        externals=externals,
+        transcripts={113: {"ENSSSCT10": "ENSSSCG1"}, 114: {"ENSSSCT10": "ENSSSCG2"}, 115: {"ENSSSCT10": "ENSSSCG2"}},
+    )
+    os.makedirs(tmp_path, exist_ok=True)
+    world.install(monkeypatch)
+    g = GraphMaker(world.manager(tmp_path, 111)).construct_graph(forms=["gene", "transcript"])
+    assert g.connection("MI0000010", "ENSSSCT10.1").as_dict == {"miRBase": {111: {113}}}
+    assert g.connection("MI0000010", "ENSSSCG1.1").as_dict == {"miRBase": {111: {114, 115}}}
+    assert "MI0000011" not in g
+    assert g.record.entries_of_several_genes == ("mi0000011",)
+
+
 # --------------------------------------------------------------------------- spelling (graph-2, graph-8, new-1)
 
 
@@ -482,6 +611,97 @@ def symbols_world():
         ],
     }
     return World("sus_scrofa", {111: genes}, externals=externals)
+
+
+def test_releases_after_the_externals_settings_take_the_last_settings_and_say_so(monkeypatch, tmp_path):
+    """Decision 68: with settings listed up to 114, release 115 takes those of 114, and the record says so.
+
+    Under the earlier rule release 115 got no external ids (``SLA`` was found nowhere) and the record named nothing.
+    """
+    from idtrack.build.externals import write_externals_yaml
+
+    os.makedirs(tmp_path, exist_ok=True)
+    selection = {"Ensembl release": "113,114", "Include": True}
+    write_externals_yaml(
+        {"sus_scrofa": {"gene": {db: {"Assembly": {"111": dict(selection)}} for db in ("VGNC Symbol", "Old Symbol")}}},
+        os.path.join(str(tmp_path), "sus_scrofa_externals_modified.yml"),
+    )
+    g = build(symbols_world(), monkeypatch, tmp_path, 111)
+    assert g.record.externals_settings == {113: 113, 114: 114, 115: 114}
+    assert g.connection("SLA", "ENSSSCG3.1").as_dict == {"VGNC Symbol": {111: {115}}}
+
+
+def test_a_mirbase_entry_links_only_where_it_names_one_gene_over_the_releases(monkeypatch, tmp_path):
+    """Decision 73: a miRBase entry given to genes at several loci, at once or one after the other, links no gene.
+
+    ``MI0000002`` and its label name genes 1 and 3 at 113 (rhesus ``mml-mir-663-7`` named many copies at 69 to 85);
+    ``MI0000003`` names gene 2 at 114 and gene 3 at 115 (mouse ``MI0000399`` carried a retired gene back to another
+    locus). Both are no nodes; ``MI0000001``, gene 1's own, stays, and the VGNC symbol that shares a node's text with
+    nothing is untouched. Judged per release only, the moving entry stayed and the shared label read the name at
+    another release (two right answers became wrong).
+
+    One gene is not one stable id (:py:func:`idtrack.graph.genes.count_genes`): ``MI0000004`` names gene 1 and its
+    copy on a patch (gene 4) at once; ``MI0000005`` names gene 5 at 113 and gene 6, which Ensembl's history made of it,
+    at 114 and 115, at another place; ``MI0000007`` names gene 7 at 113 and gene 8, at an overlapping place without an
+    event, after it. All three stay. Fails if genes are counted by stable id (the three are left out: the review's
+    247 human entries of copies and 500 of successive ids).
+    """
+    genes = lifetimes(
+        {
+            "ENSSSCG1": [(113, 115, 1)],
+            "ENSSSCG2": [(113, 115, 1)],
+            "ENSSSCG3": [(113, 115, 1)],
+            "ENSSSCG4": [(113, 115, 1)],
+            "ENSSSCG5": [(113, 113, 1)],
+            "ENSSSCG6": [(114, 115, 1)],
+            "ENSSSCG7": [(113, 113, 1)],
+            "ENSSSCG8": [(114, 115, 1)],
+        }
+    )
+    externals = {
+        113: [
+            ("ENSSSCG1.1", "MI0000001", "miRBase", 111),
+            ("ENSSSCG1.1", "MI0000002", "miRBase", 111),
+            ("ENSSSCG3.1", "MI0000002", "miRBase", 111),
+            ("ENSSSCG1.1", "ssc-mir-2", "miRBase label", 111),
+            ("ENSSSCG3.1", "ssc-mir-2", "miRBase label", 111),
+            ("ENSSSCG1.1", "STAT2", "VGNC Symbol", 111),
+            ("ENSSSCG1.1", "MI0000004", "miRBase", 111),
+            ("ENSSSCG4.1", "MI0000004", "miRBase", 111),
+            ("ENSSSCG5.1", "MI0000005", "miRBase", 111),
+            ("ENSSSCG7.1", "MI0000007", "miRBase", 111),
+        ],
+        114: [
+            ("ENSSSCG2.1", "MI0000003", "miRBase", 111),
+            ("ENSSSCG1.1", "MI0000001", "miRBase", 111),
+            ("ENSSSCG6.1", "MI0000005", "miRBase", 111),
+            ("ENSSSCG8.1", "MI0000007", "miRBase", 111),
+        ],
+        115: [("ENSSSCG3.1", "MI0000003", "miRBase", 111), ("ENSSSCG1.1", "MI0000001", "miRBase", 111)],
+    }
+    world = World(
+        "sus_scrofa",
+        {111: genes},
+        events=[(1, "ENSSSCG5", 1, "ENSSSCG6", 1, 0.9)],
+        sessions=[(1, 113, 114)],
+        externals=externals,
+        non_reference={111: {release: ["ENSSSCG4"] for release in (113, 114, 115)}},
+        places={
+            "ENSSSCG5": (50_000, 50_500),
+            "ENSSSCG6": (60_000, 60_500),
+            "ENSSSCG7": (70_000, 70_500),
+            "ENSSSCG8": (70_400, 70_900),
+        },
+    )
+    g = build(world, monkeypatch, tmp_path, 111)
+    assert "MI0000002" not in g and "MI0000003" not in g and "ssc-mir-2" not in g
+    assert g.connection("MI0000001", "ENSSSCG1.1").as_dict == {"miRBase": {111: {113, 114, 115}}}
+    assert "STAT2" in g
+    assert g.connection("MI0000004", "ENSSSCG4.1").as_dict == {"miRBase": {111: {113}}}
+    assert g.connection("MI0000005", "ENSSSCG6.1").as_dict == {"miRBase": {111: {114}}}
+    assert g.connection("MI0000007", "ENSSSCG8.1").as_dict == {"miRBase": {111: {114}}}
+    assert g.record.counts["links_of_entries_of_several_genes"] == 6
+    assert g.entries_of_several_genes == {"mi0000002", "mi0000003", "ssc-mir-2"}  # what the checks leave out
 
 
 def test_external_id_keeps_the_spelling_of_its_latest_release(monkeypatch, tmp_path):
@@ -531,7 +751,11 @@ def test_spelling_of_a_release_is_how_the_database_wrote_the_id_at_that_release(
         assert g.spelling("ZNF1", name) == "Znf1"  # without a release: as the database writes it last
         assert [g.spelling("ZNF1", name, release) for release in (113, 114, 115)] == ["ZNF1", "Znf1", "Znf1"]
         assert g.spelling("ZNF1", name, 112) == "Znf1"  # a release at which the database does not have it
-        assert "Abc" in g and "ABC" not in g and g.spelling("Abc", name, 115) == "Abc"
+        assert "Abc" in g and "ABC" not in g  # two links write `Abc`, one `ABC`
+        # decision 75: the spelling belongs to the link; one gene given both spellings at one release has one value,
+        # the one with more upper-case letters
+        assert g.spelling("Abc", name, 115, via="ENSSSCG2.1") == "Abc"
+        assert g.spelling("Abc", name, 115, via="ENSSSCG3.1") == "ABC"
         assert g.spelling("ZNF1", "No Such Database", 115) == "ZNF1"
     track = Track(built)
     assert track.gene_to_database("ENSSSCG1.1", name, 113) == (["ZNF1"], 0)
@@ -539,6 +763,55 @@ def test_spelling_of_a_release_is_how_the_database_wrote_the_id_at_that_release(
     old = track.convert("ENSSSCG1.1", to_release=113, final_database=name)
     assert list(targets_of(old, "ENSSSCG1.1", best=False)) == ["ZNF1"]
     assert list(targets_of(track.convert("znf1", final_database=name), "ENSSSCG1.1", best=False)) == ["Znf1"]
+
+
+def test_a_spelling_belongs_to_its_link(monkeypatch, tmp_path):
+    """Decision 75: ``Tc`` is a synonym of one mouse gene and ``tc`` one of Noto, in one database at one release.
+
+    The graph keeps one node for the two strings and the spelling of every link. ``Tc`` typed exactly is the
+    synonym of the first gene only, ``tc`` of Noto only; ``TC`` is neither exactly and is both by letter case. Each
+    gene's id in the database is spelt as its own link writes it. Under the earlier rule (one spelling per database
+    and release) ``Tc`` was matched "exactly" and answered both genes, and both genes' ids were spelt alike.
+    """
+    genes = lifetimes({"ENSMUSG1": [(113, 115, 1)], "ENSMUSG2": [(113, 115, 1)]})
+    synonym = "synonym_id::MGI Symbol"
+    externals = {
+        release: [
+            ("ENSMUSG1.1", "synonym_id::Tc", synonym, 39),
+            ("ENSMUSG2.1", "synonym_id::tc", synonym, 39),
+            ("ENSMUSG1.1", "T", "MGI Symbol", 39),
+            ("ENSMUSG2.1", "Noto", "MGI Symbol", 39),
+        ]
+        for release in (113, 114, 115)
+    }
+    g = build(World("mus_musculus", {39: genes}, externals=externals), monkeypatch, tmp_path, 39)
+    node = "synonym_id::Tc" if "synonym_id::Tc" in g else "synonym_id::tc"
+    assert ("synonym_id::Tc" in g) != ("synonym_id::tc" in g)  # one node for both strings
+    assert g.spelling(node, synonym, 115, via="ENSMUSG1.1") == "synonym_id::Tc"
+    assert g.spelling(node, synonym, 115, via="ENSMUSG2.1") == "synonym_id::tc"
+
+    track = Track(g)
+    assert g.resolve_name("Tc") == (node, "synonym:exact") and g.resolve_name("tc") == (node, "synonym:exact")
+    assert genes_of(track.convert("Tc"), best=False) == ["ENSMUSG1.1"]
+    assert genes_of(track.convert("tc"), best=False) == ["ENSMUSG2.1"]
+    assert g.resolve_name("TC") == (node, "synonym:case")
+    assert genes_of(track.convert("TC"), best=False) == ["ENSMUSG1.1", "ENSMUSG2.1"]
+    assert {m.gene for m in g.genes_named("Tc")} == {"ENSMUSG1.1"}
+    assert {m.gene for m in g.genes_named("tc")} == {"ENSMUSG2.1"}
+    assert {m.gene for m in g.genes_named("TC", fold_case=True)} == {"ENSMUSG1.1", "ENSMUSG2.1"}
+    assert {(m.name, m.gene) for m in g.genes_named("TC", fold_case=True)} == {
+        ("Tc", "ENSMUSG1.1"),
+        ("tc", "ENSMUSG2.1"),
+    }  # each name as its link writes it (decision 56: a synonym without the graph's prefix)
+    assert [m.name for m in g.names_of("ENSMUSG2.1") if m.synonym] == ["tc"]
+    # decision 56: synonyms are no target database
+    with pytest.raises(UnknownDatabaseError, match="no target"):
+        track.gene_to_database("ENSMUSG1.1", synonym)
+    path = os.path.join(str(tmp_path), "links.npz")
+    g.save(path)
+    loaded = TheGraph.load(path)
+    assert genes_of(Track(loaded).convert("Tc"), best=False) == ["ENSMUSG1.1"]
+    assert loaded.record.content_digest == g.record.content_digest
 
 
 def test_frozen_parallel_assembly_does_not_supply_the_spelling_of_a_release_it_does_not_serve(monkeypatch, tmp_path):
@@ -655,7 +928,7 @@ def test_name_as_a_database_wrote_it_at_the_release_is_an_exact_match(monkeypatc
     then = api.convert("PRR2", from_release=113, to_release=113)
     assert (then.graph_id, then.match, list(then.targets("best"))) == ("prr2", "exact", ["ENSSSCG1.1"])
     now = api.convert("PRR2", from_release=115)
-    assert (now.graph_id, now.match, list(now.targets("best"))) == (synonym + "PRR2", "synonym:exact", ["ENSSSCG2.1"])
+    assert (now.graph_id, now.match, list(now.targets("best"))) == ("PRR2", "synonym:exact", ["ENSSSCG2.1"])
     back = api.convert("PRR2", to_release=113)
     assert (back.graph_id, back.match, list(back.targets("best")), back.from_release) == (
         "prr2",
@@ -713,7 +986,8 @@ def test_string_exists_at_a_release_only_on_the_assembly_that_serves_it(monkeypa
         assert g.resolve_name("oldn", release) == (f"{synonym}OLDN", "synonym:case")
     assert g.resolve_name("OLDN", 75) == ("OLDN", "exact") and g.resolve_name("OLDN", 74) == ("OLDN", "exact")
     assert g.resolve_name("OLDN", None, symbol) == ("OLDN", "exact")  # named as a symbol: the symbol it was
-    assert g.resolve_name("OLDN", 77, f"{synonym}{symbol}") == (f"{synonym}OLDN", "synonym:exact")
+    # decision 56: the database's synonyms come after all its names (a name of it at another release first)
+    assert g.resolve_name("OLDN", 77, symbol) == ("OLDN", "exact")
     # a name that GRCh38 gave up and nothing replaced: found where it exists, which is not at release 77
     assert g.resolve_name("GONE") == ("GONE", "exact") and g._exists_at("GONE", 77, None) == (False, True)
     assert g._exists_at("GONE", 75, None) == (True, True) and g._exists_at("GONE", 77, symbol) == (False, True)
@@ -735,7 +1009,7 @@ def test_string_exists_at_a_release_only_on_the_assembly_that_serves_it(monkeypa
     for from_release in (None, 77):
         today = api.convert("OLDN", from_release=from_release)
         assert (today.graph_id, today.match, list(today.targets("best"))) == (
-            synonym + "OLDN",
+            "OLDN",
             "synonym:exact",
             ["ENSG2.1"],
         )
@@ -777,13 +1051,17 @@ def test_suffix_of_an_external_id_is_never_cut_off(monkeypatch, tmp_path):
     assert g.resolve_name("WNT4_713028147") == (None, None)
 
 
-def test_ensembl_versions_are_read_with_any_separator(monkeypatch, tmp_path):
-    """``ENSG..._2`` is ``ENSG....2``; a symbol followed by ``.<digits>`` is not the symbol."""
+def test_ensembl_versions_are_read_after_a_dot_only(monkeypatch, tmp_path):
+    """An Ensembl version is read after ``.`` only; a symbol followed by ``.<digits>`` is not the symbol.
+
+    ``ENSG..._2`` and ``ENSG...-2`` are a tool's suffix for a repeated name as often as a version: they stay not found.
+    """
     g = build(symbols_world(), monkeypatch, tmp_path, 111)
 
     assert g.resolve_name("ENSSSCG1.1") == ("ENSSSCG1.1", "exact")
-    assert g.resolve_name("ENSSSCG1_1") == ("ENSSSCG1.1", "separator")
-    assert g.resolve_name("ensssCG1-1") == ("ENSSSCG1.1", "separator")
+    assert g.resolve_name("ensssCG1.1") == ("ENSSSCG1.1", "case")
+    assert g.resolve_name("ENSSSCG1_1") == (None, None)
+    assert g.resolve_name("ensssCG1-1") == (None, None)
     assert g.resolve_name("SLA.1") == ("SLA-1", "separator")  # as R writes `SLA-1`; not a version of `SLA`
     assert g.resolve_name("SLA.7") == (None, None)  # `SLA` is a VGNC symbol: nothing is cut off a symbol
     assert g.resolve_name("ENSSSCG1") == ("ENSSSCG1", "exact")
@@ -799,12 +1077,12 @@ def versions_world():
         {"ENSSSCG1": [(110, 111, 2), (112, 115, 4)], "ENSSSCG2": [(110, 112, 6)], "ENSSSCG3": [(110, 115, 1)]}
     )
     per_release = [
-        ("ENSSSCT3.1", "NM_0001", "RefSeq_mRNA", 111, "transcript"),
-        ("ENSSSCP3.1", "P04637", "Uniprot/SWISSPROT", 111, "translation"),
+        ("ENSSSCT3.1", "NM_0001", "RefSeq_mRNA", 111, "transcript", {"version": 9}),
+        ("ENSSSCP3.1", "P04637", "Uniprot/SWISSPROT", 111, "translation", {"version": 4}),
         ("ENSSSCG3.1", "SLA", "VGNC Symbol", 111),
         ("ENSSSCG3.1", "ABC1", "UniProtKB Gene Name", 111),
         # one string that is a RefSeq accession and a gene symbol
-        ("ENSSSCT3.1", "BOTH", "RefSeq_mRNA", 111, "transcript"),
+        ("ENSSSCT3.1", "BOTH", "RefSeq_mRNA", 111, "transcript", {"version": 3}),
         ("ENSSSCG3.1", "BOTH", "VGNC Symbol", 111),
     ]
     return World("sus_scrofa", {111: genes}, externals={115: per_release, 114: per_release})
@@ -818,9 +1096,11 @@ def test_version_newer_than_the_graph_is_read_as_the_latest_version(monkeypatch,
     g = GraphMaker(world.manager(tmp_path, 111)).construct_graph()
 
     assert g.versions_of("ENSSSCG1") == ("ENSSSCG1.2", "ENSSSCG1.4")
-    for written in ("ENSSSCG1.5", "ENSSSCG1.99", "ENSSSCG1_5", "ensssCG1-5"):
+    for written in ("ENSSSCG1.5", "ENSSSCG1.99", "ensssCG1.5"):
         assert g.resolve_name(written) == ("ENSSSCG1.4", "version_newer_than_graph"), written
         assert g.known_versions(written) == ("ENSSSCG1.2", "ENSSSCG1.4")
+    for written in ("ENSSSCG1_5", "ensssCG1-5"):  # no version: not found, and no version to name
+        assert g.resolve_name(written) == (None, None) and g.known_versions(written) == (), written
     # transcripts and translations have no node without version: the same rule through their versions
     assert g.resolve_name("ENSSSCT1.2") == ("ENSSSCT1.1", "version_newer_than_graph")
     assert g.resolve_name("ENSSSCP3.7") == ("ENSSSCP3.1", "version_newer_than_graph")
@@ -845,7 +1125,6 @@ def test_other_unknown_versions_match_nothing_and_the_versions_that_exist_are_na
     cases = {
         "ENSSSCG1.1": ("ENSSSCG1.2", "ENSSSCG1.4"),  # lower than every version
         "ENSSSCG1.3": ("ENSSSCG1.2", "ENSSSCG1.4"),  # in a gap
-        "ENSSSCG1_3": ("ENSSSCG1.2", "ENSSSCG1.4"),
         "ENSSSCG2.7": ("ENSSSCG2.6",),  # higher, but the id was retired after 112: the graph knows all its versions
         "ENSSSCG2.5": ("ENSSSCG2.6",),
         "ENSSSCT2.9": ("ENSSSCT2.1",),  # a transcript of the retired gene
@@ -858,21 +1137,26 @@ def test_other_unknown_versions_match_nothing_and_the_versions_that_exist_are_na
         assert caught.value.versions == held and caught.value.identifier == written
         assert ", ".join(held) in str(caught.value)
     # not an Ensembl id of the graph at all: unknown, with nothing to name
-    for written in ("ENSSSCG9.1", "NOPE.3", "SLA.7"):
+    for written in ("ENSSSCG9.1", "NOPE.3", "SLA.7", "ENSSSCG1_3"):
         assert g.resolve_name(written) == (None, None) and g.known_versions(written) == ()
         assert nothing(track.convert(written))
 
 
 def test_version_suffix_is_cut_only_off_ids_of_accession_databases(monkeypatch, tmp_path):
-    """Decision 20: `NM_0001.9` is `NM_0001`; a symbol, a gene name, or a string that is also a symbol is not cut."""
+    """Decision 20 with I140: `NM_0001.9` is `NM_0001` with the version its link attached; a symbol is never cut.
+
+    A version above every version the links attached is the latest, flagged (`NM_0001.12`); a symbol, a gene name, or
+    a string that is also a symbol is not cut, whatever version a link of it attaches (`BOTH.3`).
+    """
     world = versions_world()
     os.makedirs(tmp_path, exist_ok=True)
     world.install(monkeypatch)
     g = GraphMaker(world.manager(tmp_path, 111)).construct_graph()
 
     assert g.resolve_name("NM_0001.9") == ("NM_0001", "version")
-    assert g.resolve_name("nm_0001.12") == ("NM_0001", "version")
+    assert g.resolve_name("nm_0001.12") == ("NM_0001", "version_newer_than_graph")
     assert g.resolve_name("P04637.4") == ("P04637", "version")
+    assert g.resolve_name("P04637.2") == (None, None) and g.known_versions("P04637.2") == ("P04637.4",)
     assert g.resolve_name("NM_0001_9") == (None, None) and g.resolve_name("NM_0001-9") == (None, None)
     assert g.resolve_name("SLA.7") == (None, None)  # a symbol of the organism
     assert g.resolve_name("ABC1.2") == (None, None)  # a gene name of UniProt: not an accession
@@ -968,17 +1252,19 @@ def test_string_means_the_node_that_exists_at_the_release_asked_about(monkeypatc
     # two names that differ in the separator only: the one of the release
     assert g.resolve_name("ab.1") == ("Ab_1", "separator") and g.resolve_name("ab.1", 103) == ("Ab-1", "separator")
     assert g.resolve_name("Ab-1") == ("Ab_1", "separator") and g.resolve_name("Ab-1", 103) == ("Ab-1", "exact")
-    # where none of them exists (a release the graph does not have): the first in the order of the steps
-    assert g.resolve_name("slit2", 90) == (f"{synonym}slit2", "synonym:exact")
-    assert g.resolve_name("Apc10", 90) == ("Apc10", "exact") and g.resolve_name("ab.1", 90) == ("Ab-1", "separator")
+    # where none of them exists (a release the graph does not have): the readings of the latest release at which one
+    # exists (106), by the order of the steps there
+    assert g.resolve_name("slit2", 90) == ("Slit2", "case")
+    assert g.resolve_name("Apc10", 90) == (f"{synonym}Apc10", "synonym:exact")
+    assert g.resolve_name("ab.1", 90) == ("Ab_1", "separator")
+    assert not g.readings("slit2", 90).here
     # a string that is spelt as a node says so when asked for it, and is still read by existence
     assert g.resolve_name(f"{synonym}slit2") == (f"{synonym}slit2", "exact")  # nothing else it can mean
     assert g.resolve_name("slit2", np.int64(103)) == (f"{synonym}slit2", "synonym:exact")
 
     # with the database named, a node exists where it is an id of that database
     symbol = "MGI Symbol"
-    assert g.resolve_name("Apc10", None, symbol) == ("Apc10", "exact")  # today's synonym is no MGI symbol
-    assert g.resolve_name("Apc10", None, f"{synonym}{symbol}") == (f"{synonym}Apc10", "synonym:exact")
+    assert g.resolve_name("Apc10", None, symbol) == ("Apc10", "exact")  # MGI's names before its synonyms (56)
     assert g.resolve_name("slit2", 103, symbol) == ("Slit2", "case")  # the old synonym is no MGI symbol either
     assert g.resolve_name("ab.1", None, symbol) == ("Ab_1", "separator")
     assert g.resolve_name("ab.1", 103, symbol) == ("Ab-1", "separator")
@@ -995,7 +1281,7 @@ def test_ensembl_id_is_never_passed_over_for_a_synonym_spelt_the_same(monkeypatc
         assert g.resolve_name("ENSMUSG5", release) == ("ENSMUSG5", "exact")
         assert g.resolve_name("ensmusg5", release) == ("ENSMUSG5", "case")
         assert g.resolve_name("ENSMUSG5.1", release) == ("ENSMUSG5.1", "exact")
-        assert g.resolve_name("ENSMUSG5_1", release) == ("ENSMUSG5.1", "separator")
+        assert g.resolve_name("ensmusg5.1", release) == ("ENSMUSG5.1", "case")
     track = Track(g)
     # its successor, not the gene of today's synonym
     assert genes_of(track.convert("ENSMUSG5"), best=False) == ["ENSMUSG3.1"]
@@ -1027,46 +1313,41 @@ def test_engine_and_api_read_a_string_by_the_one_rule_of_the_graph(monkeypatch, 
     named = track.convert("Apc10", from_database="MGI Symbol")
     assert genes_of(named, best=False) == ["ENSMUSG3.1"] and named.from_release == 104
     assert genes_of(track.convert("slit2", from_database="MGI Symbol"), best=False) == ["ENSMUSG2.1"]
-    as_synonym = track.convert("Slit2", from_database=f"{synonym}MGI Symbol")  # the name is no synonym: the old one
-    assert genes_of(as_synonym, best=False) == ["ENSMUSG1.1"] and as_synonym.graph_id == f"{synonym}slit2"
-    assert nothing(track.convert("Ab_1", from_database=f"{synonym}MGI Symbol"))  # an id of the other database only
+    # decision 56: a database's synonyms are read under its name; the graph's name of them is no database
+    with pytest.raises(UnknownDatabaseError, match="own name"):
+        track.convert("Slit2", from_database=f"{synonym}MGI Symbol")
     with pytest.raises(UnknownDatabaseError, match="not an external database of this graph"):
         track.convert("nothing at all", from_database="No Such Database")
 
     api = API.build("mus_musculus", 106, str(tmp_path))
     today = api.convert("Apc10")
-    assert (today.graph_id, today.match, list(today.targets("best"))) == (
-        ids.SYNONYM_PREFIX + "Apc10",
-        "synonym:exact",
-        ["ENSMUSG4.1"],
-    )
+    assert (today.graph_id, today.match, list(today.targets("best"))) == ("Apc10", "synonym:exact", ["ENSMUSG4.1"])
     then = api.convert("Apc10", from_release=103)
     assert (then.graph_id, then.match, list(then.targets("best"))) == ("Apc10", "exact", ["ENSMUSG3.1"])
     lower = api.convert("slit2")
     assert (lower.graph_id, lower.match, list(lower.targets("best"))) == ("Slit2", "case", ["ENSMUSG2.1"])
     old = api.convert("slit2", from_release=104)
-    assert (old.graph_id, old.match, list(old.targets("best"))) == (f"{synonym}slit2", "synonym:exact", ["ENSMUSG1.1"])
+    assert (old.graph_id, old.match, list(old.targets("best"))) == ("slit2", "synonym:exact", ["ENSMUSG1.1"])
     # spelt exactly as today's name, asked from a release that had only the synonym in another letter case
     spelt = api.convert("Slit2", from_release=103)
     assert (spelt.graph_id, spelt.match, list(spelt.targets("best"))) == (
-        f"{synonym}slit2",
+        "slit2",
         "synonym:case",
         ["ENSMUSG1.1"],
     )
     assert spelt.from_release_fallback is False
-    # a release at which nothing the string can mean exists: read where it is held, by the rule without a release
-    moved = api.convert(f"{synonym}ENSMUSG5", from_release=103)
-    assert moved.from_release_fallback is True and moved.from_release == 106
-    assert (moved.graph_id, moved.match) == (f"{synonym}ENSMUSG5", "exact")
-    assert list(moved.targets("best")) == ["ENSMUSG4.1"]
+    # decision 56: the graph's name of a synonym is no identifier
+    with pytest.raises(InvalidArgumentError, match="internal prefix"):
+        api.convert(f"{synonym}ENSMUSG5", from_release=103)
     as_symbol = api.convert("Apc10", from_database="MGI Symbol")
     assert (as_symbol.graph_id, as_symbol.match, list(as_symbol.targets("best"))) == ("Apc10", "exact", ["ENSMUSG3.1"])
     batch = api.convert_many(["Apc10", "ENSMUSG5"])
     assert [list(item.targets()) for item in batch] == [["ENSMUSG4.1"], ["ENSMUSG3.1"]]
 
-    # the source of a list is inferred from the nodes the strings mean at the last release of the graph
+    # decision 79: the source of a list is inferred from what each string means at each release: the old name at 103
+    # and 104; at 105 and 106 it is only today's synonym, which places no list
     counts = dict(map(tuple, api.infer_source(["Apc10"], mode="release", report_only_winner=False)))
-    assert counts == {105: 1, 106: 1}
+    assert counts == {103: 1, 104: 1}
 
 
 def test_unknown_identifier_with_many_separators_is_answered_at_once(monkeypatch, tmp_path):
@@ -1114,7 +1395,7 @@ def test_base_gene_id_listed_as_external_id_stays_a_base_id(monkeypatch, tmp_pat
     assert g.node_type("ENSMUSG1") == ids.BASE_ENSEMBL_TYPE["gene"]
     assert ids.BASE_ENSEMBL_TYPE["gene"] not in g.available_external_databases
     assert g.available_external_databases == {"MGI Symbol"}
-    assert g.graph["misplaced_external_entry"] == {"ENSMUSG1"}
+    assert g.misplaced_external_entries == ("ENSMUSG1",)
     assert [n for n, _ in g.xref_edges("ENSMUSG1")] == ["ENSMUSG1.1"]
 
 
@@ -1147,9 +1428,9 @@ def test_all_inclusive_ranges_of_a_gene_that_never_lived_on_the_primary_assembly
     assert g.get_active_ranges_of_id_ensembl_all_inclusive("ENSSSCG1.1") == [[88, 89]]
     assert g.get_active_ranges_of_base_id_alternative("ENSSSCG1") == [[88, 89]]
     assert g.get_active_ranges_of_base_id_alternative("ENSSSCG2") == [[88, 91]]
-    assert g.graph["backbone_assembly"] == g.serving_assembly == {88: 102, 89: 102, 90: 111, 91: 111}
+    assert g.record.serving_assembly == g.serving_assembly == {88: 102, 89: 102, 90: 111, 91: 111}
     assert g.assembly_releases == {102: (88, 89), 111: (90, 91)}
-    assert g.manifest["releases_per_assembly"] == {"102": [88, 89], "111": [90, 91]}
+    assert g.record.releases_per_assembly == {102: (88, 89), 111: (90, 91)}
 
 
 def test_relation_of_a_transcript_is_named_after_the_assembly_of_the_edge():
@@ -1173,23 +1454,19 @@ def test_relation_of_a_transcript_is_named_after_the_assembly_of_the_edge():
     assert g.serving_assembly == {73: 102, 74: 102, 90: 111}  # derived from the edges of a graph made by hand
 
 
-def test_backbone_follows_the_primary_assembly_where_it_has_the_release(monkeypatch, tmp_path):
-    """With the older of two overlapping assemblies as primary, the backbone is that assembly's ids (graph-6)."""
+def test_backbone_follows_the_assembly_that_serves_each_release(monkeypatch, tmp_path):
+    """The backbone holds the ids of the default primary assembly where it has the release (graph-6, decision 58)."""
     grch37 = lifetimes({"ENSG1": [(100, 101, 1)], "ENSG2": [(100, 101, 1)]})
     grch38 = lifetimes({"ENSG1": [(100, 100, 1), (101, 101, 2)], "ENSG2": [(100, 100, 1)]})
     world = World("homo_sapiens", {37: grch37, 38: grch38})
 
-    g37 = build(world, monkeypatch, tmp_path / "a", 37)
-    assert g37.graph["backbone_assembly"] == {100: 37, 101: 37}
-    assert g37.active_ranges("ENSG1.1") == [[100, INF]]
-    assert g37.active_ranges("ENSG2.1") == [[100, INF]]
-    assert "ENSG1.2" not in g37
-
     g38 = build(world, monkeypatch, tmp_path / "b", 38)
-    assert g38.graph["backbone_assembly"] == {100: 38, 101: 38}
+    assert g38.serving_assembly == {100: 38, 101: 38}
     assert g38.active_ranges("ENSG1.1") == [[100, 100]]
     assert g38.active_ranges("ENSG1.2") == [[101, INF]]
     assert g38.active_ranges("ENSG2.1") == [[100, 100]]
+    with pytest.raises(InvalidArgumentError, match="default primary assembly"):
+        build(world, monkeypatch, tmp_path / "a", 37)  # the frozen GRCh37 is no primary assembly at 101
 
 
 def test_graph_of_an_earlier_primary_assembly_ends_at_its_last_release(monkeypatch, tmp_path):
@@ -1253,6 +1530,19 @@ def test_release_sets_are_shared_immutable_and_carry_their_mask(monkeypatch, tmp
             assert connection.releases == union
     with pytest.raises(AttributeError):
         stat2.releases.add(116)
+
+
+def test_a_release_set_gives_its_runs_of_consecutive_releases():
+    """The one helper of release ranges (the explained path's places and non-reference ranges read it).
+
+    Fails if a run is cut at a word boundary of the mask (64), if a single release is lost, or if the ends are off by
+    one.
+    """
+    assert ReleaseSet.of([]).ranges() == ()
+    assert ReleaseSet.of([7]).ranges() == ((7, 7),)
+    assert ReleaseSet.of([1, 2, 3, 5, 60, 61, 62, 63, 64, 65, 115]).ranges() == ((1, 3), (5, 5), (60, 65), (115, 115))
+    releases = [r for r in range(48, 116) if r % 7]
+    assert [r for a, b in ReleaseSet.of(releases).ranges() for r in range(a, b + 1)] == releases
 
 
 def test_release_set_and_connection_survive_pickling_as_the_same_objects():
@@ -1333,13 +1623,13 @@ def test_compact_ranges_leaves_its_argument_alone():
 
 
 def test_graph_file_is_self_describing_and_loads_without_network(monkeypatch, tmp_path):
-    """The file carries its manifest and is read back identically with no manager and no connection."""
+    """The file carries its record and is read back identically with no manager and no connection."""
     world = symbols_world()
     world.install(monkeypatch)
     maker = GraphMaker(world.manager(tmp_path, 111))
     built = maker.get_graph(forms=["gene"])
     path = maker.create_file_name(forms=["gene"])
-    assert os.path.basename(path) == "graph_sus_scrofa_assembly111_min113_max115_narrow_formsgene.npz"
+    assert os.path.basename(path) == "graph_sus_scrofa_assembly111_min113_max115_formsgene.npz"
 
     def no_network(*args, **kwargs):
         raise AssertionError("loading a graph must not open a connection")
@@ -1348,26 +1638,35 @@ def test_graph_file_is_self_describing_and_loads_without_network(monkeypatch, tm
     monkeypatch.setattr(DatabaseManager, "__init__", no_network)
     loaded = TheGraph.load(path)
     by_request = GraphMaker.load_graph(str(tmp_path), "sus_scrofa", 115, first_release=113, forms=["gene"])
-    assert by_request.manifest == loaded.manifest and by_request.graph["genome_assembly"] == 111
-    os.link(path, files.graph_file_path(str(tmp_path), "sus_scrofa", 102, 113, 115, forms=["gene"]))
-    with pytest.raises(GraphMismatchError, match="genome_assembly"):
-        GraphMaker.load_graph(str(tmp_path), "sus_scrofa", 115, assembly=102, first_release=113, forms=["gene"])
+    assert by_request.record == loaded.record and by_request.primary_assembly == 111
+    os.link(path, files.graph_file_path(str(tmp_path), "sus_scrofa", 111, 56, 115, forms=["gene"]))
+    with pytest.raises(GraphMismatchError, match="first_release: file has 113, asked for 56"):
+        GraphMaker.load_graph(str(tmp_path), "sus_scrofa", 115, forms=["gene"])
     with pytest.raises(GraphFileError, match="No graph file"):
         GraphMaker.load_graph(str(tmp_path), "sus_scrofa", 114, first_release=113, forms=["gene"])
 
-    manifest = loaded.manifest
-    for field in ("format_version", "package_version", "organism", "genome_assembly", "ignore_before", "ignore_after",
-                  "snapshot_release", "forms", "externals_fingerprint", "organism_table_fingerprint", "build_date",
-                  "releases_per_assembly", "tables", "history", "content_digest"):  # fmt: skip
-        assert field in manifest, field
-    assert (manifest["organism"], manifest["genome_assembly"], manifest["snapshot_release"]) == ("sus_scrofa", 111, 115)
-    assert manifest["releases_per_assembly"] == {"111": [113, 114, 115]}
+    record = loaded.record
+    assert (record.organism, record.primary_assembly, record.first_release, record.window_end) == (
+        "sus_scrofa",
+        111,
+        113,
+        115,
+    )
+    assert record.snapshot_release == 115 and record.forms == ("gene",) and record.package_version
+    assert record.releases_per_assembly == {111: (113, 114, 115)} and record.serving_assembly == {
+        113: 111,
+        114: 111,
+        115: 111,
+    }
+    assert record.externals_settings == {113: 113, 114: 114, 115: 115}
+    assert set(record.identity()) == set(idtrack.graph.record.IDENTITY_FIELDS)
+    assert record.content_digest and record.tables and record.history and record.build_date
     assert frozen(loaded) and list(loaded.nodes) == list(built.nodes)
     for node in built.nodes:
         assert loaded.xref_edges(node) == built.xref_edges(node)
         assert repr(loaded.history_edges(node)) == repr(built.history_edges(node))
         assert loaded.nodes[node] == built.nodes[node]
-    assert loaded.graph["confident_for_release"] == [113, 114, 115]
+    assert loaded.releases == (113, 114, 115)
     assert loaded.hyperconnective_nodes == built.hyperconnective_nodes == {}
     assert loaded.shared_external_ids == built.shared_external_ids == {}
     assert loaded.available_external_databases == built.available_external_databases
@@ -1378,30 +1677,21 @@ def test_graph_file_is_self_describing_and_loads_without_network(monkeypatch, tm
     assert loaded.spelling("STAT2", "UniProtKB Gene Name") == "stat2"
 
 
-def test_graphs_of_different_primary_assemblies_are_different_files(monkeypatch, tmp_path):
-    """The file name carries the primary assembly; a file of another graph is never returned (graph-5)."""
+def test_graph_file_name_carries_the_primary_assembly(monkeypatch, tmp_path):
+    """The file name carries the primary assembly, which is the organism's default at the snapshot (graph-5)."""
     grch37 = lifetimes({"ENSG1": [(100, 101, 1)]})
     grch38 = lifetimes({"ENSG1": [(100, 100, 1), (101, 101, 2)]})
     world = World("homo_sapiens", {37: grch37, 38: grch38})
     world.install(monkeypatch)
-    maker38, maker37 = GraphMaker(world.manager(tmp_path, 38)), GraphMaker(world.manager(tmp_path, 37))
+    maker38 = GraphMaker(world.manager(tmp_path, 38))
 
     g38 = maker38.get_graph(forms=["gene"])
-    g37 = maker37.get_graph(forms=["gene"])
-    assert maker38.create_file_name(forms=["gene"]) != maker37.create_file_name(forms=["gene"])
-    assert g38.graph["genome_assembly"] == 38 and "ENSG1.2" in g38
-    assert g37.graph["genome_assembly"] == 37 and "ENSG1.2" not in g37
-    assert maker37.get_graph(forms=["gene"]).graph["genome_assembly"] == 37  # loaded from its own file
+    assert g38.primary_assembly == 38 and "ENSG1.2" in g38
+    assert maker38.get_graph(forms=["gene"]).record == g38.record  # loaded from its file
     found = files.list_graph_files(str(tmp_path), "homo_sapiens")
     assert [(f["assembly"], f["first_release"], f["snapshot_release"], f["forms"]) for f in found] == [
-        (37, 100, 101, ["gene"]),
         (38, 100, 101, ["gene"]),
     ]
-
-    # the file of one graph under the name of the other is refused, with the difference named
-    os.replace(maker38.create_file_name(forms=["gene"]), maker37.create_file_name(forms=["gene"]))
-    with pytest.raises(GraphMismatchError, match="genome_assembly: file has 38, asked for 37"):
-        maker37.get_graph(forms=["gene"])
 
 
 def test_graph_built_for_another_selection_of_external_databases_is_refused(monkeypatch, tmp_path):
@@ -1476,15 +1766,15 @@ def test_selection_entries_that_never_produce_an_edge_are_not_part_of_the_identi
     pig_selection(tmp_path / "a", tidy)
     pig_selection(tmp_path / "b", untidy)
     one, two = graph("a"), graph("b")
-    assert one.manifest["externals_fingerprint"] == two.manifest["externals_fingerprint"]
-    assert one.manifest["content_digest"] == two.manifest["content_digest"]
+    assert one.record.externals_fingerprint == two.record.externals_fingerprint
+    assert one.record.content_digest == two.record.content_digest
 
     # each file is the graph of the other selection too
     pig_selection(tmp_path / "a", untidy)
     pig_selection(tmp_path / "b", tidy)
     assert list(graph("a").nodes) == list(one.nodes) and list(graph("b").nodes) == list(two.nodes)
     loaded = GraphMaker.load_graph(str(tmp_path / "a"), "sus_scrofa", 115, forms=["gene"])
-    assert loaded.manifest["build_date"] == one.manifest["build_date"]
+    assert loaded.record.build_date == one.record.build_date
 
 
 @pytest.mark.parametrize(
@@ -1546,11 +1836,12 @@ def test_interrupted_write_leaves_the_previous_file(monkeypatch, tmp_path):
     with open(path, "rb") as handle:
         before = handle.read()
 
-    def dies(handle, **arrays):
-        handle.write(b"partial")
+    def dies(target, arrays):
+        with open(target, "wb") as handle:
+            handle.write(b"partial")
         raise KeyboardInterrupt
 
-    monkeypatch.setattr(np, "savez", dies)
+    monkeypatch.setattr(graph_module, "_write_arrays", dies)
     with pytest.raises(KeyboardInterrupt):
         graph.save(path)
     with open(path, "rb") as handle:
@@ -1561,6 +1852,41 @@ def test_interrupted_write_leaves_the_previous_file(monkeypatch, tmp_path):
     with pytest.raises(KeyboardInterrupt):
         graph.save(fresh)
     assert not os.path.exists(fresh)
+
+
+def test_file_deflates_the_arrays_that_shrink_and_reads_them_in_threads(monkeypatch, tmp_path):
+    """Members that deflating makes a tenth smaller are deflated, arrays of hashes are stored.
+
+    np.load reads the file, and the threaded reader gives the same arrays with one thread and with several (decision 54).
+    """
+    import zipfile
+
+    world = symbols_world()
+    world.install(monkeypatch)
+    maker = GraphMaker(world.manager(tmp_path, 111))
+    maker.get_graph(forms=["gene"])
+    path = maker.create_file_name(forms=["gene"])
+    rng = np.random.default_rng(0)
+    arrays = {"hashes": rng.integers(0, 2**63, 4096, dtype=np.int64), "runs": np.repeat(np.arange(64), 64)}
+    target = os.path.join(str(tmp_path), "two.npz")
+    graph_module._write_arrays(target, arrays)
+    with zipfile.ZipFile(target) as archive:
+        methods = {info.filename: info.compress_type for info in archive.infolist()}
+    assert methods == {"hashes.npy": zipfile.ZIP_STORED, "runs.npy": zipfile.ZIP_DEFLATED}
+    with np.load(target) as loaded:
+        assert all(np.array_equal(loaded[name], arrays[name]) for name in arrays)
+    with np.load(path) as loaded:
+        expected = {name: loaded[name] for name in loaded.files}
+    for threads in (1, 4):
+        monkeypatch.setattr(graph_module, "_READ_THREADS", threads)
+        got = graph_module._read_arrays(path)
+        assert sorted(got) == sorted(expected)
+        for name, array in got.items():
+            assert (array.dtype, array.shape, array.tobytes()) == (
+                expected[name].dtype,
+                expected[name].shape,
+                expected[name].tobytes(),
+            ), name
 
 
 def test_file_is_the_same_before_and_after_using_the_graph(monkeypatch, tmp_path):
@@ -1586,7 +1912,7 @@ def test_two_builds_of_the_same_tables_have_the_same_content(monkeypatch, tmp_pa
     one = build(world, monkeypatch, tmp_path / "a", 111)
     two = build(world, monkeypatch, tmp_path / "b", 111)
 
-    assert one.manifest["content_digest"] == two.manifest["content_digest"]
+    assert one.record.content_digest == two.record.content_digest
     assert list(one.nodes) == sorted(one.nodes) == list(two.nodes)
 
 
@@ -1600,7 +1926,7 @@ def test_manifest_records_the_tables_the_graph_was_built_from(monkeypatch, tmp_p
     world.assemblies[102][88]["ENSSSCG9"] = 1  # one more gene on the earlier assembly
     other = build(world, monkeypatch, tmp_path / "c", 111)
 
-    recorded = one.manifest["source_tables"]
+    recorded = one.record.source_tables
     assert sorted(recorded) == ["102", "111"]
     for assembly in (102, 111):
         digests = (
@@ -1611,9 +1937,9 @@ def test_manifest_records_the_tables_the_graph_was_built_from(monkeypatch, tmp_p
         for name in sorted(digests):
             folded.update(f"{name}\t{digests[name]}\n".encode())
         assert recorded[str(assembly)] == {"tables": len(digests), "fingerprint": folded.hexdigest()}
-    assert again.manifest["source_tables"] == recorded
-    assert other.manifest["source_tables"]["102"]["fingerprint"] != recorded["102"]["fingerprint"]
-    assert other.manifest["source_tables"]["111"] == recorded["111"]
+    assert again.record.source_tables == recorded
+    assert other.record.source_tables["102"]["fingerprint"] != recorded["102"]["fingerprint"]
+    assert other.record.source_tables["111"] == recorded["111"]
 
 
 def test_external_table_naming_an_assembly_of_another_organism_stops_the_build(monkeypatch, tmp_path):
@@ -1678,7 +2004,7 @@ def test_mismatch_message_names_a_way_out_that_exists(monkeypatch, tmp_path):
     world.install(monkeypatch)
     maker = GraphMaker(world.manager(tmp_path, 111, first=organisms.first_release("sus_scrofa")))
     maker.get_graph()
-    path = str(tmp_path / "graph_sus_scrofa_assembly111_min56_max115_narrow.npz")
+    path = str(tmp_path / "graph_sus_scrofa_assembly111_min56_max115.npz")
     assert os.path.isfile(path)
 
     messages = []
@@ -1717,23 +2043,23 @@ def test_mismatch_message_names_a_way_out_that_exists(monkeypatch, tmp_path):
 
     # the way out through the API works as the message says: with the file moved away the graph is built again
     os.replace(path, path + ".aside")
-    os.link(path + ".aside", str(tmp_path / "graph_sus_scrofa_assembly111_min56_max114_narrow.npz"))
-    with pytest.raises(GraphMismatchError, match="ignore_after.*rebuild=True"):
+    os.link(path + ".aside", str(tmp_path / "graph_sus_scrofa_assembly111_min56_max114.npz"))
+    with pytest.raises(GraphMismatchError, match="window_end.*rebuild=True"):
         API.build("sus_scrofa", 114, str(tmp_path))  # the file of another graph under this graph's name
     api = API.build("sus_scrofa", 114, str(tmp_path), rebuild=True)
-    assert api.graph.graph["ensembl_release"] == 114 and api.releases() == [113, 114]
-    assert API.load(str(tmp_path / "graph_sus_scrofa_assembly111_min56_max114_narrow.npz")).releases() == [113, 114]
+    assert api.graph.snapshot_release == 114 and api.releases() == [113, 114]
+    assert API.load(str(tmp_path / "graph_sus_scrofa_assembly111_min56_max114.npz")).releases() == [113, 114]
     # and through the builder: `create_even_if_exist=True` replaces a file that is not the graph asked for
     os.link(path + ".aside", path)
-    os.remove(tmp_path / "graph_sus_scrofa_assembly111_min56_max114_narrow.npz")
-    os.link(path, str(tmp_path / "graph_sus_scrofa_assembly111_min56_max114_narrow.npz"))
+    os.remove(tmp_path / "graph_sus_scrofa_assembly111_min56_max114.npz")
+    os.link(path, str(tmp_path / "graph_sus_scrofa_assembly111_min56_max114.npz"))
     older = GraphMaker(world.manager(tmp_path, 111, first=organisms.first_release("sus_scrofa"), last=114))
     with pytest.raises(GraphMismatchError):
         older.get_graph()
-    assert older.get_graph(create_even_if_exist=True).graph["ensembl_release"] == 114
+    assert older.get_graph(create_even_if_exist=True).snapshot_release == 114
 
 
-def test_narrow_false_records_the_sessions_and_builds_with_two_sessions_of_one_release(monkeypatch, tmp_path):
+def test_session_details_record_the_sessions_and_build_with_two_sessions_of_one_release(monkeypatch, tmp_path):
     """Two sessions that name the same new release (human 113 to 114 and 114 to "114") do not stop the build."""
     genes = lifetimes({"G1": [(100, 100, 1)], "G2": [(101, 102, 1)], "G3": [(100, 101, 1)], "G4": [(102, 102, 1)]})
     world = World(
@@ -1742,13 +2068,13 @@ def test_narrow_false_records_the_sessions_and_builds_with_two_sessions_of_one_r
         events=[(424, "G1", 1, "G2", 1, 0.9), (425, "G3", 1, "G4", 1, 0.9)],
         sessions=[(424, 100, 101), (425, 101, 101)],
     )
-    g = build(world, monkeypatch, tmp_path, 38, narrow=False)
+    g = build(world, monkeypatch, tmp_path, 38, session_details=True)
 
-    sessions = {s["mapping_session_id"]: s for s in g.manifest["history"]["sessions"]}
+    sessions = {s["mapping_session_id"]: s for s in g.record.history["sessions"]}
     assert sessions[424]["used"] == [100, 101] and sessions[425]["used"] == [101, 102]
     assert sessions[425]["recorded"] == [101, 101] and sessions[425]["old_db_name"] == "homo_sapiens_core_101"
     assert g.active_ranges("G4.1") == [[102, INF]]
-    assert g.graph["name"] == "homo_sapiens_102_gene"
+    assert (g.organism, g.snapshot_release, g.record.forms) == ("homo_sapiens", 102, ("gene",))
 
 
 def test_frozen_graph_is_a_networkx_graph_that_cannot_be_changed(monkeypatch, tmp_path):
@@ -1783,26 +2109,32 @@ def test_versions_of_a_stable_id_are_found_without_a_base_node(monkeypatch, tmp_
     assert by_hand.versions_of("ENST2") == ("ENST2.9", "ENST2.10")
 
 
-def test_three_forms_and_an_id_that_exists_on_a_parallel_assembly_only(monkeypatch, tmp_path):
-    """The whole build with transcripts and translations, and a GRCh37 gene that GRCh38 never had."""
+def _three_forms_world(with_grch37_only_names: bool) -> World:
+    """GRCh37 and GRCh38 beside each other at releases 100 and 101; GRCh37 has a gene (ENSG7) that GRCh38 never had."""
     grch37 = lifetimes({"ENSG1": [(100, 101, 1)], "ENSG7": [(100, 101, 1)]})
     grch38 = lifetimes({"ENSG1": [(100, 100, 1), (101, 101, 2)]})
-    externals = {
+    externals: dict[int, list[tuple]] = {
         100: [
             ("ENSG1.1", "SYM", "HGNC Symbol", 38),
             ("ENSG1.1", "SYM", "HGNC Symbol", 37),
-            ("ENSG7.1", "OLD", "HGNC Symbol", 37),
             ("ENST1.1", "NM_1", "RefSeq_mRNA", 38, "transcript"),
             ("ENSP1.1", "P1", "Uniprot/SWISSPROT", 38, "translation"),
         ],
         101: [
             ("ENSG1.2", "SYM", "HGNC Symbol", 38),
             ("ENSG1.1", "SYM", "HGNC Symbol", 37),
-            ("ENSG7.1", "OLD", "HGNC Symbol", 37),
             ("ENST1.1", "NM_1", "RefSeq_mRNA", 38, "transcript"),
         ],
     }
-    world = World("homo_sapiens", {37: grch37, 38: grch38}, externals=externals)
+    if with_grch37_only_names:
+        for release in (100, 101):
+            externals[release].append(("ENSG7.1", "OLD", "HGNC Symbol", 37))
+    return World("homo_sapiens", {37: grch37, 38: grch38}, externals=externals)
+
+
+def test_three_forms_beside_a_parallel_assembly(monkeypatch, tmp_path):
+    """The whole build with transcripts and translations; a gene that only GRCh37 has is not a node (decision 58)."""
+    world = _three_forms_world(with_grch37_only_names=False)
     os.makedirs(tmp_path, exist_ok=True)
     world.install(monkeypatch)
     g = GraphMaker(world.manager(tmp_path, 38)).construct_graph()
@@ -1818,16 +2150,15 @@ def test_three_forms_and_an_id_that_exists_on_a_parallel_assembly_only(monkeypat
         ("assembly_38_ensembl_transcript", 38, 101),
     }
     assert g.versions_of("ENST1") == ("ENST1.1",)
-
-    # the gene that only GRCh37 has: a node of that assembly, with its transcript, translation and base id
-    assert g.node_type("ENSG7.1") == "assembly_37_ensembl_gene"
-    assert g.node_type("ENST7.1") == "assembly_37_ensembl_transcript"
-    assert g.node_type("ENSP7.1") == "assembly_37_ensembl_translation"
-    assert g.connection("ENST7.1", "ENSG7.1").as_dict == {"assembly_37_ensembl_transcript": {37: {100, 101}}}
-    assert g.connection("ENSG7", "ENSG7.1").as_dict == {"base_ensembl_gene": {37: {100, 101}}}
-    assert g.combined("ENSG7.1") == {"assembly_37_ensembl_gene": {37: {100, 101}}}
-    assert g.active_ranges("ENSG7.1") == [[100, 101]] and g.history_edges("ENSG7.1") == ()
-    assert g.connection("OLD", "ENSG7.1").as_dict == {"HGNC Symbol": {37: {100, 101}}}
+    assert "ENSG7.1" not in g and "ENSG7" not in g
+    assert set(g.record.counts) >= {"nodes", "history_edges", "cross_reference_edges"}
+    assert {g.node_type(node) for node in g.nodes} == {
+        "base_ensembl_gene",
+        "ensembl_gene",
+        "ensembl_transcript",
+        "ensembl_translation",
+        "external",
+    }
 
     # the gene of both assemblies: one backbone node, referred to on both
     assert g.connection("ENSG1", "ENSG1.1").as_dict == {"base_ensembl_gene": {37: {100, 101}, 38: {100}}}
@@ -1848,6 +2179,42 @@ def test_three_forms_and_an_id_that_exists_on_a_parallel_assembly_only(monkeypat
     assert table[("ensembl_gene", 38)] == table[("assembly_38_ensembl_gene", 38)] == {100, 101}
 
 
+def test_the_form_of_a_database_is_that_of_its_own_links(monkeypatch, tmp_path):
+    """An identifier two databases hold, one on genes and one on transcripts: each database keeps its own form."""
+    world = _three_forms_world(with_grch37_only_names=False)
+    for release in (100, 101):
+        world.externals[release].append(("ENST1.1", "SYM", "Clone_based_ensembl_transcript", 38, "transcript"))
+    os.makedirs(tmp_path, exist_ok=True)
+    world.install(monkeypatch)
+    g = GraphMaker(world.manager(tmp_path, 38)).construct_graph()
+
+    # SYM is linked to two genes by HGNC Symbol and to one transcript by the other database
+    assert g.external_database_connection_form["HGNC Symbol"] == "gene"
+    assert g.external_database_connection_form["Clone_based_ensembl_transcript"] == "transcript"
+
+
+def test_build_refuses_an_external_id_of_a_gene_that_only_another_assembly_has(monkeypatch, tmp_path):
+    """Decision 58: no node of one assembly only; a cross reference to such a gene stops the build and names it.
+
+    Under the removed rule the build added ``ENSG7.1`` as a node of type ``assembly_37_ensembl_gene`` (and its
+    transcripts) and went on; a graph on the primary assembly holds the ids of the assembly that serves each release.
+    """
+    world = _three_forms_world(with_grch37_only_names=True)
+    os.makedirs(tmp_path, exist_ok=True)
+    world.install(monkeypatch)
+    with pytest.raises(BuildError, match="'ENSG7.1' on assembly 37"):
+        GraphMaker(world.manager(tmp_path, 38)).construct_graph()
+
+
+def test_graph_maker_refuses_a_manager_of_another_assembly(monkeypatch, tmp_path):
+    """Decision 58: graphs are built on the organism's default primary assembly of the snapshot only."""
+    world = _three_forms_world(with_grch37_only_names=False)
+    os.makedirs(tmp_path, exist_ok=True)
+    world.install(monkeypatch)
+    with pytest.raises(InvalidArgumentError, match="default primary assembly"):
+        GraphMaker(world.manager(tmp_path, 37))
+
+
 # ---------------------------------------------------------------- genes outside the reference sequence (decision 18)
 
 
@@ -1865,6 +2232,47 @@ def patches_world(externals=None):
         38: {release: ["ENSG2", "LRG_1"] for release in (76, 77)},
     }
     return World("homo_sapiens", {37: grch37, 38: grch38}, externals=externals, non_reference=beside)
+
+
+def test_every_gene_version_has_its_place_on_the_assembly_that_serves_each_release(monkeypatch, tmp_path):
+    """Decision 72 (c): the graph keeps the place of every gene version (assembly, region, start, end, strand, kind).
+
+    ``ENSG3.1`` lay on a GRCh37 haplotype at 74 and 75 and lies on chromosome 1 of GRCh38 at 76 and 77: two places.
+    The places survive the file, are part of the content digest, and a node that is not a gene has none.
+    """
+    from idtrack.graph import Place
+
+    g = build(patches_world(), monkeypatch, tmp_path, 38)
+    on37 = Place(37, "CHR_PATCH_1", 2001, 2500, 1, ReleaseSet.of([74, 75]), "chromosome")
+    on38 = Place(38, "1", 3001, 3500, 1, ReleaseSet.of([76, 77]), "chromosome")
+    assert g.places("ENSG3.1") == (on37, on38)
+    assert g.places("ENSG5.1") == (Place(37, "CHR_PATCH_1", 3001, 3500, 1, ReleaseSet.of([74, 75]), "chromosome"),)
+    assert g.places("ENSG3") == () and g.places("ENSG3.Void") == ()
+    with pytest.raises(UnknownIdentifierError):
+        g.places("ENSG9.1")
+    assert g.record.counts["places"] == sum(len(g.places(node)) for node in g.nodes)
+
+    path = os.path.join(str(tmp_path), "places.npz")
+    g.save(path)
+    loaded = TheGraph.load(path)
+    assert all(loaded.places(node) == g.places(node) for node in g.nodes)
+
+    moved = patches_world()
+    moved.assemblies[38][77]["ENSG3"] = 1  # the same version; its table row stays, the place is computed from it
+    other = build(moved, monkeypatch, tmp_path / "moved", 38)
+    assert other.record.content_digest == g.record.content_digest
+    real_table = World.table
+
+    def shifted(self, manager, table_key):
+        table = real_table(self, manager, table_key)
+        if table_key == "gene" and int(manager.release) == 77:
+            table["seq_region_end"] = table["seq_region_end"] + 1
+        return table
+
+    monkeypatch.setattr(World, "table", shifted)
+    shifted_graph = build(patches_world(), monkeypatch, tmp_path / "shifted", 38)
+    assert shifted_graph.places("ENSG3.1")[-1] == Place(38, "1", 3001, 3501, 1, ReleaseSet.of([77]), "chromosome")
+    assert shifted_graph.record.content_digest != g.record.content_digest
 
 
 def test_genes_outside_the_reference_sequence_are_marked_for_the_assembly_that_serves_the_release(
@@ -1887,16 +2295,16 @@ def test_genes_outside_the_reference_sequence_are_marked_for_the_assembly_that_s
         assert g.non_reference_releases(other) == set(), other
     with pytest.raises(UnknownIdentifierError):  # a node the graph does not hold is the caller's (accuracy_track-17)
         g.non_reference_releases("ENSG9.1")
-    assert g.manifest["counts"]["non_reference_genes"] == 4
-    assert g.manifest["tables"]["generegion"] == {"tables": 4, "rows": 3 + 3 + 4 + 4}
+    assert g.record.counts["non_reference_genes"] == 4
+    assert g.record.tables["generegion"] == {"tables": 4, "rows": 3 + 3 + 4 + 4}
 
     # the mark is part of what a graph holds: the same world without it is another graph
     plain = patches_world(externals=world.externals)
     plain.non_reference = {}
     unmarked = build(plain, monkeypatch, tmp_path / "plain", 38)
-    assert unmarked.manifest["counts"]["non_reference_genes"] == 0
+    assert unmarked.record.counts["non_reference_genes"] == 0
     assert unmarked.non_reference_releases("ENSG2.1") == set()
-    assert unmarked.manifest["content_digest"] != g.manifest["content_digest"]
+    assert unmarked.record.content_digest != g.record.content_digest
     assert list(unmarked.nodes) == list(g.nodes)
 
 
@@ -2154,7 +2562,11 @@ def test_api_reports_the_copies_on_alternative_loci_apart(monkeypatch, tmp_path)
     batch = api.convert_many(["SYM", "ENSG2"])
     assert [list(item.alternative_locus_genes) for item in batch] == [["ENSG2.1", "LRG_1.1"], []]
     assert list(api.convert("COPIES").targets("all")) == ["ENSG2.1", "LRG_1.1"]
-    assert list(api.convert("LRG_1").targets("best")) == ["LRG_1.1"]
+    # decision 96: an LRG id answers the gene its record describes (here the gene whose symbol it carries), the
+    # record listed apart
+    record = api.convert("LRG_1")
+    assert (list(record.targets("best")), record.match) == (["ENSG1.1"], "lrg:exact")
+    assert "LRG_1.1" in record.alternative_locus_genes
 
 
 def test_symbol_that_two_databases_give_to_two_genes_is_one_gene_when_the_database_is_named(monkeypatch, tmp_path):
@@ -2316,7 +2728,7 @@ def test_api_loads_a_graph_file_without_manager_or_network_and_converts(monkeypa
     world = symbols_world()
     world.install(monkeypatch)
     built = GraphMaker(world.manager(tmp_path, 111, first=organisms.first_release("sus_scrofa"))).get_graph()
-    assert os.path.exists(tmp_path / "graph_sus_scrofa_assembly111_min56_max115_narrow.npz")
+    assert os.path.exists(tmp_path / "graph_sus_scrofa_assembly111_min56_max115.npz")
 
     def refuse(*args, **kwargs):
         raise AssertionError("loading a stored graph must not open a connection or make a manager")
@@ -2325,7 +2737,7 @@ def test_api_loads_a_graph_file_without_manager_or_network_and_converts(monkeypa
     monkeypatch.setattr(DatabaseManager, "__init__", refuse)
     api = API.build("sus_scrofa", 115, str(tmp_path))
     assert list(api.graph.nodes) == list(built.nodes)
-    loaded = API.load(str(tmp_path / "graph_sus_scrofa_assembly111_min56_max115_narrow.npz"))
+    loaded = API.load(str(tmp_path / "graph_sus_scrofa_assembly111_min56_max115.npz"))
     assert list(loaded.graph.nodes) == list(built.nodes)
     assert api.releases() == [113, 114, 115] and sorted(a.assembly for a in api.describe().assemblies) == [111]
     assert "VGNC Symbol" in api.final_databases() and "ensembl_gene" in api.final_databases(113)
@@ -2347,8 +2759,11 @@ def test_api_loads_a_graph_file_without_manager_or_network_and_converts(monkeypa
     unnamed = api.convert("ENSSSCG3", final_database="UniProtKB Gene Name")
     assert unnamed.no_target is True and unnamed.final_database == "ensembl_gene"
     assert list(unnamed.targets("best")) == ["ENSSSCG3.1"]
-    # WNT4 exists at 113 and 115, STAT2 at 113 to 115: two releases hold both, and both are named
-    assert api.infer_source(["WNT4", "STAT2"], mode="release") == [113, 115]
+    # WNT4 exists at 113 and 115, STAT2 at 113 to 115: two releases hold both; 114, which holds one, is not told
+    # apart by two names (decision 79: the band, best first)
+    assert api.infer_source(["WNT4", "STAT2"], mode="release") == [113, 115, 114]
+    inference = api.source_inference(["WNT4", "STAT2"], mode="release")
+    assert inference.counts[:2] == ((113, 2), (115, 2)) and inference.margin is None
 
     # decision 15: the engine is strict about a release at which the graph does not hold the id; the API reads the id
     # where the graph holds it and says so
@@ -2381,10 +2796,10 @@ def test_api_loads_a_graph_file_without_manager_or_network_and_converts(monkeypa
 
     # a file that holds another graph than the one asked for is an error that names the difference
     os.link(
-        tmp_path / "graph_sus_scrofa_assembly111_min56_max115_narrow.npz",
-        tmp_path / "graph_sus_scrofa_assembly111_min56_max114_narrow.npz",
+        tmp_path / "graph_sus_scrofa_assembly111_min56_max115.npz",
+        tmp_path / "graph_sus_scrofa_assembly111_min56_max114.npz",
     )
-    with pytest.raises(ExportedMismatch, match="ignore_after"):
+    with pytest.raises(ExportedMismatch, match="window_end"):
         API.build("sus_scrofa", 114, str(tmp_path))
     # decision 19: a graph is built on the organism's assembly order; the API takes no primary assembly
     with pytest.raises(TypeError, match="assembly"):
@@ -2397,4 +2812,4 @@ def test_api_loads_a_graph_file_without_manager_or_network_and_converts(monkeypa
     assert not hasattr(api, "calculate_graph_caches")
     assert "available_releases_given_database_assembly" not in api.graph._frozen().globals
     assert api.graph.available_releases_given_database_assembly[("VGNC Symbol", 111)] == {114, 115}
-    assert ExportedMismatch is GraphMismatchError and api.graph.graph["ensembl_release"] == 115
+    assert ExportedMismatch is GraphMismatchError and api.graph.snapshot_release == 115

@@ -13,6 +13,7 @@ from __future__ import annotations
 import collections
 import dataclasses
 import json
+import math
 
 import numpy as np
 import pandas as pd
@@ -21,7 +22,16 @@ import pytest
 import idtrack
 from idtrack import errors, ids, organisms
 from idtrack.results import ConversionResult
-from tests._real_tables import ORGANISMS, SNAPSHOT, read_truth, tables_path, truth_path, verdict, without_version
+from tests._real_tables import (
+    ORGANISMS,
+    SNAPSHOT,
+    read_truth,
+    tables_path,
+    truth_path,
+    verdict,
+    with_y_copies_apart,
+    without_version,
+)
 from tests.unit._paths import raw_steps
 
 AVAILABLE = [organism for organism in ORGANISMS if tables_path(organism).is_file() and truth_path(organism).is_file()]
@@ -48,9 +58,14 @@ def test_listings_of_the_graph_are_those_of_ensembls_tables(real_world, organism
     api = world.api
     databases: dict[int, set[str]] = collections.defaultdict(set)
     forms: dict[str, collections.Counter] = collections.defaultdict(collections.Counter)
+    synonyms: dict[int, set[str]] = collections.defaultdict(set)
     for assembly, _release, _gene, database, _value, form in selected_links(world):
-        databases[assembly].add(database)
-        forms[database][form] += 1
+        # decision 56: a database's synonyms are listed under its own name, the database marked as recording them
+        databases[assembly].add(ids.public_name(database))
+        if database.startswith(SYNONYM):
+            synonyms[assembly].add(ids.public_name(database))
+        else:
+            forms[database][form] += 1
 
     assert api.releases() == sorted(world.backbone)
     assert sorted(a.assembly for a in api.describe().assemblies) == sorted(databases)
@@ -75,44 +90,61 @@ def test_listings_of_the_graph_are_those_of_ensembls_tables(real_world, organism
     ]
     for assembly in described.assemblies:
         held = databases[assembly.assembly]
-        assert list(assembly.external_databases) == sorted(held)  # as the graph names them, synonyms' with the prefix
-        assert list(assembly.synonym_databases) == sorted(d for d in held if d.startswith(SYNONYM))
+        assert list(assembly.external_databases) == sorted(held)
+        assert list(assembly.synonym_databases) == sorted(synonyms[assembly.assembly])
         assert assembly.name == organisms.assembly_name(organism, assembly.assembly)
         assert list(assembly.serves) == sorted(r for r, a in world.backbone.items() if a == assembly.assembly)
     every = set().union(*databases.values())
     assert list(described.external_databases) == sorted(every) == api.external_databases()
-    assert list(described.synonym_databases) == sorted(d for d in every if d.startswith(SYNONYM))
+    assert list(described.synonym_databases) == sorted(set().union(*synonyms.values()))
+    assert not any(d.startswith(SYNONYM) for d in every | set(api.final_databases()))
     assert list(described.final_databases) == api.final_databases(SNAPSHOT)
     assert described.content_digest and described.format_version == idtrack.graph.GRAPH_FORMAT_VERSION
     assert type(described).from_dict(json.loads(json.dumps(described.to_dict(), allow_nan=False))) == described
 
 
 def test_source_of_a_list_of_identifiers_is_inferred_from_where_they_exist(real_world, organism):
-    """The gene ids of one release, with their versions, exist together at the releases Ensembl had them all."""
+    """The gene ids of one release, with their versions, exist together at the releases Ensembl had them all.
+
+    Decision 79: in the mode ``release`` a release counts for an id where the assembly that serves it has the id
+    there, each id once; the answer is the band of releases that a one-sided sign test on the ids found at one
+    release and not at the other cannot tell from the best (:py:data:`idtrack.api.SOURCE_SIGNIFICANCE`), best first.
+    """
+    from idtrack.api import SOURCE_SIGNIFICANCE
+
     world = real_world(organism)
     api = world.api
     releases = sorted(world.backbone)
     for release in (releases[0], releases[len(releases) // 2], SNAPSHOT):
         genes = world.genes_at(release)
         ids = [f"{gene}.{version}" for gene, version in sorted(genes.items())]
-        # a release counts for an id when some assembly has the id there (human GRCh37 beside GRCh38)
-        counts = collections.Counter()
-        for other in releases:
-            tables = [
-                world.ensembl.genes(assembly, other)
-                for assembly in sorted({int(a) for a in world.tables.indices})
-                if other in world.ensembl.releases(assembly)
-            ]
-            counts[other] = sum(
-                1 for gene, version in genes.items() if any(there.get(gene) == version for there in tables)
-            )
-        best = [r for r in releases if counts[r] == max(counts.values())]
-        assert release in best
-        assert api.infer_source(ids, mode="release") == best
-        ranking = api.infer_source(ids, mode="release", report_only_winner=False)
-        assert [pair for pair in ranking if pair[1]] == sorted(
-            ([r, c] for r, c in counts.items() if c), key=lambda pair: (-pair[1], pair[0])
-        )
+        found = {
+            other: {
+                gene
+                for gene, version in genes.items()
+                if world.ensembl.genes(world.backbone[other], other).get(gene) == version
+            }
+            for other in releases
+        }
+        counts = {other: len(held) for other, held in found.items()}
+        ranking = sorted(([r, c] for r, c in counts.items() if c), key=lambda pair: (-pair[1], pair[0]))
+        best = ranking[0][0]
+
+        def worse(other: int) -> bool:
+            fewer, more = len(found[best] - found[other]), len(found[other] - found[best])
+            n = fewer + more
+            if fewer <= more:
+                return False
+            if n <= 1000:
+                p = sum(math.comb(n, k) for k in range(fewer, n + 1)) / 2**n
+            else:
+                p = 0.5 * math.erfc((fewer - 0.5 - n / 2) / math.sqrt(n / 4) / math.sqrt(2))
+            return p < SOURCE_SIGNIFICANCE
+
+        band = [r for r, _c in ranking if r == best or not worse(r)]
+        assert release in band
+        assert api.infer_source(ids, mode="release") == band
+        assert api.infer_source(ids, mode="release", report_only_winner=False) == ranking
     with pytest.raises(errors.UnknownIdentifierError, match="None of the 2 identifiers"):
         api.infer_source(["no such id", "nor this"])
     with pytest.raises(errors.InvalidArgumentError, match="is not a mode"):
@@ -142,16 +174,19 @@ def test_batch_gives_the_answers_of_single_conversions_in_the_order_asked(real_w
         assert batch == single
         assert [result.query_id for result in batch] == ids
         for query, result in zip(queries, batch):
-            assert verdict(query, result) is None, query["source"]
+            assert verdict(with_y_copies_apart(world, query), result) is None, query["source"]
         with pytest.raises(AttributeError):
             batch[-3].query_id = "changed by the caller"  # results are frozen: a repeated identifier is safe
 
         bins = api.classify(batch, strategy)
         assert bins["input_identifiers"] == batch
         nothing = [r for r in batch if r.status in ("not_found", "unknown_version", "no_conversion")]
-        stand_in = [r for r in batch if r.no_target]
-        answered = [r for r in batch if r not in nothing and not r.no_target]
+        elsewhere = [r for r in batch if r not in nothing and r.from_release_fallback]
+        stand_in = [r for r in batch if r.no_target and r not in elsewhere]
+        answered = [r for r in batch if r not in nothing and r not in elsewhere and not r.no_target]
         assert bins["matching_1_to_0"] == nothing
+        assert bins["read_at_another_release"] == elsewhere
+        assert all(r.reason == "read_at_another_release" for r in elsewhere if not r.no_target)
         assert bins["alternative_target_1_to_1"] + bins["alternative_target_1_to_n"] == [
             r for n in (1, 2) for r in stand_in if (len(r.targets(strategy)) == 1) is (n == 1)
         ]
@@ -235,8 +270,9 @@ def test_wrong_arguments_are_refused_before_any_search_and_say_what_is_valid(rea
         api.convert(gene, from_database="No Such Database")
     with pytest.raises(errors.MissingValueError, match="`identifier` is empty"):
         api.convert("   ")
-    with pytest.raises(errors.MissingValueError, match=r"1 empty strings, at positions \[1\]"):
-        api.convert_many([gene, " "])
+    # decisions 81 and 46 (g): in a batch, an empty string is that item's error
+    refused = api.convert_many([gene, " "])[1]
+    assert (refused.status, refused.error.type) == ("error", "MissingValueError")
     # the same refusals for an identifier that is not in the graph: nothing is searched first
     with pytest.raises(errors.UnknownReleaseError, match="`to_release`"):
         api.convert("not an identifier of anything", to_release=SNAPSHOT + 1)
@@ -270,7 +306,8 @@ def test_arguments_of_the_wrong_type_are_type_errors(real_world, organism):
     with pytest.raises(errors.InvalidArgumentError, match="`strategy`='first' is not a strategy"):
         api.convert(gene).view("first")
     with pytest.raises(errors.ArgumentTypeError, match=r"non-string items, at positions \[1\]"):
-        api.convert_many([gene, None])
+        api.convert_many([gene, 12345])
+    assert api.convert_many([gene, None])[1].error.type == "MissingValueError"  # an empty cell: that item's
     assert api.convert(gene, to_release=np.int64(SNAPSHOT)).to_release == SNAPSHOT
 
 
@@ -326,6 +363,11 @@ def test_dataset_of_an_old_release_keeps_every_count_and_sums_what_ensembl_merge
     kept = 0
     for gene in names:
         if gene not in now:
+            continue
+        if gene.startswith("LRG_"):
+            # decision 96: an LRG record's counts go to the gene the record describes, never to the record
+            holders = [i for i, query in enumerate(data.var["Query ID"]) if gene in str(query).split(";")]
+            assert len(holders) == 1 and not data.var_names[holders[0]].startswith("LRG_"), gene
             continue
         feature = f"{gene}.{now[gene]}"
         assert feature in data.var_names, gene

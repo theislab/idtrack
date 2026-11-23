@@ -316,7 +316,8 @@ typeguard session, where typeguard refuses the argument first).
 
 The tests that can catch a wrong mapping are ``tests/unit/test_real_*.py``. They need no network:
 ``tests/_real_tables.py`` serves real Ensembl tables of pig and human, cut down to a few hundred genes
-(``tests/data/real/<organism>.tables.json.xz``, each under 500 kB), to :py:class:`idtrack.build.DatabaseManager`, so the
+(``tests/data/real/<organism>.tables.json.xz``, each under 600 kB: the repository's size check for added files; the
+tables are not part of the package's distributions), to :py:class:`idtrack.build.DatabaseManager`, so the
 graphs of both organisms are built by the production code (tables, history, graph file, engine, API) in the test
 session. Conversions are compared with expected answers that were derived from Ensembl's own files
 (``tests/data/real/<organism>.truth.jsonl``) and with the tables themselves, read by independent code; the package's
@@ -551,7 +552,7 @@ Adding Organism Support
 -----------------------
 
 An organism is declared in one place, the organism table ``ORGANISM_TABLE`` in ``idtrack/organisms.py``
-(:py:data:`idtrack.organisms.ORGANISM_TABLE`); everything else (supported organisms, assembly node types, assembly priorities) is derived
+(:py:data:`idtrack.organisms.ORGANISM_TABLE`); everything else (supported organisms, assembly labels, assembly priorities) is derived
 from it. Rhesus and cynomolgus macaque were added this way. The recipe:
 
 1. **Establish the assemblies.** List the organism's core databases in Ensembl's dump listings

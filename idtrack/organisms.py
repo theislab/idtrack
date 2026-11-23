@@ -121,6 +121,28 @@ SYMBOL_DATABASES: dict[str, tuple[str, ...]] = {
     "macaca_fascicularis": ("VGNC Symbol", "HGNC Symbol"),
 }
 
+#: Ensembl's name of NCBI Gene's database (``external_db.db_name``, the same at every release). Its accessions are the
+#: NCBI gene numbers, its label rows NCBI's official symbols, which a graph names by the rule of decision 53 (the name
+#: Ensembl's tables give them: :py:attr:`idtrack.TheGraph.label_names`); NCBI's symbols are the symbols of a name
+#: authority beside :py:data:`SYMBOL_DATABASES` (:py:attr:`idtrack.TheGraph.authority_databases`, decision 94).
+NCBI_GENE_DATABASE = "EntrezGene"
+
+#: The pseudoautosomal regions of an assembly, by Ensembl's name of the assembly: pairs of a region of Y and the region
+#: of X that it repeats, ``((region, first base, last base), (region, first base, last base))`` (the Genome Reference
+#: Consortium's PAR1 and PAR2 of GRCh38). From release 110 Ensembl gives the Y copies of the genes of these regions ids
+#: of their own (decisions 93 and 95). Ensembl records the same regions in its core databases as assembly exceptions of
+#: the type ``PAR`` (table ``assembly_exception``), which a built graph holds since the builder reads the exceptions
+#: for the copies on patches and haplotypes (:py:attr:`idtrack.TheGraph.assembly_exceptions`; GRCh38's two ``PAR``
+#: rows equal this table); the rule of the Y copies still reads this table, which also serves graphs made in memory.
+#: It holds only the assembly whose Y copies have ids of their own.
+PSEUDOAUTOSOMAL_REGIONS: dict[str, tuple[tuple[tuple[str, int, int], tuple[str, int, int]], ...]] = {
+    "GRCh38": (
+        (("Y", 10_001, 2_781_479), ("X", 10_001, 2_781_479)),
+        (("Y", 56_887_903, 57_217_415), ("X", 155_701_383, 156_030_895)),
+    ),
+}
+
+
 #: Short names of the organisms. A declared alias names its organism wherever an organism is asked for, without the
 #: network, and wins over what Ensembl lists under the same word (``"pig"`` is the common name of every pig breed
 #: there). Lower case, unique across organisms.
@@ -132,9 +154,11 @@ ALIASES: dict[str, tuple[str, ...]] = {
     "macaca_fascicularis": ("cynomolgus",),
 }
 
-#: Node type of each form of each assembly key, ``{assembly: {form: "assembly_<key>_ensembl_<form>"}}`` (derived from
-#: the table; updated in place by :py:func:`register_organism`).
-ASSEMBLY_NODE_TYPES: dict[int, dict[str, str]] = {}
+#: The label under which a graph reports the Ensembl ids of each form on each assembly key,
+#: ``{assembly: {form: "assembly_<key>_ensembl_<form>"}}``: the source of an Ensembl id on an assembly in
+#: :py:meth:`idtrack.TheGraph.trios` and :py:meth:`idtrack.TheGraph.combined`, in the inference of the source of a
+#: list, and in the self-checks (derived from the table; updated in place by :py:func:`register_organism`).
+ASSEMBLY_LABELS: dict[int, dict[str, str]] = {}
 
 _ENTRY_FIELDS = ("Name", "DbSuffix", "Ports", "Priority", "ReleaseRange")
 _REQUIRED_FIELDS = ("Ports", "Priority", "ReleaseRange")
@@ -314,9 +338,9 @@ def _rebuild() -> None:
     _validate(ORGANISM_TABLE, SYMBOL_DATABASES, ALIASES)
     _state["supported"] = tuple(sorted(ORGANISM_TABLE))
     assemblies = sorted({int(key) for entries in ORGANISM_TABLE.values() for key in entries})
-    ASSEMBLY_NODE_TYPES.clear()
+    ASSEMBLY_LABELS.clear()
     for key in assemblies:
-        ASSEMBLY_NODE_TYPES[key] = {form: f"assembly_{key}_ensembl_{form}" for form in ids.FORMS}
+        ASSEMBLY_LABELS[key] = {form: f"assembly_{key}_ensembl_{form}" for form in ids.FORMS}
 
 
 def register_organism(
@@ -578,6 +602,27 @@ def assembly_name(organism: str, assembly: Any) -> str | None:
     return _entry(organism, assembly).get("Name")
 
 
+def pseudoautosomal_repeats(organism: str | None) -> dict[int, tuple[tuple[str, int, int, str, int], ...]]:
+    """Return, per assembly key of an organism, its pseudoautosomal regions of Y with the region of X each repeats.
+
+    Read from :py:data:`PSEUDOAUTOSOMAL_REGIONS` by the assembly's name; the one rule of a gene reads a place in such a
+    region of Y on the region of X it repeats (:py:mod:`idtrack.graph.genes`).
+
+    Args:
+        organism: Ensembl production name (``None`` or an organism outside the table: none).
+
+    Returns:
+        dict[int, tuple[tuple[str, int, int, str, int], ...]]: ``{assembly: ((region of Y, first base, last base,
+        region of X, its first base), ...)}`` for the assemblies that have such regions.
+    """
+    found: dict[int, tuple[tuple[str, int, int, str, int], ...]] = {}
+    for assembly, entry in ORGANISM_TABLE.get(organism or "", {}).items():
+        pairs = PSEUDOAUTOSOMAL_REGIONS.get(entry.get("Name") or "", ())
+        if pairs:
+            found[int(assembly)] = tuple((y[0], y[1], y[2], x[0], x[1]) for y, x in pairs)
+    return found
+
+
 def core_db_name_pattern(organism: str, assembly: Any) -> re.Pattern[str]:
     """Return the regular expression of the assembly's core database names.
 
@@ -599,7 +644,9 @@ _rebuild()
 
 __all__ = [
     "ALIASES",
-    "ASSEMBLY_NODE_TYPES",
+    "ASSEMBLY_LABELS",
+    "NCBI_GENE_DATABASE",
+    "PSEUDOAUTOSOMAL_REGIONS",
     "ORGANISM_TABLE",
     "SYMBOL_DATABASES",
     "assemblies_by_priority",
@@ -607,6 +654,7 @@ __all__ = [
     "assembly_name",
     "check_organism",
     "core_db_name_pattern",
+    "pseudoautosomal_repeats",
     "db_suffix",
     "first_release",
     "primary_assembly",

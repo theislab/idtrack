@@ -31,6 +31,8 @@ _EXPORTS: dict[str, str] = {
     "NameMatch": "idtrack.results",
     "PathNode": "idtrack.results",
     "PathStep": "idtrack.results",
+    "OtherReading": "idtrack.results",
+    "SourceInference": "idtrack.results",
     # settings
     "GraphSettings": "idtrack.settings",
     "SearchSettings": "idtrack.settings",

@@ -238,7 +238,11 @@ def _reader_loop(path: str, frames: list, reads) -> None:
     deadline = time.time() + 3
     while time.time() < deadline:
         back = load_table(path, {})
-        assert back is not None
+        if back is None:
+            # The file was opened between the writer's two names: a network file system does not make the rename
+            # atomic for a concurrent opener (seen once on Lustre under load). ``None`` is `load_table`'s answer for
+            # "compute the table"; what a reader must never get is a table that is partial or another one.
+            continue
         assert any(back.equals(f) for f in frames)
         ok += 1
     # The count goes back through shared memory, which is written before the function returns. A

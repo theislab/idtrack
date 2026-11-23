@@ -25,9 +25,9 @@ import tqdm
 
 from idtrack import _arguments, organisms
 from idtrack._atomic import write_text
-from idtrack._version import package_version
 from idtrack.api import API
 from idtrack.errors import IntegrityError, InvalidArgumentError
+from idtrack.graph import files
 from idtrack.graph.files import list_graph_files
 from idtrack.harmonize.core import (
     STATUSES,
@@ -39,8 +39,9 @@ from idtrack.harmonize.core import (
     output_plan,
 )
 from idtrack.results import ConversionResult
+from idtrack.settings import RULES_VERSION
 
-_CACHE_FORMAT = 3
+_CACHE_FORMAT = 4
 
 
 def read_feature_names(path: str) -> list[str]:
@@ -129,17 +130,23 @@ class HarmonizeFeatures:
     the target release (:py:meth:`idtrack.engine.Track.gene_to_database`: read from the gene, no search), the first in
     sorted order when there are several (the others in ``"<final database>_alternatives"``). A gene without an id in
     the final database keeps the gene id as its feature name and a missing final-database name (status ``"converted_no_final_id"``):
-    the final-database column never holds an Ensembl id. Features that are not converted keep their input name; no
-    feature is dropped silently. Every output feature has, in ``var``:
+    the final-database column never holds an Ensembl id. Which gene a feature is, is decided as Ensembl genes
+    (:py:meth:`idtrack.API.convert`: a target in a final database is an id of the gene answered), so a feature whose
+    gene has no name there is that gene, never another gene that has one. Features that are not converted keep their
+    input name; no feature is dropped silently. Every output feature has, in ``var``:
 
     * ``"idtrack_status"``: ``"converted"``, ``"converted_no_final_id"``, ``"merged"``, ``"merged_no_final_id"``
       (with ``merge="sum"``, the sum of several input features), ``"unconverted_merge_partner"`` (with
       ``merge="flag"``, an input feature that shares its gene with others), ``"unconverted_ambiguous"`` (several
       genes), ``"unconverted_no_conversion"`` (in the graph, but no gene at the target release),
-      ``"unconverted_not_in_graph"`` or ``"unconverted_error"`` (the conversion of this feature raised an error that
-      concerns it alone, a search over its budget);
-    * ``"idtrack_reason"``: why (missing for a plain conversion; for a feature that the graph does not hold at its
-      dataset's source release and that was therefore read at another release, that release);
+      ``"unconverted_not_in_graph"``, ``"unconverted_missing_value"`` (a spelling of a missing value, ``nan`` or
+      ``NA``, which is never a gene: decision 81) or ``"unconverted_error"`` (the conversion of this feature raised an
+      error that concerns it alone, a search over its budget);
+    * ``"idtrack_reason"``: why (missing for a plain conversion; the text of the conversion's reason,
+      :py:data:`idtrack.results.REASONS`, for a feature without a conversion; for a feature that the graph does not
+      hold at its dataset's source release and that was therefore read at another release, that release; for a
+      feature that is another feature of the dataset with a suffix a single-cell tool appends to repeated names, the
+      feature it copies, decision 82);
     * ``"Query ID"``: the input name(s), ``";"``-joined for a merged feature;
     * ``"matching_ensembl_gene"``: the gene (also for a merge partner; missing for the other unconverted features).
 
@@ -156,10 +163,11 @@ class HarmonizeFeatures:
     merging) is renamed ``"unconverted:<name>"``, so that converted and unconverted measurements never share a row.
 
     **Result cache.** The conversions of each dataset are stored in *project_local_repository* as one JSON file per
-    dataset (written to a temporary file and renamed). A stored file is used only if it was written by the same
-    idtrack version for the same feature names, organism, final database, target and source release, graph snapshot
-    and graph (the graph file's name, size and modification time, or the loaded graph's metadata when *api* is
-    given); an unreadable or mismatching file is recomputed and replaced.
+    dataset (written to a temporary file and renamed). A stored file is used only if it was written under the same
+    rules of conversion (:py:data:`idtrack.settings.RULES_VERSION`, raised with every change of an answer) for the same
+    graph (its content digest, read from the graph file's record or from the loaded graph) and the same feature
+    names, organism, final database, target and source release and graph snapshot; an unreadable or mismatching file
+    is recomputed and replaced. Conversions with a graph that records no digest (made in memory) are not cached.
 
     Args:
         project_name (str): Label used in log messages and cache file names.
@@ -308,9 +316,8 @@ class HarmonizeFeatures:
             )
 
         if api is not None:
-            graph = api.graph.graph
-            self.organism = str(graph["organism"])
-            self.snapshot_release = int(graph["ensembl_release"])
+            self.organism = str(api.graph.organism)
+            self.snapshot_release = int(api.graph.snapshot_release)
             given = {"organism": organism, "snapshot_release": snapshot_release}
             if organism is not None and self._resolve_organism(organism) != self.organism:
                 raise InvalidArgumentError(
@@ -392,7 +399,7 @@ class HarmonizeFeatures:
 
         Those are the files :py:func:`idtrack.graph.files.list_graph_files` lists with the window and the content the
         API builds: from the organism's first release (:py:meth:`idtrack.organisms.first_release`) to a snapshot release,
-        the narrow history, every form, the selected external databases, and as primary assembly the organism's
+        without session details, every form, the selected external databases, and as primary assembly the organism's
         preferred one that has the snapshot release.
 
         Args:
@@ -409,9 +416,9 @@ class HarmonizeFeatures:
                 entry["organism"] not in organisms.supported_organisms()
                 or snapshot is None
                 or entry["first_release"] != organisms.first_release(entry["organism"])
-                or not entry["narrow"]
+                or entry["session_details"]
                 or entry["forms"] is not None
-                or not entry["narrow_external"]
+                or entry["all_external"]
             ):
                 continue
             for assembly in organisms.assemblies_by_priority(entry["organism"]):
@@ -467,31 +474,20 @@ class HarmonizeFeatures:
     # ----------------------------------------------------------------------------------------------------------------
     # Conversions and their cache
 
-    def _graph_identity(self) -> dict[str, Any]:
-        """Return what identifies the graph the conversions come from (see "Result cache" in the class docs).
+    def _graph_identity(self) -> str | None:
+        """Return the content digest of the graph the conversions come from (see "Result cache" in the class docs).
 
-        The graph file of the organism and snapshot in *idtrack_local_repository* (where a given API's graph is
-        expected to come from, and where an own one is loaded from): its name, size and modification time, so that the
-        same graph identifies the same way whether it is loaded or not. A loaded graph without such a file (e.g. built
-        elsewhere) is identified by a digest of its metadata.
+        The loaded graph's (when an API is given), else the one the graph file of the organism and snapshot in
+        *idtrack_local_repository* records (read from the file's record without loading the graph); ``None`` for a
+        graph without a record (made in memory), whose conversions are never cached.
         """
+        if self._api is not None:
+            record = self._api.graph.record
+            return None if record is None else record.content_digest
         for entry in self._graph_files(self.idtrack_local_repository, self.organism):
             if entry["snapshot_release"] == self.snapshot_release:
-                stat = os.stat(entry["path"])
-                return {
-                    "graph_file": os.path.basename(entry["path"]),
-                    "size": stat.st_size,
-                    "mtime_ns": stat.st_mtime_ns,
-                }
-        if self._api is not None:
-            metadata = {
-                k: v
-                for k, v in self._api.graph.graph.items()
-                if isinstance(v, (str, int, float, bool)) or (isinstance(v, (list, tuple)) and len(v) < 1000)
-            }
-            digest = hashlib.sha256(json.dumps(metadata, sort_keys=True, default=str).encode()).hexdigest()
-            return {"loaded_graph_metadata_sha256": digest}
-        return {"graph_file": None}
+                return files.content_digest(entry["path"])
+        return None
 
     def result_cache_path(self, dataset_name: str) -> str:
         """Return the path of the cached conversions of one dataset (a JSON file in the project folder).
@@ -513,14 +509,14 @@ class HarmonizeFeatures:
         names = self.feature_names[dataset_name]
         return {
             "format": _CACHE_FORMAT,
-            "idtrack_version": package_version(),
+            "rules_version": RULES_VERSION,
             "organism": self.organism,
             "final_database": self.final_database,
             "target_ensembl_release": self.to_release,
             "source_release": self.from_release_by_dataset.get(dataset_name),
             "source_database": self.from_database_by_dataset.get(dataset_name),
             "graph_snapshot": self.snapshot_release,
-            "graph": self._graph_identity(),
+            "graph_content_digest": self._graph_identity(),
             "feature_names_sha256": hashlib.sha256("\n".join(names).encode()).hexdigest(),
         }
 
@@ -529,6 +525,8 @@ class HarmonizeFeatures:
         path = self.result_cache_path(dataset_name)
         header = self._cache_header(dataset_name)
         try:
+            if header["graph_content_digest"] is None:
+                raise FileNotFoundError  # a graph without a digest: nothing cached is known to be of it
             with open(path) as handle:
                 stored = json.load(handle)
             if stored.get("header") == header:
@@ -543,9 +541,10 @@ class HarmonizeFeatures:
         api = self._require_api()
         header = self._cache_header(dataset_name)  # the graph is loaded now: identify it as loaded
         matchings, gene_names = self._convert_dataset(api, dataset_name)
-        _write_json_atomically(
-            path, {"header": header, "matchings": [m.to_dict() for m in matchings], "gene_names": gene_names}
-        )
+        if header["graph_content_digest"] is not None:
+            _write_json_atomically(
+                path, {"header": header, "matchings": [m.to_dict() for m in matchings], "gene_names": gene_names}
+            )
         return matchings, gene_names
 
     def _require_api(self) -> API:

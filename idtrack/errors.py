@@ -140,14 +140,16 @@ class InactiveAtReleaseError(InputError, ValueError):
 
 
 class UnknownVersionError(InputError, ValueError):
-    """The identifier is an Ensembl id with a version that the graph does not hold.
+    """The identifier is an Ensembl id, or a sequence accession, with a version that the graph does not hold.
 
     The version never existed, or the graph cannot know it (a version lower than the latest, or of an id that is no
-    longer active). It is not answered with another version's gene.
+    longer active; of an accession, a version below the latest that Ensembl's cross references never attached). It is
+    not answered with another version's gene.
 
     Attributes:
         identifier (str): The identifier as given.
-        versions (tuple[str, ...]): The ``<id>.<version>`` ids that the graph holds, by ascending version.
+        versions (tuple[str, ...]): The ``<id>.<version>`` ids (or ``<accession>.<version>``) that the graph holds, by
+            ascending version.
     """
 
     def __init__(self, identifier: str, versions: tuple[str, ...]):  # noqa: B042 - __reduce__

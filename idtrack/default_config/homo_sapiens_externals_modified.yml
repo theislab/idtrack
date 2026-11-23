@@ -8,43 +8,27 @@ homo_sapiens:
                 "38":
                     Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
-        Clone-based (Ensembl):
-            Assembly:
-                "36":
-                    Ensembl release: 50,51,52,53,54
-                    Include: false
-                "37":
-                    Ensembl release: 55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87
-                    Include: false
-                "38":
-                    Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87
-                    Include: false
         Clone-based (Ensembl) gene:
             Assembly:
-                "37":
-                    Ensembl release: 88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
-                    Include: false
-                "38":
-                    Ensembl release: 88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103
-                    Include: false
-        Clone-based (Vega):
-            Assembly:
                 "36":
                     Ensembl release: 50,51,52,53,54
                     Include: false
                 "37":
-                    Ensembl release: 55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87
+                    Ensembl release: 55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
                 "38":
-                    Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87
+                    Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103
                     Include: false
         Clone-based (Vega) gene:
             Assembly:
+                "36":
+                    Ensembl release: 50,51,52,53,54
+                    Include: false
                 "37":
-                    Ensembl release: 88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Ensembl release: 55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
                 "38":
-                    Ensembl release: 88,89
+                    Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87,88,89
                     Include: false
         Clone_based_ensembl_gene:
             Assembly:
@@ -157,6 +141,11 @@ homo_sapiens:
                 "38":
                     Ensembl release: 109,110,111,112,113,114,115,116
                     Include: false
+        GeneCards label:
+            Assembly:
+                "38":
+                    Ensembl release: 109,110,111,112,113,114,115,116
+                    Include: false
         HGNC:
             Assembly:
                 "36":
@@ -240,21 +229,13 @@ homo_sapiens:
                 "38":
                     Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
-        LRG display in Ensembl:
-            Assembly:
-                "37":
-                    Ensembl release: 58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87
-                    Include: false
-                "38":
-                    Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87
-                    Include: false
         LRG display in Ensembl gene:
             Assembly:
                 "37":
-                    Ensembl release: 88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Ensembl release: 58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
                 "38":
-                    Ensembl release: 88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
         Locus Reference Genomic:
             Assembly:
@@ -263,14 +244,6 @@ homo_sapiens:
                     Include: false
                 "38":
                     Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
-                    Include: false
-        MIM disease:
-            Assembly:
-                "37":
-                    Ensembl release: 63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100
-                    Include: false
-                "38":
-                    Ensembl release: 76,77,78,79,80,81,82
                     Include: false
         MIM gene:
             Assembly:
@@ -283,10 +256,10 @@ homo_sapiens:
         MIM morbid:
             Assembly:
                 "37":
-                    Ensembl release: 101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Ensembl release: 63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
                 "38":
-                    Ensembl release: 83,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Ensembl release: 76,77,78,79,80,81,82,83,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
         MIM_GENE:
             Assembly:
@@ -304,18 +277,13 @@ homo_sapiens:
                 "38":
                     Ensembl release: 76,77,78,79,80,81,82,83,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
-        NCBI gene:
-            Assembly:
-                "38":
-                    Ensembl release: 88,89,90,91,92,93,94,95,96,97,98,99
-                    Include: true
         NCBI gene (formerly Entrezgene):
             Assembly:
                 "37":
-                    Ensembl release: 101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Ensembl release: 63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: true
                 "38":
-                    Ensembl release: 100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: true
         OTTG:
             Assembly:
@@ -332,6 +300,11 @@ homo_sapiens:
             Assembly:
                 "37":
                     Ensembl release: 67,68,69,70,71,72,73
+                    Include: false
+        Orphanet label:
+            Assembly:
+                "37":
+                    Ensembl release: 69,70,71,72,73
                     Include: false
         PUBMED:
             Assembly:
@@ -354,6 +327,14 @@ homo_sapiens:
                 "37":
                     Ensembl release: 61,62,63,64
                     Include: false
+        RFAM label:
+            Assembly:
+                "37":
+                    Ensembl release: 63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Include: true
+                "38":
+                    Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,98,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Include: true
         RFAM_gene_name:
             Assembly:
                 "37":
@@ -362,12 +343,12 @@ homo_sapiens:
         Reactome:
             Assembly:
                 "38":
-                    Ensembl release: 79,80,81,82,83,84,85,86,87
+                    Ensembl release: "79"
                     Include: false
         Reactome gene:
             Assembly:
                 "38":
-                    Ensembl release: 88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Ensembl release: 80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
         Reactome_gene:
             Assembly:
@@ -507,7 +488,7 @@ homo_sapiens:
                 "38":
                     Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
-        miRBase:
+        WikiGene label:
             Assembly:
                 "37":
                     Ensembl release: 63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
@@ -515,22 +496,38 @@ homo_sapiens:
                 "38":
                     Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
+        miRBase:
+            Assembly:
+                "37":
+                    Ensembl release: 63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Include: true
+                "38":
+                    Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Include: true
         miRBase gene name:
             Assembly:
                 "37":
                     Ensembl release: 61,62,63,64,65,66,67
                     Include: false
+        miRBase label:
+            Assembly:
+                "37":
+                    Ensembl release: 63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Include: true
+                "38":
+                    Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Include: true
         miRBase_gene_name:
             Assembly:
                 "37":
                     Ensembl release: 61,62,63,64,65,66,67
                     Include: false
-        synonym_id::Clone-based (Ensembl):
+        synonym_id::Clone-based (Ensembl) gene:
             Assembly:
                 "37":
                     Ensembl release: "57"
                     Include: false
-        synonym_id::Clone-based (Vega):
+        synonym_id::Clone-based (Vega) gene:
             Assembly:
                 "37":
                     Ensembl release: "57"
@@ -557,14 +554,6 @@ homo_sapiens:
                 "38":
                     Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87
                     Include: false
-        synonym_id::EntrezGene:
-            Assembly:
-                "37":
-                    Ensembl release: 63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100
-                    Include: true
-                "38":
-                    Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87
-                    Include: true
         synonym_id::HGNC (automatic):
             Assembly:
                 "36":
@@ -597,14 +586,6 @@ homo_sapiens:
                 "37":
                     Ensembl release: 56,63,64,65,66,67,68
                     Include: false
-        synonym_id::MIM disease:
-            Assembly:
-                "37":
-                    Ensembl release: 63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100
-                    Include: false
-                "38":
-                    Ensembl release: 76,77,78,79,80,81,82
-                    Include: false
         synonym_id::MIM gene:
             Assembly:
                 "37":
@@ -616,23 +597,18 @@ homo_sapiens:
         synonym_id::MIM morbid:
             Assembly:
                 "37":
-                    Ensembl release: 101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Ensembl release: 63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
                 "38":
-                    Ensembl release: 83,85,86,87
+                    Ensembl release: 76,77,78,79,80,81,82,83,85,86,87
                     Include: false
-        synonym_id::NCBI gene:
-            Assembly:
-                "38":
-                    Ensembl release: 88,89,90,91,92,93,94,95,96,97,98,99
-                    Include: true
         synonym_id::NCBI gene (formerly Entrezgene):
             Assembly:
                 "37":
-                    Ensembl release: 101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Ensembl release: 63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: true
                 "38":
-                    Ensembl release: 100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: true
         synonym_id::RefSeq Genomic:
             Assembly:
@@ -804,43 +780,43 @@ homo_sapiens:
                 "38":
                     Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: true
+        CCDS label:
+            Assembly:
+                "36":
+                    Ensembl release: "54"
+                    Include: true
+                "37":
+                    Ensembl release: 55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Include: true
+                "38":
+                    Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Include: true
         Clone-based (Ensembl):
             Assembly:
                 "36":
-                    Ensembl release: 50,51,52,53,54
-                    Include: false
-                "37":
-                    Ensembl release: 55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87
-                    Include: false
-                "38":
-                    Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87
+                    Ensembl release: "50"
                     Include: false
         Clone-based (Ensembl) transcript:
             Assembly:
+                "36":
+                    Ensembl release: 51,52,53,54
+                    Include: false
                 "37":
-                    Ensembl release: 88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Ensembl release: 55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
                 "38":
-                    Ensembl release: 88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103
+                    Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103
                     Include: false
-        Clone-based (Vega):
+        Clone-based (Vega) transcript:
             Assembly:
                 "36":
                     Ensembl release: 50,51,52,53,54
                     Include: false
                 "37":
-                    Ensembl release: 55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87
+                    Ensembl release: 55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
                 "38":
-                    Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87
-                    Include: false
-        Clone-based (Vega) transcript:
-            Assembly:
-                "37":
-                    Ensembl release: 88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
-                    Include: false
-                "38":
-                    Ensembl release: 88,89
+                    Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87,88,89
                     Include: false
         Clone_based_ensembl_transcri:
             Assembly:
@@ -898,11 +874,6 @@ homo_sapiens:
                 "38":
                     Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,97,98,99,100,101,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
-        Ensembl transcript having same CDS:
-            Assembly:
-                "36":
-                    Ensembl release: "50"
-                    Include: false
         EntrezGene transcript name:
             Assembly:
                 "38":
@@ -958,10 +929,7 @@ homo_sapiens:
         HGNC transcript name:
             Assembly:
                 "37":
-                    Ensembl release: 61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100
-                    Include: false
-                "38":
-                    Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97
+                    Ensembl release: 61,62,63,64,65,66,67,68,69,70,71,72
                     Include: false
         HGNC_automatic_transcript:
             Assembly:
@@ -995,7 +963,7 @@ homo_sapiens:
         Havana transcript:
             Assembly:
                 "36":
-                    Ensembl release: 50,51,52,53,54
+                    Ensembl release: 48,49,50,51,52,53,54
                     Include: true
                 "37":
                     Ensembl release: 55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
@@ -1010,11 +978,6 @@ homo_sapiens:
                     Include: false
                 "37":
                     Ensembl release: 55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
-                    Include: false
-        Havana transcripts:
-            Assembly:
-                "36":
-                    Ensembl release: 48,49
                     Include: false
         IMGT/GENE-DB:
             Assembly:
@@ -1071,26 +1034,18 @@ homo_sapiens:
         Imported HAVANA transcripts (Shares CDS with ENST):
             Assembly:
                 "36":
-                    Ensembl release: 51,52,53,54
+                    Ensembl release: 50,51,52,53,54
                     Include: false
                 "37":
                     Ensembl release: 55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70
                     Include: false
-        LRG display in Ensembl:
-            Assembly:
-                "37":
-                    Ensembl release: 58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87
-                    Include: false
-                "38":
-                    Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87
-                    Include: false
         LRG display in Ensembl transcript:
             Assembly:
                 "37":
-                    Ensembl release: 88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Ensembl release: 58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
                 "38":
-                    Ensembl release: 88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
         OTTT:
             Assembly:
@@ -1110,6 +1065,14 @@ homo_sapiens:
                     Include: false
                 "37":
                     Ensembl release: 55,56,57,58,59,60,61,62
+                    Include: false
+        RFAM label:
+            Assembly:
+                "36":
+                    Ensembl release: 52,53,54
+                    Include: false
+                "37":
+                    Ensembl release: 55,56,57,59,60
                     Include: false
         RFAM transcript name:
             Assembly:
@@ -1142,15 +1105,10 @@ homo_sapiens:
                 "38":
                     Ensembl release: 90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
-        Reactome:
-            Assembly:
-                "38":
-                    Ensembl release: 80,81,82,83,84,85,86,87
-                    Include: false
         Reactome transcript:
             Assembly:
                 "38":
-                    Ensembl release: 88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Ensembl release: 80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
         Reactome_transcript:
             Assembly:
@@ -1264,10 +1222,10 @@ homo_sapiens:
         Transcript name:
             Assembly:
                 "37":
-                    Ensembl release: 101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Ensembl release: 73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
                 "38":
-                    Ensembl release: 98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
         UCSC:
             Assembly:
@@ -1302,15 +1260,10 @@ homo_sapiens:
         UniProt transcript name:
             Assembly:
                 "37":
-                    Ensembl release: 71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Ensembl release: 70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
                 "38":
                     Ensembl release: 76,77,78,79,80,81,82
-                    Include: false
-        Uniprot transcript name:
-            Assembly:
-                "37":
-                    Ensembl release: "70"
                     Include: false
         Uniprot_genename_transcript_name:
             Assembly:
@@ -1342,6 +1295,14 @@ homo_sapiens:
                     Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87,88
                     Include: false
         miRBase:
+            Assembly:
+                "36":
+                    Ensembl release: 48,49,50,51,52,53,54
+                    Include: false
+                "37":
+                    Ensembl release: 55,56,57,58,59,60,61,62
+                    Include: false
+        miRBase label:
             Assembly:
                 "36":
                     Ensembl release: 48,49,50,51,52,53,54
@@ -1394,12 +1355,12 @@ homo_sapiens:
                 "37":
                     Ensembl release: 55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
-        synonym_id::Clone-based (Ensembl):
+        synonym_id::Clone-based (Ensembl) transcript:
             Assembly:
                 "37":
                     Ensembl release: "57"
                     Include: false
-        synonym_id::Clone-based (Vega):
+        synonym_id::Clone-based (Vega) transcript:
             Assembly:
                 "37":
                     Ensembl release: "57"
@@ -1463,6 +1424,11 @@ homo_sapiens:
                 "36":
                     Ensembl release: 48,49,50,51,52,53
                     Include: false
+        CCDS label:
+            Assembly:
+                "36":
+                    Ensembl release: 48,49,50,51,52,53
+                    Include: false
         ChEMBL:
             Assembly:
                 "37":
@@ -1507,10 +1473,10 @@ homo_sapiens:
             Assembly:
                 "36":
                     Ensembl release: 48,49,50,51,52,53,54
-                    Include: false
+                    Include: true
                 "37":
                     Ensembl release: 55,56,57,58,59,60,61,62
-                    Include: false
+                    Include: true
         Eukaryotic Promoter Database (Bucher):
             Assembly:
                 "38":
@@ -1519,15 +1485,10 @@ homo_sapiens:
         European Nucleotide Archive:
             Assembly:
                 "37":
-                    Ensembl release: 61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Ensembl release: 59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
                 "38":
                     Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
-                    Include: false
-        European Nucleotide Archive (was EMBL):
-            Assembly:
-                "37":
-                    Ensembl release: 59,60
                     Include: false
         GO:
             Assembly:
@@ -1595,8 +1556,11 @@ homo_sapiens:
                     Include: false
         INSDC protein ID:
             Assembly:
+                "36":
+                    Ensembl release: 48,49,50,51,52,53,54
+                    Include: false
                 "37":
-                    Ensembl release: 71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Ensembl release: 55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
                 "38":
                     Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
@@ -1609,21 +1573,21 @@ homo_sapiens:
                 "37":
                     Ensembl release: 55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70
                     Include: false
-        KEGG:
+        IPI label:
             Assembly:
-                "37":
-                    Ensembl release: 79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100
+                "36":
+                    Ensembl release: 48,49,50,51,52,53,54
                     Include: false
-                "38":
-                    Ensembl release: "88"
+                "37":
+                    Ensembl release: 55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70
                     Include: false
         KEGG Pathway and Enzyme:
             Assembly:
                 "37":
-                    Ensembl release: 101,102,103,104,105
+                    Ensembl release: 79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105
                     Include: false
                 "38":
-                    Ensembl release: 89,90,91,92,93,94,95,96,97,98,99,100,102,103,104
+                    Ensembl release: 88,89,90,91,92,93,94,95,96,97,98,99,100,102,103,104
                     Include: false
         KEGG_Enzyme:
             Assembly:
@@ -1649,7 +1613,7 @@ homo_sapiens:
                 "38":
                     Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
-        MIM disease:
+        MIM gene:
             Assembly:
                 "36":
                     Ensembl release: 48,49,50,51,52,53,54
@@ -1657,7 +1621,7 @@ homo_sapiens:
                 "37":
                     Ensembl release: 55,56,57,58,59,60,61,62
                     Include: false
-        MIM gene:
+        MIM morbid:
             Assembly:
                 "36":
                     Ensembl release: 48,49,50,51,52,53,54
@@ -1689,6 +1653,14 @@ homo_sapiens:
                 "38":
                     Ensembl release: 88,89,90,91
                     Include: false
+        NCBI gene (formerly Entrezgene):
+            Assembly:
+                "36":
+                    Ensembl release: 48,49,50,51,52,53,54
+                    Include: true
+                "37":
+                    Ensembl release: 55,56,57,58,59,60,61,62
+                    Include: true
         OTTP:
             Assembly:
                 "36":
@@ -1707,14 +1679,6 @@ homo_sapiens:
                     Include: false
                 "38":
                     Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
-                    Include: false
-        Protein ID:
-            Assembly:
-                "36":
-                    Ensembl release: 48,49,50,51,52,53,54
-                    Include: false
-                "37":
-                    Ensembl release: 55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70
                     Include: false
         Reactome:
             Assembly:
@@ -1786,10 +1750,20 @@ homo_sapiens:
                 "37":
                     Ensembl release: 79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105
                     Include: false
+        UniProtKB Gene Name:
+            Assembly:
+                "37":
+                    Ensembl release: "62"
+                    Include: false
         UniProtKB isoform:
             Assembly:
                 "38":
                     Ensembl release: 102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Include: false
+        UniProtKB/SpliceVariant:
+            Assembly:
+                "36":
+                    Ensembl release: 48,49,50,51,52,53,54
                     Include: false
         UniProtKB/Swiss-Prot:
             Assembly:
@@ -1812,11 +1786,6 @@ homo_sapiens:
                     Include: false
                 "38":
                     Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
-                    Include: false
-        Uniprot Gene Name:
-            Assembly:
-                "37":
-                    Ensembl release: "62"
                     Include: false
         Uniprot/SPTREMBL:
             Assembly:
@@ -1841,11 +1810,6 @@ homo_sapiens:
                     Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: true
         Uniprot/Varsplic:
-            Assembly:
-                "36":
-                    Ensembl release: 48,49,50,51,52,53,54
-                    Include: false
-        UniprotKB/SpliceVariant:
             Assembly:
                 "36":
                     Ensembl release: 48,49,50,51,52,53,54
@@ -1884,6 +1848,14 @@ homo_sapiens:
                 "37":
                     Ensembl release: 55,56,57,58,59,60,61,62
                     Include: false
+        WikiGene label:
+            Assembly:
+                "36":
+                    Ensembl release: 52,53,54
+                    Include: false
+                "37":
+                    Ensembl release: 55,56,57,58,59,60,61,62
+                    Include: false
         goslim_goa:
             Assembly:
                 "37":
@@ -1903,22 +1875,6 @@ homo_sapiens:
                 "38":
                     Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
-        synonym_id::EntrezGene:
-            Assembly:
-                "36":
-                    Ensembl release: 48,49,50,51,52,53,54
-                    Include: false
-                "37":
-                    Ensembl release: 55,56,57,58,59,60,61,62
-                    Include: false
-        synonym_id::MIM disease:
-            Assembly:
-                "36":
-                    Ensembl release: 48,49,50,51,52,53,54
-                    Include: false
-                "37":
-                    Ensembl release: 55,56,57,58,59,60,61,62
-                    Include: false
         synonym_id::MIM gene:
             Assembly:
                 "36":
@@ -1926,6 +1882,27 @@ homo_sapiens:
                     Include: false
                 "37":
                     Ensembl release: 55,56,57,58,59,60,61,62
+                    Include: false
+        synonym_id::MIM morbid:
+            Assembly:
+                "36":
+                    Ensembl release: 48,49,50,51,52,53,54
+                    Include: false
+                "37":
+                    Ensembl release: 55,56,57,58,59,60,61,62
+                    Include: false
+        synonym_id::NCBI gene (formerly Entrezgene):
+            Assembly:
+                "36":
+                    Ensembl release: 48,49,50,51,52,53,54
+                    Include: true
+                "37":
+                    Ensembl release: 55,56,57,58,59,60,61,62
+                    Include: true
+        synonym_id::UniProtKB Gene Name:
+            Assembly:
+                "37":
+                    Ensembl release: "62"
                     Include: false
         synonym_id::UniProtKB/Swiss-Prot:
             Assembly:
@@ -1948,11 +1925,6 @@ homo_sapiens:
                     Include: false
                 "38":
                     Ensembl release: 76,77,78,79,80,81,82,83,84,85,86,87
-                    Include: false
-        synonym_id::Uniprot Gene Name:
-            Assembly:
-                "37":
-                    Ensembl release: "62"
                     Include: false
         synonym_id::Vega translation:
             Assembly:

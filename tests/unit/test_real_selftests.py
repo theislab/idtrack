@@ -128,7 +128,7 @@ def test_database_that_the_graph_does_not_hold_is_refused_with_what_is_valid(sel
             from_fraction=0.01, progress=False,
         )  # fmt: skip
 
-    own_genes = organisms.ASSEMBLY_NODE_TYPES[assembly][ids.BACKBONE_FORM]
+    own_genes = organisms.ASSEMBLY_LABELS[assembly][ids.BACKBONE_FORM]
     targets = world.api.final_databases(SNAPSHOT)
     # (the engine's rule, as every conversion: a name that differs in letter case only is that database)
     for target in ("No Such Database", "gene", own_genes, ids.ENSEMBL_TYPE["transcript"]):
@@ -138,11 +138,12 @@ def test_database_that_the_graph_does_not_hold_is_refused_with_what_is_valid(sel
             f"`final_database`={target!r} is not a database of this graph at Ensembl release {SNAPSHOT} (genome "
             f"assembly {world.backbone[SNAPSHOT]}); valid: {targets}."
         )
-    sources = set(world.api.databases_by_assembly()[str(assembly)])
+    # the self-tests read the graph's own database names (with the synonyms' bookkeeping names), not the API's lists
+    sources = set(world.api.graph.available_external_databases_assembly[assembly])
     sources |= {ids.ENSEMBL_TYPE[form] for form in ids.FORMS}
-    sources |= {organisms.ASSEMBLY_NODE_TYPES[assembly][form] for form in ids.FORMS} | {ids.BASE_ENSEMBL_TYPE["gene"]}
+    sources |= {organisms.ASSEMBLY_LABELS[assembly][form] for form in ids.FORMS} | {ids.BASE_ENSEMBL_TYPE["gene"]}
     # the gene ids of another assembly
-    other_genes = organisms.ASSEMBLY_NODE_TYPES[world.backbone[SNAPSHOT]][ids.BACKBONE_FORM]
+    other_genes = organisms.ASSEMBLY_LABELS[world.backbone[SNAPSHOT]][ids.BACKBONE_FORM]
     for source in ("No Such Database", "gene", other_genes):
         with pytest.raises(UnknownDatabaseError) as refused:
             run(source, ids.ENSEMBL_TYPE["gene"])

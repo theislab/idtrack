@@ -25,7 +25,9 @@ from idtrack.errors import (
     UnknownReleaseError,
 )
 from idtrack.graph import TheGraph
-from idtrack.results import Candidate
+from idtrack.graph.store import _Places
+from idtrack.graph.types import ReleaseSet
+from idtrack.results import BRIDGE_RULES, PLACE_RELATIONS, Candidate
 from idtrack.settings import GraphSettings, SearchSettings
 from tests.unit._paths import raw_steps
 
@@ -54,12 +56,12 @@ class GraphBuilder:
                 "genome_assembly": 38,
                 "ensembl_release": self.last,
                 "confident_for_release": list(self.releases),
-                "narrow": True,
-                "narrow_external": True,
                 "misplaced_external_entry": set(),
             }
         )
         self.graph.available_forms = ["gene", "transcript", "translation"]
+        self.places: dict[tuple, int] = {}
+        self.beside: dict[str, int] = {}
 
     def _connection(self, database: str, releases: list[int], assembly: int | None) -> dict:
         per_assembly: dict[int, set] = {}
@@ -161,8 +163,31 @@ class GraphBuilder:
         self._xref_edge(name, transcript, "ensembl_translation", list(releases), None)
         return self
 
+    def place(
+        self, gene: str, region: str, start: int, end: int, strand: int, releases: range | list[int]
+    ) -> GraphBuilder:
+        """Put a gene version at a place at the given releases, each on the assembly that serves it.
+
+        A graph written by hand holds no places of its own; :py:meth:`track` gives it these, as the builder gives a
+        built graph the places of Ensembl's gene tables.
+        """
+        for r in releases:
+            key = (gene, self.assembly_of[r], region, start, end, strand)
+            self.places[key] = self.places.get(key, 0) | (1 << r)
+        return self
+
+    def outside(self, gene: str, releases: range | list[int]) -> GraphBuilder:
+        """Mark a gene version as lying outside the reference sequence (a patch, an alternative locus) at releases."""
+        for r in releases:
+            self.beside[gene] = self.beside.get(gene, 0) | (1 << r)
+        return self
+
     def track(self, settings: SearchSettings | None = None) -> Track:
-        """Return a ``Track`` on the graph."""
+        """Return a ``Track`` on the graph (with the places and marks given by :py:meth:`place` and :py:meth:`outside`)."""
+        if self.places or self.beside:
+            store = self.graph._frozen()
+            store.places = _Places.of({(store.index[node], *rest): mask for (node, *rest), mask in self.places.items()})
+            store.non_reference = {store.index[node]: ReleaseSet.from_mask(mask) for node, mask in self.beside.items()}
         return Track(self.graph, settings)
 
 
@@ -538,6 +563,214 @@ class TestBridges:
         assert targets(track.convert("F00.1", final_database="RFAM")) == ["U6"]
         assert len(genes(track.convert("U6"))) == THRESHOLD + 2
         assert track._node_scores(_Search(track._reader, "F00.1", track.search), "F00.1", 9) == [0, 0, 0]
+
+
+def checks(result: Conversion) -> dict[tuple[str, str], tuple]:
+    """Return the bridges a conversion considered: ``{(gene left, gene entered): (places, taken, through)}``."""
+    assert result.path is not None, "the conversion was not explained"
+    return {(c.source, c.target): (c.places, c.taken, c.through) for c in result.path.bridges}
+
+
+class TestBridgeRules:
+    """When a bridge is evidence of a lineage (decision 72 of the audit; decisions 17, 89 and 92 bound it).
+
+    Each test names the plausible wrong rule it tells apart from the one built.
+    """
+
+    def test_a_synonym_is_no_bridge(self):
+        """(a) ``OLD`` is a synonym of A (1-4) and of B (5-9): no bridge. Fails if synonyms bridge (the rule before).
+
+        The same id as a symbol bridges (the id was never on both genes at once), so it is the synonym that is refused.
+        """
+        for name, database, expected in (
+            ("synonym_id::OLD", "synonym_id::HGNC Symbol", []),
+            ("OLD", "HGNC Symbol", ["B.1"]),
+        ):
+            builder = GraphBuilder(range(1, 10))
+            builder.gene("A", [(1, 1, 4)]).gene("B", [(1, 5, 9)])
+            builder.xref(name, "A.1", database, range(1, 5)).xref(name, "B.1", database, range(5, 10))
+            result = builder.track().convert("A.1", to_release=9, explain=True)
+            assert genes(result) == expected, name
+            rule = "synonym" if name.startswith(ids.SYNONYM_PREFIX) else "never_shared"
+            # the explanation names the synonym as results name it (decision 56): no bookkeeping prefix anywhere
+            assert checks(result) == {("A.1", "B.1"): ("no_place", bool(expected), ((ids.public_name(name), rule),))}
+            assert ids.SYNONYM_PREFIX not in str(result.path.to_dict())
+            if not expected:
+                assert result.reason == "no_path_to_target"
+
+    def test_an_id_both_genes_hold_at_one_release_is_no_bridge(self):
+        """(b) Without places: ``X`` is on A (1-4) and on B (3-9) at once; ``Y`` left A (1-4) for C (6-9).
+
+        Only C is a successor. Fails if any shared id bridges (B, at no gap, would be the best answer). Rule (b)
+        decides only in a graph without places: with places the same chains are decided by them
+        (:py:meth:`test_on_one_assembly_the_places_decide`).
+        """
+        builder = GraphBuilder(range(1, 10))
+        builder.gene("A", [(1, 1, 4)]).gene("B", [(1, 1, 9)]).gene("C", [(1, 6, 9)])
+        builder.xref("X", "A.1", "EntrezGene", range(1, 5)).xref("X", "B.1", "EntrezGene", range(3, 10))
+        builder.xref("Y", "A.1", "HGNC Symbol", range(1, 5)).xref("Y", "C.1", "HGNC Symbol", range(6, 10))
+        result = builder.track().convert("A.1", to_release=9, explain=True)
+        assert genes(result) == ["C.1"]
+        assert checks(result) == {
+            ("A.1", "B.1"): ("no_place", False, (("X", "shared_at_one_release"),)),
+            ("A.1", "C.1"): ("no_place", True, (("Y", "never_shared"),)),
+        }
+
+    def test_the_holders_of_an_id_are_stable_ids_not_versions(self):
+        """(b) ``X`` is on A.1 (1-2), on A.2 at 4 and on B (4-9): the stable ids A and B hold it at 4.
+
+        No bridge, from either version. Fails if the holders are read per version (from A.1, at 1-2, B never held
+        ``X`` with it: B would be reached through A.1).
+        """
+        builder = GraphBuilder(range(1, 10))
+        builder.gene("A", [(1, 1, 2), (2, 3, 4)]).gene("B", [(1, 4, 9)])
+        builder.xref("X", "A.1", "EntrezGene", [1, 2]).xref("X", "A.2", "EntrezGene", [4])
+        builder.xref("X", "B.1", "EntrezGene", range(4, 10))
+        result = builder.track().convert("A.1", from_release=1, to_release=9, explain=True)
+        assert nothing(result)
+        assert {key: value[1:] for key, value in checks(result).items() if key[1] == "B.1"} == {
+            ("A.1", "B.1"): (False, (("X", "shared_at_one_release"),)),
+            ("A.2", "B.1"): (False, (("X", "shared_at_one_release"),)),
+        }
+
+    def test_on_one_assembly_the_places_decide(self):
+        """(c) A (1-4, chromosome 1, 100-200, +) ends. B overlaps it and holds ``X`` with it at 3-4: a bridge.
+
+        C (another chromosome) and D (the same bases, the other strand) took ids that left A: no bridges. Fails if
+        (b) is applied before the places (B dropped), if places are not compared (C and D kept), or if the strand
+        does not count (D kept).
+        """
+        builder = GraphBuilder(range(1, 10))
+        builder.gene("A", [(1, 1, 4)]).gene("B", [(1, 1, 9)]).gene("C", [(1, 5, 9)]).gene("D", [(1, 5, 9)])
+        builder.place("A.1", "1", 100, 200, 1, range(1, 5)).place("B.1", "1", 150, 300, 1, range(1, 10))
+        builder.place("C.1", "2", 100, 200, 1, range(5, 10)).place("D.1", "1", 100, 200, -1, range(5, 10))
+        builder.xref("X", "A.1", "EntrezGene", range(1, 5)).xref("X", "B.1", "EntrezGene", range(3, 10))
+        builder.xref("Y", "A.1", "HGNC Symbol", range(1, 5)).xref("Y", "C.1", "HGNC Symbol", range(5, 10))
+        builder.xref("Z", "A.1", "UniProtKB Gene Name", range(1, 5))
+        builder.xref("Z", "D.1", "UniProtKB Gene Name", range(5, 10))
+        result = builder.track().convert("A.1", to_release=9, explain=True)
+        assert genes(result) == ["B.1"]
+        assert checks(result) == {
+            ("A.1", "B.1"): ("same_place", True, (("X", "same_place"),)),
+            ("A.1", "C.1"): ("places_apart", False, (("Y", "places_apart"),)),
+            ("A.1", "D.1"): ("places_apart", False, (("Z", "places_apart"),)),
+        }
+
+    def test_places_are_compared_over_every_version_of_both_genes(self):
+        """(c) A.1 (37) and A.2 (38) end at 6; B (38, from 8) lies elsewhere on 38 and took ``X`` from A.1 at 4.
+
+        No bridge from either version. Fails if places are compared per version (A.1 never lay on 38, so the bridge
+        from A.1 would fall back to (b) and be taken around the place test).
+        """
+        builder = GraphBuilder(range(1, 10), assembly_of={r: (37 if r <= 4 else 38) for r in range(1, 10)})
+        builder.gene("A", [(1, 1, 4), (2, 5, 6)]).gene("B", [(1, 8, 9)])
+        builder.place("A.1", "1", 100, 200, 1, range(1, 5)).place("A.2", "1", 1100, 1200, 1, [5, 6])
+        builder.place("B.1", "5", 100, 200, 1, [8, 9])
+        builder.xref("X", "A.1", "EntrezGene", range(1, 5)).xref("X", "B.1", "EntrezGene", [8, 9])
+        result = builder.track().convert("A.1", from_release=1, to_release=9, explain=True)
+        assert nothing(result)
+        assert checks(result) == {("A.1", "B.1"): ("places_apart", False, (("X", "places_apart"),))}
+
+    def test_across_an_assembly_change_an_id_that_left_one_gene_for_the_other_bridges(self):
+        """(c), then (b): A lies on assembly 37 only (1-4), B on 38 only (5-9); their places cannot be compared.
+
+        ``X`` left A for B: a bridge. Fails if a bridge needs comparable places (nothing would cross an assembly).
+        """
+        builder = GraphBuilder(range(1, 10), assembly_of={r: (37 if r <= 4 else 38) for r in range(1, 10)})
+        builder.gene("A", [(1, 1, 4)]).gene("B", [(1, 5, 9)])
+        builder.place("A.1", "1", 100, 200, 1, range(1, 5)).place("B.1", "7", 100, 200, 1, range(5, 10))
+        builder.xref("X", "A.1", "EntrezGene", range(1, 5)).xref("X", "B.1", "EntrezGene", range(5, 10))
+        result = builder.track().convert("A.1", to_release=9, explain=True)
+        assert genes(result) == ["B.1"]
+        assert checks(result) == {("A.1", "B.1"): ("other_assemblies", True, (("X", "never_shared"),))}
+
+    def test_a_copy_outside_the_reference_sequence_keeps_the_bridge_to_its_reference_gene(self):
+        """A copy on a patch (1-4) carries its reference gene's symbol ``S`` at the same releases: a bridge.
+
+        ``N`` was the copy's other name; Ensembl gave it to M only after the copy's end (5-9): no bridge, as the copy
+        stands for the gene that carries its names while it exists. A synonym is still no bridge. Places on a patch
+        are not compared with the reference sequence (decision 92 would project them first). Fails if the copy's
+        place is compared by region name or (b) is applied to it (either cuts it from R), or if a copy bridges
+        through any id (M kept).
+        """
+        builder = GraphBuilder(range(1, 10))
+        builder.gene("P", [(1, 1, 4)]).gene("R", [(1, 1, 9)]).gene("Q", [(1, 1, 9)]).gene("M", [(1, 1, 9)])
+        builder.place("P.1", "CHR_PATCH_1", 100, 200, 1, range(1, 5)).outside("P.1", range(1, 5))
+        builder.place("R.1", "1", 100, 200, 1, range(1, 10)).place("Q.1", "2", 500, 900, 1, range(1, 10))
+        builder.place("M.1", "3", 100, 900, -1, range(1, 10))
+        builder.xref("S", "P.1", "HGNC Symbol", range(1, 5)).xref("S", "R.1", "HGNC Symbol", range(1, 10))
+        builder.xref("N", "P.1", "EntrezGene", range(1, 5)).xref("N", "M.1", "EntrezGene", range(5, 10))
+        builder.xref("synonym_id::T", "P.1", "synonym_id::HGNC Symbol", range(1, 5))
+        builder.xref("synonym_id::T", "Q.1", "synonym_id::HGNC Symbol", range(1, 10))
+        result = builder.track().convert("P.1", to_release=9, explain=True)
+        assert genes(result) == ["R.1"]
+        assert checks(result) == {
+            ("P.1", "M.1"): ("outside_reference", False, (("N", "copy_id_elsewhere"),)),
+            ("P.1", "Q.1"): ("outside_reference", False, (("T", "synonym"),)),
+            ("P.1", "R.1"): ("outside_reference", True, (("S", "outside_reference"),)),
+        }
+
+    def test_a_shared_transcript_is_judged_as_an_id(self):
+        """A transcript of A (1-4) belongs to B (5-9) later: a bridge where the places overlap, none where they do not.
+
+        Fails if a shared transcript escapes the place test.
+        """
+        for b_region, expected in (("1", ["B.1"]), ("3", [])):
+            builder = GraphBuilder(range(1, 10))
+            builder.gene("A", [(1, 1, 4)]).gene("B", [(1, 5, 9)])
+            builder.place("A.1", "1", 100, 200, 1, range(1, 5)).place("B.1", b_region, 120, 220, 1, range(5, 10))
+            builder.transcript("AT.1", "A.1", range(1, 5)).transcript("AT.1", "B.1", range(5, 10))
+            result = builder.track().convert("A.1", to_release=9, explain=True)
+            assert genes(result) == expected, b_region
+            rule = "same_place" if expected else "places_apart"
+            assert checks(result) == {("A.1", "B.1"): (rule, bool(expected), (("AT.1", rule),))}
+
+    def test_the_rules_and_relations_have_texts(self):
+        """Every rule and every relation of places has a text for the explained path (the web app's path view)."""
+        assert set(BRIDGE_RULES) == {
+            "same_place",
+            "never_shared",
+            "outside_reference",
+            "synonym",
+            "places_apart",
+            "shared_at_one_release",
+            "copy_id_elsewhere",
+            "copy_id_of_several_genes",
+            "mitochondrial_genome",
+        }
+        assert set(PLACE_RELATIONS) == {
+            "same_place",
+            "places_apart",
+            "other_assemblies",
+            "outside_reference",
+            "no_place",
+        }
+        assert all(isinstance(text, str) and text for text in (*BRIDGE_RULES.values(), *PLACE_RELATIONS.values()))
+
+    def test_a_history_step_says_where_it_moves_the_gene(self):
+        """Decision 89: Ensembl's history moves A from chromosome 1 to 2 at 3/4 (the walk follows it and says so).
+
+        A.2 -> A.3 keeps the place; A.3 -> A.4 turns to the other strand over the same bases (another place); at the
+        assembly change 7/8 the places cannot be compared. Fails if a step's place is compared by region and bases
+        alone (A.3 -> A.4 would read as the same place) or across assemblies (A.4 -> A.5 would read as moved).
+        """
+        builder = GraphBuilder(range(1, 10), assembly_of={r: (37 if r <= 7 else 38) for r in range(1, 10)})
+        builder.gene("A", [(1, 1, 3), (2, 4, 4), (3, 5, 5), (4, 6, 7), (5, 8, 9)])
+        builder.place("A.1", "1", 100, 200, 1, [1, 2, 3]).place("A.2", "2", 100, 200, 1, [4])
+        builder.place("A.3", "2", 150, 250, 1, [5]).place("A.4", "2", 150, 250, -1, [6, 7])
+        builder.place("A.5", "2", 150, 250, -1, [8, 9])
+        result = builder.track().convert("A.1", from_release=1, to_release=9, explain=True)
+        steps = [s for s in result.path.steps if s.kind == "history"]
+        assert [(s.source, s.target, s.places) for s in steps] == [
+            ("A.1", "A.2", "places_apart"),
+            ("A.2", "A.3", "same_place"),
+            ("A.3", "A.4", "places_apart"),
+            ("A.4", "A.5", "other_assemblies"),
+        ]
+        places = {node.id: node.places for node in result.path.nodes}
+        assert [(p.assembly, p.region, p.start, p.end, p.strand, p.releases, p.reference) for p in places["A.4"]] == [
+            (37, "2", 150, 250, -1, ((6, 7),), True)
+        ]
 
 
 class TestFinalConversion:

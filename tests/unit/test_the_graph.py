@@ -278,6 +278,135 @@ class TestHyperconnectiveNodes:
         assert graph.genes_linked_at_once("MOVING") == 1
         assert graph.hyperconnective_nodes == {"FAMILY": 30}
 
+    def test_a_label_that_named_many_genes_over_its_releases_is_a_family_name(self):
+        """Decision 74: a label is a family name when it named more genes than the threshold over its releases.
+
+        ``SCARNA``, a label, names one or two genes at a time, six genes over the releases (mouse ``SCARNA15``:
+        9 genes, at most 5 at once, carried a retired id to copies at other loci); the same pattern in a database of
+        accessions, and a label of as many genes as the threshold, stay identities: the comparison is the one of the
+        count at once (more genes than the threshold).
+        """
+        threshold = GraphSettings().hyperconnective_threshold
+        graph = TheGraph(assembly=38, confident_for_release=list(range(60, 80)), label_databases=["RFAM label"])
+        places: dict[str, tuple[str, int, int]] = {}
+        releases: dict[str, set[int]] = {}
+        for name, database, genes in (
+            ("SCARNA", "RFAM label", threshold + 1),
+            ("RF00001", "RFAM", threshold + 1),
+            ("FEW", "RFAM label", threshold),
+        ):
+            graph.add_node(name, **{ids.NODE_TYPE_KEY: ids.EXTERNAL})
+            for i in range(genes):
+                target = f"{name}GENE{i}.1"
+                graph.add_node(target, **{ids.NODE_TYPE_KEY: "ensembl_gene"})
+                graph.add_edge(name, target, **{ids.CONNECTION_KEY: {database: {38: {60 + 2 * i, 61 + 2 * i}}}})
+                # each gene at a locus of its own, living at the releases at which the label names it
+                places[target] = ("1", 10_000 * (i + 1), 10_000 * (i + 1) + 500)
+                releases[target] = {60 + 2 * i, 61 + 2 * i}
+        self.placed(graph, places, set(), releases)
+
+        assert graph.genes_linked_at_once("SCARNA") == 1
+        assert graph.label_families == {"SCARNA": threshold + 1, "FEW": threshold}
+        assert graph.hyperconnective_nodes == {"SCARNA": threshold + 1}
+
+    @staticmethod
+    def placed(
+        graph: TheGraph,
+        places: dict[str, tuple[str, int, int]],
+        outside: set[str],
+        releases: dict[str, set[int]] | None = None,
+    ) -> TheGraph:
+        """Give a graph made by hand the places of its genes (assembly 38, forward strand) and marks.
+
+        ``places``: ``{gene version: (region, start, end)}``; ``outside``: the versions on a patch at every release
+        they live; ``releases``: the releases at which each version lies there (a version lives at the releases of
+        its places), every release where not given.
+        """
+        from idtrack.graph.store import _Places
+        from idtrack.graph.types import ReleaseSet
+
+        store = graph._frozen()
+        every = (1 << 120) - 1
+
+        def mask(node: str) -> int:
+            return every if releases is None or node not in releases else sum(1 << r for r in releases[node])
+
+        store.places = _Places.of(
+            {
+                (store.index[node], 38, region, start, end, 1): mask(node)
+                for node, (region, start, end) in places.items()
+            }
+        )
+        store.non_reference = {store.index[node]: ReleaseSet.from_mask(mask(node)) for node in outside}
+        return graph
+
+    def test_a_label_of_one_gene_its_copies_and_its_ids_over_time_is_no_family_name(self):
+        """Decisions 74 and 73's notion of one gene: copies outside the reference sequence and successive ids are one.
+
+        ``ACTB``-like: one gene of chromosome 1, its five copies on patches (one per release). ``MOVED``: six stable
+        ids at one locus, each the next one's predecessor in Ensembl's history (one per release). ``FAMILY``: six
+        genes at six loci. Only ``FAMILY`` is a family name. Fails if genes are counted by stable id (the review's 636
+        human labels flagged through patch and haplotype copies; ``MOVED`` would be one too).
+        """
+        threshold = GraphSettings().hyperconnective_threshold
+        graph = TheGraph(assembly=38, confident_for_release=list(range(60, 80)), label_databases=["HGNC Symbol"])
+        places: dict[str, tuple[str, int, int]] = {}
+        releases: dict[str, set[int]] = {}
+        outside: set[str] = set()
+        for name in ("ACTB", "MOVED", "FAMILY"):
+            graph.add_node(name, **{ids.NODE_TYPE_KEY: ids.EXTERNAL})
+        for i in range(threshold + 1):
+            for name in ("ACTB", "MOVED", "FAMILY"):
+                gene = f"{name}GENE{i}.1"
+                graph.add_node(gene, **{ids.NODE_TYPE_KEY: "ensembl_gene"})
+                graph.add_edge(name, gene, **{ids.CONNECTION_KEY: {"HGNC Symbol": {38: {60 + i}}}})
+            places[f"ACTBGENE{i}.1"] = ("1", 100, 900) if i == 0 else (f"CHR_PATCH_{i}", 100, 900)
+            if i:
+                outside.add(f"ACTBGENE{i}.1")
+            places[f"MOVEDGENE{i}.1"] = ("2", 10_000 * (i + 1), 10_000 * (i + 1) + 500)
+            places[f"FAMILYGENE{i}.1"] = ("3", 10_000 * (i + 1), 10_000 * (i + 1) + 500)
+            for name in ("ACTB", "MOVED", "FAMILY"):  # each gene lives at the release at which the label names it
+                releases[f"{name}GENE{i}.1"] = {60 + i}
+            if i:
+                graph.add_edge(f"MOVEDGENE{i - 1}.1", f"MOVEDGENE{i}.1", key=60 + i, weight=0.9, old_release=59 + i,
+                               new_release=60 + i)  # fmt: skip
+        self.placed(graph, places, outside, releases)
+
+        assert graph.label_families == {"FAMILY": threshold + 1}
+        assert graph.count_genes(["ACTBGENE0", "ACTBGENE1"]) == 1
+        assert graph.count_genes(["MOVEDGENE0", "MOVEDGENE5"]) == 2  # only the ids counted join: no event between
+        assert graph.count_genes(["MOVEDGENE0", "MOVEDGENE1"]) == 1
+        assert graph.hyperconnective_nodes == {"FAMILY": threshold + 1}
+
+    def test_the_count_at_once_counts_a_genes_copies(self):
+        """The count at once counts stable ids: a gene and its seven haplotype copies carrying one id at once are 8.
+
+        Such an id (the MHC genes' ids on the human haplotypes) stays no bridge, as Ensembl's history gives for an id
+        retired without a successor; the count over the releases (decision 74) reads the one rule of a gene. Fails if
+        the count at once reads :py:meth:`idtrack.TheGraph.count_genes` (the copies would bridge retired copies to
+        other copies) or counts genes at several loci as one.
+        """
+        graph = TheGraph(assembly=38, confident_for_release=[100], label_databases=["HGNC Symbol"])
+        places: dict[str, tuple[str, int, int]] = {}
+        outside: set[str] = set()
+        for name in ("HLA", "SPREAD"):
+            graph.add_node(name, **{ids.NODE_TYPE_KEY: ids.EXTERNAL})
+        for i in range(8):
+            for name in ("HLA", "SPREAD"):
+                gene = f"{name}GENE{i}.1"
+                graph.add_node(gene, **{ids.NODE_TYPE_KEY: "ensembl_gene"})
+                graph.add_edge(name, gene, **{ids.CONNECTION_KEY: {"HGNC Symbol": {38: {100}}}})
+            places[f"HLAGENE{i}.1"] = ("6", 100, 900) if i == 0 else (f"CHR_HSCHR6_MHC_{i}", 100, 900)
+            if i:
+                outside.add(f"HLAGENE{i}.1")
+            places[f"SPREADGENE{i}.1"] = ("6", 10_000 * (i + 1), 10_000 * (i + 1) + 500)
+        self.placed(graph, places, outside)
+
+        assert graph.genes_linked_at_once("HLA") == 8 and graph.count_genes(graph._gene_masks("HLA")) == 1
+        assert graph.genes_linked_at_once("SPREAD") == 8
+        assert graph.label_families == {"SPREAD": 8}
+        assert graph.hyperconnective_nodes == {"HLA": 8, "SPREAD": 8}
+
     def test_genes_linked_at_once_counts_a_transcript_as_its_gene(self):
         """An id linked to two transcripts of one gene links one gene."""
         graph = TheGraph(assembly=38, confident_for_release=[100])

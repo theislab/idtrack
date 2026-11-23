@@ -5,6 +5,7 @@ The goal is to exercise the developer-facing test harness on a tiny synthetic
 graph (2 releases) without requiring large MySQL downloads.
 """
 
+import dataclasses
 import random
 from dataclasses import dataclass
 
@@ -13,7 +14,7 @@ import pandas as pd
 import pytest
 
 from idtrack.build.builder import GraphMaker
-from idtrack.build.database_manager import DatabaseManager
+from idtrack.build.database_manager import ASSEMBLY_EXCEPTION_COLUMNS, DatabaseManager
 from idtrack.checks import CheckResult, GraphChecks
 from idtrack.engine import Conversion
 from idtrack.errors import ArgumentTypeError, InvalidArgumentError, UnknownDatabaseError
@@ -33,6 +34,11 @@ def _synthetic_graph_mysql() -> _SyntheticGraphMySQL:
             "stable_id": ["ENSG00000000001", "ENSG00000000002"],
             "version": [1, 1],
             "seq_region_id": [1, 1],
+            "biotype": ["protein_coding"] * 2,
+            "display_xref_id": [None] * 2,
+            "seq_region_start": [100 * (k + 1) for k in range(2)],
+            "seq_region_end": [100 * (k + 1) + 50 for k in range(2)],
+            "seq_region_strand": [1] * 2,
         }
     )
     gene_r101 = pd.DataFrame(
@@ -41,6 +47,11 @@ def _synthetic_graph_mysql() -> _SyntheticGraphMySQL:
             "stable_id": ["ENSG00000000001", "ENSG00000000003"],
             "version": [2, 1],
             "seq_region_id": [1, 1],
+            "biotype": ["protein_coding"] * 2,
+            "display_xref_id": [None] * 2,
+            "seq_region_start": [100 * (k + 1) for k in range(2)],
+            "seq_region_end": [100 * (k + 1) + 50 for k in range(2)],
+            "seq_region_strand": [1] * 2,
         }
     )
 
@@ -72,6 +83,10 @@ def _synthetic_graph_mysql() -> _SyntheticGraphMySQL:
     regions = {
         "attrib_type": pd.DataFrame({"attrib_type_id": [6, 16], "code": ["toplevel", "non_ref"]}),
         "seq_region_attrib": pd.DataFrame({"seq_region_id": [1], "attrib_type_id": [6]}),
+        "seq_region": pd.DataFrame({"seq_region_id": [1], "name": ["1"], "coord_system_id": [1]}),
+        "coord_system": pd.DataFrame({"coord_system_id": [1], "name": ["chromosome"]}),
+        # no patch, haplotype or pseudoautosomal region
+        "assembly_exception": pd.DataFrame(columns=ASSEMBLY_EXCEPTION_COLUMNS),
     }
     tables_by_release = {
         100: {"gene": gene_r100, "stable_id_event": stable_id_event, "mapping_session": mapping_session, **regions},
@@ -125,6 +140,8 @@ def synthetic_track_tests(tmp_path, monkeypatch) -> GraphChecks:
 
     def _download_table(self: DatabaseManager, table_key: str, usecols: list[str] | None = None) -> pd.DataFrame:
         df = synthetic.tables_by_release[int(self.release)].get(table_key)
+        if df is None and table_key == "external_db":  # no external database is named apart from its labels
+            return pd.DataFrame(columns=["external_db_id", "db_name", "db_display_name"])
         if df is None:
             return pd.DataFrame()
         if usecols is None:
@@ -132,7 +149,7 @@ def synthetic_track_tests(tmp_path, monkeypatch) -> GraphChecks:
         return df.loc[:, usecols].copy(deep=True)
 
     def _create_external_all(
-        self: DatabaseManager, narrow_external: bool = True, **kwargs  # noqa: ARG002
+        self: DatabaseManager, all_external: bool = False, **kwargs  # noqa: ARG002
     ) -> pd.DataFrame:
         release = int(self.release)
         graph_id = "ENSG00000000001.1" if release == 100 else "ENSG00000000001.2"
@@ -145,6 +162,8 @@ def synthetic_track_tests(tmp_path, monkeypatch) -> GraphChecks:
                     "name_db": "HGNC",
                     "ensembl_identity": np.nan,
                     "xref_identity": np.nan,
+                    "version": 0,
+                    "is_display": False,
                     "assembly": 38,
                 },
             ]
@@ -167,7 +186,7 @@ def synthetic_track_tests(tmp_path, monkeypatch) -> GraphChecks:
     )
 
     # the harness is made as a user makes it: by its constructor, which builds the graph through the manager
-    graph = GraphMaker(dm).get_graph(narrow=True, save_after_calculation=False, forms=["gene"])
+    graph = GraphMaker(dm).get_graph(save_after_calculation=False, forms=["gene"])
     return GraphChecks(graph, dm)
 
 
@@ -388,7 +407,7 @@ def test_random_arguments_are_releases_and_databases_of_the_graph(synthetic_trac
         )
         drawn_releases.add((drawn["from_release"], drawn["to_release"]))
         if (
-            drawn["to_release"] not in graph.graph["confident_for_release"]
+            drawn["to_release"] not in graph.releases
             or drawn["to_release"] < drawn["from_release"]
             or drawn["final_database"] != "HGNC"
             or drawn["from_database"] != "ensembl_gene"
@@ -559,8 +578,40 @@ def test_external_id_that_only_the_graph_has_is_reported(synthetic_track_tests, 
     ]
     # an identifier of the tables that is an Ensembl id of the graph is no external identifier there
     serve_external_table(monkeypatch, TP53_ROWS + [(101, "ENSG00000000003.1", "ENSG00000000001", "HGNC")])
-    monkeypatch.setitem(synthetic_track_tests.graph.graph, "misplaced_external_entry", {"ENSG00000000001"})
+    graph = synthetic_track_tests.graph
+    monkeypatch.setitem(
+        graph.__dict__, "_record", dataclasses.replace(graph.record, misplaced_external_entries=("ENSG00000000001",))
+    )
     assert synthetic_track_tests.is_id_functions_consistent_external(progress=False).holds is True
+
+
+def test_an_entry_the_graph_leaves_out_by_the_one_gene_rule_is_no_difference(synthetic_track_tests, monkeypatch):
+    """Decision 73: an entry the build left out because the tables give it to several genes is no id of the tables.
+
+    The build lists such entries in the record (``entries_of_several_genes``); both checks against the tables leave
+    them out for the databases the rule judges (here HGNC stands in for miRBase, which the synthetic world lacks); an
+    entry not listed stays compared. Without the rule the external check reports ``mi1`` missing and the conversion
+    check counts gene 3 as lost although it has an id.
+    """
+    monkeypatch.setattr(DatabaseManager, "one_gene_only_names", lambda self: {"HGNC"})
+    serve_external_table(monkeypatch, TP53_ROWS + [(101, "ENSG00000000003.1", "MI1", "HGNC")])
+    graph = synthetic_track_tests.graph
+    assert synthetic_track_tests.is_id_functions_consistent_external(progress=False).holds is False
+    lost = synthetic_track_tests.is_final_external_conversion_robust(
+        final_database="HGNC", to_release=101, progress=False, convert_using_release=True
+    )
+    assert lost.details["n_lost_with_id"] == 1
+    monkeypatch.setitem(graph.__dict__, "_record", dataclasses.replace(graph.record, entries_of_several_genes=("mi1",)))
+    assert synthetic_track_tests.is_id_functions_consistent_external(progress=False).holds is True
+    converted = synthetic_track_tests.is_final_external_conversion_robust(
+        final_database="HGNC", to_release=101, progress=False, convert_using_release=True
+    )
+    assert converted.holds is True, converted.details
+    serve_external_table(monkeypatch, TP53_ROWS + [(101, "ENSG00000000003.1", "MI2", "HGNC")])
+    one_gene = synthetic_track_tests.is_id_functions_consistent_external(progress=False)
+    assert [(d["database"], d["release"], d["missing"]) for d in one_gene.details["differing"]] == [
+        ("HGNC", 101, ["mi2"])
+    ]
 
 
 def test_final_conversion_check_passes_when_the_conversions_equal_the_tables(synthetic_track_tests, monkeypatch):

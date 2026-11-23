@@ -1,13 +1,16 @@
 """The identifier graph of one organism (:py:class:`TheGraph`): typed accessors over its store, and its file."""
 
 import functools
+import io
 import itertools
 import json
 import logging
 import math
 import os
 import zipfile
-from collections.abc import Iterator, Mapping
+import zlib
+from collections.abc import Collection, Iterator, Mapping
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 import networkx as nx
@@ -23,38 +26,35 @@ from idtrack.errors import (
     InvalidArgumentError,
     UnknownIdentifierError,
 )
+from idtrack.graph import genes as genes_rule
 from idtrack.graph.names import NameResolution
+from idtrack.graph.record import GRAPH_FORMAT_VERSION, GraphRecord
 from idtrack.graph.store import (
     _NAME_SEPARATOR,
-    _STORED_GLOBALS,
     _connection_or_none,
-    _from_json_globals,
-    _from_json_graph,
+    _LinkMarks,
     _masks_to_words,
+    _Places,
     _Store,
     _to_json,
     _words_to_masks,
 )
 from idtrack.graph.types import (
-    _ASSEMBLY_TYPE,
     _INF,
+    _KIND_HISTORY,
     _KIND_OTHER,
     _KIND_XREF,
     _NO_RELEASES,
+    AssemblyException,
     Connection,
     HistoryEdge,
+    Place,
     ReleaseSet,
     _assembly_label,
-    _is_assembly_gene,
     _is_release,
     serving_line,
 )
 from idtrack.settings import GraphSettings, check_graph_settings
-
-#: Version of the graph file layout and of the build rules behind it. It is raised whenever a graph built by an
-#: earlier version of the code must not be loaded any more (a change of the file layout, of what an edge means, of
-#: how names are chosen or of how the history is validated).
-GRAPH_FORMAT_VERSION = 2
 
 #: The steps of name resolution that are tried on names and then on synonyms, in this order.
 _NETWORKX_VIEWS = (
@@ -76,6 +76,11 @@ _REBUILD_HINT = (
     "To build the graph again: call `API.build(..., rebuild=True)` or "
     "`GraphMaker.get_graph(create_even_if_exist=True)`, which replace the file."
 )
+
+
+def _stable_id(name: str) -> str:
+    """Return the stable id of an Ensembl node name ``<id>.<version>`` (a name without a version is its own)."""
+    return ids.split(name)[0] if ids.is_versioned_name(name) else name
 
 
 class _NodeMap(Mapping):
@@ -124,6 +129,50 @@ class _AdjacencyMap(Mapping):
         return self._store.n
 
 
+# A member of the graph file is deflated when that makes it at most this fraction of its size; arrays of hashes barely
+# compress, and inflating them would only cost time at every load.
+_DEFLATE_WHEN_AT_MOST = 0.9
+# Members are inflated in this many threads at most (zlib releases the GIL), so that the deflated file loads as fast
+# as the same arrays stored.
+_READ_THREADS = 8
+
+
+def _write_arrays(path: str, arrays: Mapping[str, Any]) -> None:
+    """Write *arrays* as a ``.npz`` file, each member deflated where that pays and stored otherwise.
+
+    The file is what ``np.savez`` writes (a zip of ``.npy`` members, read by ``np.load``); a member is deflated when that
+    makes it at most :py:data:`_DEFLATE_WHEN_AT_MOST` of its size.
+    """
+    with zipfile.ZipFile(path, "w", allowZip64=True) as archive:
+        for name, array in arrays.items():
+            buffer = io.BytesIO()
+            np.lib.format.write_array(buffer, np.asanyarray(array), allow_pickle=False)
+            raw = buffer.getvalue()
+            deflated = len(zlib.compress(raw, 6)) <= _DEFLATE_WHEN_AT_MOST * len(raw)
+            method = zipfile.ZIP_DEFLATED if deflated else zipfile.ZIP_STORED
+            archive.writestr(zipfile.ZipInfo(f"{name}.npy", date_time=(1980, 1, 1, 0, 0, 0)), raw, compress_type=method)
+
+
+def _read_arrays(path: str) -> dict[str, np.ndarray]:
+    """Read every member of a ``.npz`` file written by :py:func:`_write_arrays`, inflating the members in threads."""
+    with zipfile.ZipFile(path) as archive:
+        members = sorted(archive.infolist(), key=lambda info: -info.file_size)
+
+        def read(info: zipfile.ZipInfo) -> tuple[str, np.ndarray]:
+            data = archive.read(info.filename)
+            return info.filename.removesuffix(".npy"), np.lib.format.read_array(io.BytesIO(data), allow_pickle=False)
+
+        try:
+            available = len(os.sched_getaffinity(0))
+        except AttributeError:  # not on Linux
+            available = os.cpu_count() or 1
+        threads = max(1, min(_READ_THREADS, available, len(members)))
+        if threads == 1:
+            return dict(map(read, members))
+        with ThreadPoolExecutor(threads) as pool:
+            return dict(pool.map(read, members))
+
+
 class TheGraph(NameResolution, nx.MultiDiGraph):
     """The identifier graph of one organism: Ensembl gene history plus cross-references, with typed accessors.
 
@@ -157,9 +206,11 @@ class TheGraph(NameResolution, nx.MultiDiGraph):
         Args:
             args (Any): Positional arguments accepted by :py:meth:`networkx.MultiDiGraph.__init__`.
             kwargs (Any): Keyword arguments accepted by :py:meth:`networkx.MultiDiGraph.__init__`; they become graph
-                attributes (``organism``, ``assembly``, ``ensembl_release``, ``confident_for_release`` ...).
+                attributes (``organism``, ``assembly``, ``confident_for_release`` ...) of a graph made in
+                memory; a built or loaded graph has its :py:attr:`record` instead.
         """
         self._store: _Store | None = None
+        self._record: GraphRecord | None = None
         self._reverse_view = False
         self.log = logging.getLogger(__name__)
         self.available_forms = None
@@ -291,7 +342,7 @@ class TheGraph(NameResolution, nx.MultiDiGraph):
         self._c_combined = combined
         self._c_ranges, self._c_active, self._c_trios = ranges, active, trios
         # What a string means at a release: asked twice per conversion (for the report and by the engine).
-        self._c_resolved = functools.lru_cache(maxsize=size["names"])(self._resolve_uncached)
+        self._c_readings = functools.lru_cache(maxsize=size["names"])(self._readings_uncached)
         # What every resolution asks for: the identifiers that are written in more than one way, the last release.
         self._c_respelled, self._c_respelled_lower = store.respelled()
         self._c_last: int | None = None
@@ -352,24 +403,114 @@ class TheGraph(NameResolution, nx.MultiDiGraph):
     # ------------------------------------------------------------------ graph-level values
 
     @property
+    def record(self) -> GraphRecord | None:
+        """What the graph is and what built it (:py:class:`idtrack.graph.GraphRecord`; ``None`` in memory)."""
+        return self.__dict__.get("_record")
+
+    @property
+    def organism(self) -> str | None:
+        """The organism of the graph (``None`` for a graph made in memory without one)."""
+        record = self.record
+        return record.organism if record is not None else self.graph.get("organism")
+
+    @property
+    def primary_assembly(self) -> int | None:
+        """The assembly of the snapshot release (``None`` for a graph made in memory without one)."""
+        record = self.record
+        if record is not None:
+            return record.primary_assembly
+        found = self.graph.get("genome_assembly")
+        return None if found is None else int(found)
+
+    def _primary(self) -> int:
+        """Return the primary assembly, which this needs (a graph made in memory may have none).
+
+        Raises:
+            IntegrityError: If the graph has no primary assembly.
+        """
+        assembly = self.primary_assembly
+        if assembly is None:
+            raise IntegrityError("The graph has no primary assembly (a graph made in memory without one).")
+        return assembly
+
+    @property
     def releases(self) -> tuple[int, ...]:
         """The Ensembl releases the graph covers, ascending."""
+        record = self.record
+        if record is not None:
+            return record.releases
         return tuple(sorted(int(r) for r in self.graph["confident_for_release"]))
 
     @property
     def first_release(self) -> int:
         """The first release the graph covers."""
-        return min(int(r) for r in self.graph["confident_for_release"])
+        return self.releases[0]
 
     @property
     def snapshot_release(self) -> int:
         """The last release the graph covers."""
-        return int(max(self.graph["confident_for_release"]))
+        return self.releases[-1]
 
     @property
-    def manifest(self) -> dict:
-        """What the graph was built from (empty for a graph made in memory); see :py:meth:`save`."""
-        return self.graph.get("manifest", {})
+    def label_databases(self) -> frozenset[str]:
+        """The external databases whose ids are labels (display names, symbols) rather than accessions."""
+        record = self.record
+        if record is not None:
+            return frozenset(record.label_names.values())
+        return frozenset(self.graph.get("label_databases", ()))
+
+    @property
+    def label_names(self) -> dict[str, str]:
+        """The name of each database's label rows in the graph, by Ensembl's database name (decision 53).
+
+        Ensembl names a database's label rows by its display name, which changed over the releases for some databases;
+        the graph gives them one name, read from Ensembl's tables of its releases
+        (:py:func:`idtrack.build.database_manager.label_names_of_databases`). Empty for a graph made in memory.
+        """
+        record = self.record
+        return dict(record.label_names) if record is not None else dict(self.graph.get("label_names", {}))
+
+    @property
+    def authority_databases(self) -> frozenset[str]:
+        """The databases of a name authority of the graph's organism (decision 94).
+
+        The organism's symbol databases (:py:data:`idtrack.organisms.SYMBOL_DATABASES`: HGNC, MGI, VGNC) and NCBI's
+        official symbols, the label rows of NCBI Gene's database (:py:data:`idtrack.organisms.NCBI_GENE_DATABASE`) by
+        the name the graph gives them (:py:attr:`label_names`).
+        """
+        found = set(organisms.SYMBOL_DATABASES.get(self.organism or "", ()))
+        ncbi = self.label_names.get(organisms.NCBI_GENE_DATABASE)
+        if ncbi is not None:
+            found.add(ncbi)
+        return frozenset(found)
+
+    @property
+    def renamed_databases(self) -> dict[str, str]:
+        """Names that Ensembl gives a database's labels at some release and the graph does not, with the graph's name."""
+        record = self.record
+        if record is not None:
+            return dict(record.renamed_databases)
+        return dict(self.graph.get("renamed_databases", {}))
+
+    @property
+    def misplaced_external_entries(self) -> tuple[str, ...]:
+        """External ids that the build left out because they are Ensembl ids (an Ensembl node or a gene's base id)."""
+        record = self.record
+        if record is not None:
+            return record.misplaced_external_entries
+        return tuple(sorted(self.graph.get("misplaced_external_entry", ())))
+
+    @property
+    def entries_of_several_genes(self) -> frozenset[str]:
+        """Entries (lower case) the build left out because Ensembl gives them to several genes (decision 73's rule)."""
+        record = self.record
+        return frozenset(record.entries_of_several_genes) if record is not None else frozenset()
+
+    @property
+    def all_external(self) -> bool:
+        """Whether the graph holds every external database of Ensembl, not only the selected ones."""
+        record = self.record
+        return record.all_external if record is not None else bool(self.graph.get("all_external", False))
 
     @property
     def assembly_releases(self) -> dict[int, tuple[int, ...]]:
@@ -401,14 +542,17 @@ class TheGraph(NameResolution, nx.MultiDiGraph):
         Returns:
             dict[int, int]: ``{release: assembly}`` for the releases that some assembly has.
         """
+        record = self.record
+        if record is not None:
+            return record.serving_assembly
         recorded = self.graph.get("backbone_assembly")
         if recorded:
             return recorded
         return self._global("backbone_assembly", self._compute_serving_assembly)
 
     def _compute_serving_assembly(self) -> dict[int, int]:
-        primary = self.graph.get("genome_assembly")
-        table = organisms.ORGANISM_TABLE.get(self.graph.get("organism"), {})
+        primary = self.primary_assembly
+        table = organisms.ORGANISM_TABLE.get(self.organism or "", {})
         result: dict[int, int] = {}
         for assembly, releases in self.assembly_releases.items():
             rank = (assembly != primary, table.get(assembly, {}).get("Priority", math.inf), assembly)
@@ -450,7 +594,7 @@ class TheGraph(NameResolution, nx.MultiDiGraph):
             self._frozen()
             found = self.reverse(copy=False)
             for name, value in self.__dict__.items():
-                if name.startswith("_c_") or name in ("_store", "available_forms"):
+                if name.startswith("_c_") or name in ("_store", "_record", "available_forms"):
                     found.__dict__[name] = value
             found.__dict__["_reverse_view"] = not self._reverse_view
             found.__dict__["rev"] = self
@@ -515,7 +659,7 @@ class TheGraph(NameResolution, nx.MultiDiGraph):
 
     @property
     def hyperconnective_nodes(self) -> dict[str, int]:
-        """External identifiers that more genes share at one time than an identity can, with that number of genes.
+        """External identifiers that more genes share than an identity can, with that number of genes.
 
         An external id is hyper-connective when, in a single Ensembl release, it is linked to more than
         :py:attr:`idtrack.settings.GraphSettings.hyperconnective_threshold` different genes
@@ -523,47 +667,181 @@ class TheGraph(NameResolution, nx.MultiDiGraph):
         counts as its gene). Such ids are names of gene families and accessions shared by paralogues (RFAM families,
         ``U6``, ``5S_rRNA``, snoRNA names): they say what kind of gene something is, not which gene. Following them in
         a synonym search multiplies the candidates and bridges unrelated genes, so the search does not follow them.
+        A label (an id of one of :py:attr:`label_databases`: a display name, a symbol) is a family name too when it
+        named more genes than that over all its releases (:py:attr:`label_families`, genes as :py:meth:`count_genes`
+        counts them: the ids of one locus over the releases are one gene, a copy outside the reference sequence adds
+        none): Ensembl gives a snoRNA's family name to the copy it names at each release, a few at a time (mouse
+        ``SCARNA15``: 9 genes over the releases, at most 5 at once), and such a name carried a retired id to copies at
+        other loci.
 
-        The count is per release, so the set does not grow with the number of releases in the graph: an id linked
-        to many successive versions of one gene, or to a few genes that change over the years, is not
+        The count at once is per release, so the set does not grow with the number of releases in the graph: an id
+        linked to many successive versions of one gene, or to a few genes that change over the years, is not
         hyper-connective, however many edges it has. The threshold was chosen by measurement against Ensembl's own
         data (pig: with 5, no kind of query is answered worse and 15 kinds better than with the earlier rule, more
         than 20 edges over all releases; with 10 or 20 the family ids shared by 6 to 20 genes become bridges and
-        conversions of retired ids get worse). It is read when this property is read, so it can be changed on the
-        class without building a graph again.
+        conversions of retired ids get worse). It is the threshold of the graph's settings
+        (:py:attr:`idtrack.TheGraph.graph_settings`, given when a graph is loaded), read whenever this property is
+        read, so another threshold needs no graph built again: load the file with other settings. Counting by stable id
+        counts a gene's copies on alternative loci and patches as genes here (unlike :py:attr:`label_families`), on
+        purpose (:py:meth:`genes_linked_at_once` says why).
 
         Returns:
-            dict[str, int]: ``{external node: largest number of genes linked in one release}`` for the
-            hyper-connective nodes.
+            dict[str, int]: ``{external node: number of genes}`` for the hyper-connective nodes: the largest number of
+            genes linked in one release, or, for a label that is a family name over its releases only, the number of
+            genes it named over them.
         """
         store = self._frozen()
         threshold = self.graph_settings.hyperconnective_threshold
         cached = store.globals.get("_hyperconnective_nodes")
         if cached is None or cached[0] != threshold:
-            shared = self.shared_external_ids
-            cached = (threshold, {name: count for name, count in shared.items() if count > threshold})
+            found = {name: count for name, count in self.label_families.items() if count > threshold}
+            found.update({name: count for name, count in self.shared_external_ids.items() if count > threshold})
+            cached = (threshold, found)
             store.globals["_hyperconnective_nodes"] = cached
         return cached[1]
 
-    def genes_linked_at_once(self, node: str) -> int:
-        """Return the largest number of different genes that a node is linked to in a single release.
+    @property
+    def label_families(self) -> dict[str, int]:
+        """Labels that named two or more genes over the graph's releases, with the number of those genes.
 
-        Genes are counted by stable id, whatever their versions; a transcript or a translation counts as its gene.
-        For an external identifier this says how specific it is: 1 for an id of one gene, however many versions of
-        that gene it was linked to over the years, and hundreds for the name of a gene family.
-
-        Args:
-            node (str): A node with outgoing cross-reference edges (an external identifier).
+        A label is an id of one of :py:attr:`label_databases`; genes are those of the label's links in those databases
+        over every release (a transcript or a translation counts as its gene), counted by :py:meth:`count_genes`. The
+        table is computed when a graph is built and stored with it; :py:attr:`hyperconnective_nodes` takes the labels
+        that named more genes than :py:attr:`idtrack.settings.GraphSettings.hyperconnective_threshold`.
 
         Returns:
-            int: The largest number of gene stable ids linked in one release; 0 if the node links no gene.
+            dict[str, int]: ``{external node: genes named over the releases}``, numbers from 2.
+        """
+        return self._global("label_families", self._compute_label_families)
+
+    def _compute_label_families(self) -> dict[str, int]:
+        store = self._frozen()
+        labels = self.label_databases
+        if store.external_code < 0 or not labels:
+            return {}
+        degree = np.diff(store.out_ptr)
+        candidates = np.flatnonzero((store.ntype == store.external_code) & (degree > 1))
+        result: dict[str, int] = {}
+        for i in candidates.tolist():
+            name = store.names[i]
+            genes_named = self._gene_masks(name, labels)
+            count = self.count_genes(genes_named) if len(genes_named) > 1 else len(genes_named)
+            if count > 1:
+                result[name] = count
+        return result
+
+    @property
+    def repeated_regions(self) -> dict[int, tuple[tuple[str, int, int, str, int], ...]]:
+        """The regions of the graph's organism that repeat another, per assembly (the pseudoautosomal regions of Y).
+
+        :py:func:`idtrack.organisms.pseudoautosomal_repeats`; the one rule of a gene reads a place in such a region on
+        the region it repeats (:py:mod:`idtrack.graph.genes`). Empty for a graph without an organism of the table.
+        """
+        found = self.__dict__.get("_c_repeats")
+        if found is None:
+            found = self.__dict__["_c_repeats"] = organisms.pseudoautosomal_repeats(self.organism)
+        return found
+
+    def count_genes(self, stable_ids: Collection[str], release: int | None = None) -> int:
+        """Return how many genes some stable gene ids name (the one rule: :py:func:`idtrack.graph.genes.count_genes`).
+
+        The ids are compared where the graph tells loci apart, in frames: at one release (ids that live then are one
+        gene only where their places overlap then), on one assembly (ids whose places overlap, or that Ensembl's
+        history carried one to the other where they follow one another, are one gene) and by the names of chromosomes
+        across assemblies (:py:meth:`places`, their kinds). The count is the size of a set of ids told pairwise apart
+        by some frame: one id of each locus of the frame that shows the most loci, extended by every id told apart from
+        each id of the set so far, so that the evidence of several frames adds up. A copy that lies only outside the
+        reference sequence (:py:meth:`non_reference_releases`) adds no gene. Ids that nothing tells apart are one gene.
+        A graph made in memory holds no places: an id lives at the releases of its history (:py:meth:`active_releases`),
+        and ids that live at one release are two genes.
+
+        Args:
+            stable_ids (Collection[str]): Stable gene ids, without version.
+            release (int | None): Count at this release only: the loci of the ids that live at it and lie on the
+                reference sequence there (an id that does not live at it adds none).
+
+        Returns:
+            int: The number of genes (0 for no id, at least 1 for some).
+        """
+        facts, joined = self._global("_genes", self._compute_genes)
+        return genes_rule.count_genes(stable_ids, facts, joined, release)
+
+    def _compute_genes(self) -> tuple[dict[str, genes_rule.GeneFacts], dict[str, frozenset[str]]]:
+        """Return the facts of every gene by stable id and the stable ids Ensembl's history joins (for count_genes).
+
+        A version lives at the releases of its places; a version of which the graph holds no place (a graph made in
+        memory) at the releases of its history.
+        """
+        store = self._frozen()
+        names = store.names
+        table = store.places
+        per_version: dict[str, list[tuple[int, str, int, int, int, int, str]]] = {}
+        if len(table):
+            masks = _words_to_masks(table.masks)
+            for j, node in enumerate(table.node.tolist()):
+                per_version.setdefault(names[node], []).append(
+                    (
+                        int(table.assembly[j]),
+                        table.regions[int(table.region[j])],
+                        int(table.start[j]),
+                        int(table.end[j]),
+                        int(table.strand[j]),
+                        masks[j],
+                        genes_rule.PLACE_KINDS[int(table.kind[j])],
+                    )
+                )
+        unplaced: set[str] = set()
+        history: set[tuple[str, str]] = set()
+        if store.backbone_code >= 0:  # gene versions, not the history's marks of a birth or a retirement
+            unplaced = {
+                names[int(i)]
+                for i in np.flatnonzero(store.ntype == store.backbone_code).tolist()
+                if ids.is_versioned_name(names[int(i)]) and ids.split(names[int(i)])[1] not in (ids.VOID, ids.RETIRED)
+            } - set(per_version)
+            steps = np.flatnonzero(store.e_kind == _KIND_HISTORY)
+            src, dst = store.e_src[steps], store.e_dst[steps]
+            keep = (store.ntype[src] == store.backbone_code) & (store.ntype[dst] == store.backbone_code) & (src != dst)
+            history = {(names[a], names[b]) for a, b in set(zip(src[keep].tolist(), dst[keep].tolist()))}
+        outside = {names[node]: releases.mask for node, releases in store.non_reference.items()}
+        carried: dict[str, list[tuple[int, str, int, int, int]]] = {}
+        moved = store.carried
+        for j, node in enumerate(moved.node.tolist()):
+            carried.setdefault(names[node], []).append(
+                (
+                    int(moved.assembly[j]),
+                    moved.regions[int(moved.region[j])],
+                    int(moved.start[j]),
+                    int(moved.end[j]),
+                    int(moved.strand[j]),
+                )
+            )
+        return genes_rule.facts_by_stable_id(
+            per_version,
+            outside,
+            history,
+            self.repeated_regions,
+            self._history_releases,
+            unplaced,
+            carried,
+            self.exception_regions,
+        )
+
+    def _history_releases(self, name: str) -> int:
+        """Return the releases at which a gene version lives by its history, as a mask (0 where it has no history)."""
+        try:
+            return self.active_releases(name).mask
+        except IntegrityError:  # a node without history edges in a graph made in memory: the graph does not say
+            return 0
+
+    def _gene_masks(self, node: str, databases: frozenset[str] | None = None) -> dict[str, int]:
+        """Return ``{gene stable id: releases}`` of the genes a node is linked to (through its databases, if given).
+
+        A transcript or a translation counts as its gene, at the releases of both links.
         """
         gene_mask: dict[str, int] = {}
 
         def follow(current: str, mask: int, depth: int) -> None:
-            node_type = self.node_type(current)
-            found = _ASSEMBLY_TYPE.match(node_type)
-            form = ids.FORM_OF_ENSEMBL_TYPE.get(node_type) if found is None else found.group(2)
+            form = ids.FORM_OF_ENSEMBL_TYPE.get(self.node_type(current))
             if form == ids.BACKBONE_FORM:
                 base = self.base_id(current)
                 gene_mask[base] = gene_mask.get(base, 0) | mask
@@ -574,7 +852,35 @@ class TheGraph(NameResolution, nx.MultiDiGraph):
                         follow(parent, shared, depth + 1)
 
         for neighbour, connection in self.xref_edges(node):
-            follow(neighbour, connection.releases.mask, 0)
+            if databases is None:
+                mask = connection.releases.mask
+            else:
+                mask = 0
+                for database, _assembly, releases in connection.items:
+                    if database in databases:
+                        mask |= releases.mask
+            if mask:
+                follow(neighbour, mask, 0)
+        return gene_mask
+
+    def genes_linked_at_once(self, node: str) -> int:
+        """Return the largest number of different genes that a node is linked to in a single release.
+
+        Genes are counted by stable id, whatever their versions; a transcript or a translation counts as its gene.
+        For an external identifier this says how specific it is: 1 for an id of one gene, however many versions of
+        that gene it was linked to over the years, and hundreds for the name of a gene family. A gene's copies outside
+        the reference sequence count here (unlike :py:meth:`count_genes`): an id that a gene shares with many copies at
+        once (the genes of the human MHC on its haplotypes) stays no bridge, which is what Ensembl's history gives for
+        an id retired without a successor (counted by :py:meth:`count_genes`, such ids bridged retired copies to other
+        copies: seven human lines of the truth file of the tests became wrong).
+
+        Args:
+            node (str): A node with outgoing cross-reference edges (an external identifier).
+
+        Returns:
+            int: The largest number of gene stable ids linked in one release; 0 if the node links no gene.
+        """
+        gene_mask = self._gene_masks(node)
         union = 0
         for mask in gene_mask.values():
             union |= mask
@@ -641,9 +947,11 @@ class TheGraph(NameResolution, nx.MultiDiGraph):
     def external_database_connection_form(self) -> dict[str, str]:
         """The Ensembl form (gene, transcript or translation) that each external database is linked to.
 
-        For every database the Ensembl neighbours of its identifiers are counted by form and the commonest form
-        wins (a few identifiers are annotated on another form than the rest of their database); a tie goes to the
-        form that comes first in gene, transcript, translation.
+        For every database its links are counted by the form of their Ensembl end and the commonest form wins (a few
+        identifiers are annotated on another form than the rest of their database); a tie goes to the form that comes
+        first in gene, transcript, translation. Only the database's own links count: an identifier that two databases
+        hold (a RefSeq accession that is a gene's display name under one and a transcript's link under another) adds
+        to each database the links it holds of it.
 
         Returns:
             dict[str, str]: ``{database: form}``.
@@ -658,8 +966,7 @@ class TheGraph(NameResolution, nx.MultiDiGraph):
         forms = list(ids.FORMS)
         form_of_type = []
         for node_type in store.node_types:
-            found = _ASSEMBLY_TYPE.match(node_type) if isinstance(node_type, str) else None
-            form = ids.FORM_OF_ENSEMBL_TYPE.get(node_type) if found is None else found.group(2)
+            form = ids.FORM_OF_ENSEMBL_TYPE.get(node_type)
             form_of_type.append(forms.index(form) if form in forms else -1)
         form_of_type_array = np.asarray(form_of_type, dtype=np.int64)
         src, dst, ref, connections = self._xref_arrays()
@@ -675,21 +982,15 @@ class TheGraph(NameResolution, nx.MultiDiGraph):
                 f"Not connected only to Ensembl ID. From:{store.names[int(src[bad])]}, To:{store.names[int(dst[bad])]}, "
                 f"{store.node_type(int(dst[bad]))}"
             )
-        nodes, compact = np.unique(src, return_inverse=True)
-        counts = np.zeros((len(nodes), len(forms)), dtype=np.int64)
-        np.add.at(counts, (compact, dst_form), 1)
-        has_database: dict[str, np.ndarray] = {}
-        order = np.argsort(ref, kind="stable")
-        boundaries = np.flatnonzero(np.diff(ref[order])) + 1
-        for group in np.split(order, boundaries):
-            for database in connections[int(ref[group[0]])].databases:
-                flags = has_database.get(database)
-                if flags is None:
-                    flags = has_database[database] = np.zeros(len(nodes), dtype=bool)
-                flags[compact[group]] = True
-        for database in sorted(has_database):
-            totals = counts[has_database[database]].sum(axis=0)
-            result[database] = forms[int(np.argmax(totals))]
+        codes, compact = np.unique(ref, return_inverse=True)
+        by_connection = np.zeros((len(codes), len(forms)), dtype=np.int64)
+        np.add.at(by_connection, (compact, dst_form), 1)
+        counts: dict[str, np.ndarray] = {}
+        for code, found in zip(codes.tolist(), by_connection):
+            for database in connections[int(code)].databases:
+                counts[database] = counts.get(database, 0) + found
+        for database in sorted(counts):
+            result[database] = forms[int(np.argmax(counts[database]))]
         return result
 
     @property
@@ -717,7 +1018,7 @@ class TheGraph(NameResolution, nx.MultiDiGraph):
             for database, assembly, release in trios:
                 key = (database, assembly)
                 masks[key] = masks.get(key, 0) | (1 << release)
-        main_assembly = int(self.graph["genome_assembly"])
+        main_assembly = self._primary()
         result: dict[tuple[str, int], set] = {}
         for assembly, database_names in self.available_external_databases_assembly.items():
             for database in database_names:
@@ -794,6 +1095,85 @@ class TheGraph(NameResolution, nx.MultiDiGraph):
             return store.non_reference.get(store.index[node], _NO_RELEASES)
         except KeyError:
             raise self._unknown(node) from None
+
+    def places(self, node: str) -> tuple[Place, ...]:
+        """Return where a gene lies: on which assembly, sequence region, bases and strand, at which releases.
+
+        The builder takes every version's place from Ensembl's core database of every release, on the assembly that
+        serves the release in the backbone (:py:attr:`serving_assembly`); a version that kept its place over releases
+        has one place for them, a version that an assembly change moved has one place per assembly.
+
+        Args:
+            node (str): A node of the graph.
+
+        Returns:
+            tuple[Place, ...]: The places, by assembly, region and position; empty for a node that is not a gene of
+            the backbone and for every node of a graph made in memory.
+
+        Raises:
+            UnknownIdentifierError: If the node is not in the graph.
+        """
+        store = self._frozen()
+        try:
+            return store.places.of_node(store.index[node])
+        except KeyError:
+            raise self._unknown(node) from None
+
+    def carried_places(self, node: str) -> tuple[Place, ...]:
+        """Return a gene's places on the reference sequence carried onto later assemblies by Ensembl's mapping (decision 103).
+
+        Where Ensembl publishes a mapping of an earlier assembly of the organism onto a later one (its chain files,
+        :py:mod:`idtrack.build.assembly_chain`), the builder carries every place of a version on the reference
+        sequence of the earlier assembly onto each later one, by its aligned bases: one place per region and strand of
+        the later assembly that holds some of them, from the first to the last base carried there. A place that no
+        aligned base carries has none. The places are compared with those of the later assembly by overlap, as
+        places on one assembly are (:py:func:`idtrack.graph.genes.relation`).
+
+        Args:
+            node (str): A node of the graph.
+
+        Returns:
+            tuple[Place, ...]: The carried places, each with the later assembly, its region, bases and strand there
+            and the releases of the place carried (on the earlier assembly); empty for a node that is not a gene of the
+            backbone, for a gene of an assembly that Ensembl maps onto no later one, and for a graph made in memory.
+
+        Raises:
+            UnknownIdentifierError: If the node is not in the graph.
+        """
+        store = self._frozen()
+        try:
+            return store.carried.of_node(store.index[node])
+        except KeyError:
+            raise self._unknown(node) from None
+
+    @property
+    def assembly_exceptions(self) -> tuple[AssemblyException, ...]:
+        """Ensembl's assembly exceptions of the graph's releases: which reference region each patch or haplotype is.
+
+        Read at build from the ``assembly_exception`` table of every release, on the assembly that serves it
+        (:py:meth:`idtrack.DatabaseManager.create_assembly_exceptions`), each row with the releases that list it and
+        its reference region carried onto later assemblies where Ensembl maps them. A gene on a patch or a haplotype
+        stands for that region of the reference sequence (:py:func:`idtrack.graph.genes.relation`). Empty for a graph
+        made in memory and for an organism whose core databases list none (pig and the macaques at every release).
+        """
+        return self._frozen().exceptions
+
+    @property
+    def exception_regions(self) -> genes_rule.Exceptions:
+        """The assembly exceptions by assembly and region, as the one rule of a gene reads them.
+
+        :py:data:`idtrack.graph.genes.Exceptions`, from :py:attr:`assembly_exceptions`.
+        """
+        found = self.__dict__.get("_c_exceptions")
+        if found is None:
+            table: dict[tuple[int, str], list] = {}
+            for row in self.assembly_exceptions:
+                table.setdefault((row.assembly, row.region), []).append(
+                    (row.start, row.end, row.releases.mask, row.ref_region, row.ref_start, row.ref_end, row.ref_kind,
+                     row.carried)
+                )  # fmt: skip
+            found = self.__dict__["_c_exceptions"] = {key: tuple(rows) for key, rows in table.items()}
+        return found
 
     def is_non_reference(self, node: str, release: int) -> bool:
         """Tell whether a gene lies outside the reference sequence at a release (:py:meth:`non_reference_releases`)."""
@@ -911,16 +1291,12 @@ class TheGraph(NameResolution, nx.MultiDiGraph):
     def _combined_uncached(self, name: str, family: str) -> dict:
         store = self._frozen()
         i = store.index[name]
-        is_gene = store.ntype_list[i] == store.backbone_code
         if family == "out":
             found = store.combine(i, False)
             if found is None:
                 raise KeyError(name)
             return {db: {asm: ReleaseSet.from_mask(mask) for asm, mask in per.items()} for db, per in found.items()}
-        if family == "genes":
-            if not is_gene:
-                raise KeyError(name)
-        elif is_gene or store.combine(i, False) is not None:
+        if store.ntype_list[i] != store.backbone_code:
             raise KeyError(name)
         found = store.combine(i, True)
         if found is None:
@@ -936,17 +1312,14 @@ class TheGraph(NameResolution, nx.MultiDiGraph):
 
     def _family(self, name: str) -> str:
         store = self._frozen()
-        code = store.ntype_list[store.index[name]]
-        if code == store.backbone_code:
-            return "genes"
-        return "assembly" if store.type_is_assembly_gene[code] else "out"
+        return "genes" if store.ntype_list[store.index[name]] == store.backbone_code else "out"
 
     def combined(self, node: str) -> dict[str, dict[int, ReleaseSet]]:
         """Sum what all cross-reference edges of a node say: ``{database: {assembly: releases}}``.
 
-        For a gene (of the backbone or of one assembly) the edges that enter it are summed and reported under the
-        gene type of each assembly (``assembly_<key>_ensembl_gene``): the releases in which the gene is referred to
-        on that assembly. For every other node the edges that leave it are summed per database; the relation of a
+        For a gene of the backbone the edges that enter it are summed and reported under the label of the genes of
+        each assembly (``assembly_<key>_ensembl_gene``): the releases in which the gene is referred to on that
+        assembly. For every other node the edges that leave it are summed per database; the relation of a
         transcript to its gene, or of a translation to its transcript, is named after the assembly of the edge
         (``assembly_<key>_ensembl_transcript``).
 
@@ -988,7 +1361,7 @@ class TheGraph(NameResolution, nx.MultiDiGraph):
 
     def _active_ranges_uncached(self, name: str) -> list[list]:
         if not self.is_backbone(name):
-            summary = self._c_combined(name, "assembly" if self._family(name) == "assembly" else "out")
+            summary = self._c_combined(name, "out")
             mask = 0
             for per in summary.values():
                 for releases in per.values():
@@ -1085,7 +1458,7 @@ class TheGraph(NameResolution, nx.MultiDiGraph):
 
     def _trios_uncached(self, name: str) -> frozenset:
         if self.is_backbone(name) and self._c_node(name).get("Version") in ids.SENTINEL_VERSIONS:
-            assembly = self.graph["genome_assembly"]
+            assembly = self._primary()
             label = _assembly_label(ids.BACKBONE_FORM, assembly)
             found = set()
             for first, end in self.active_ranges(name):
@@ -1113,13 +1486,14 @@ class TheGraph(NameResolution, nx.MultiDiGraph):
         backbone at that release must lie inside the backbone ranges.
 
         Args:
-            node (str): A backbone gene or a gene of one assembly.
+            node (str): A backbone gene.
 
         Returns:
             list[list[int]]: Inclusive, ascending ranges of all releases in which the gene exists on any assembly.
 
         Raises:
-            ValueError: If the cross-references contradict the backbone ranges, or if the node is not a gene.
+            IntegrityError: If the cross-references contradict the backbone ranges.
+            UnknownIdentifierError: If the node is not a backbone gene.
         """
         node_type = self.node_type(node)
         if node_type == ids.ENSEMBL_TYPE["gene"]:
@@ -1145,11 +1519,8 @@ class TheGraph(NameResolution, nx.MultiDiGraph):
                     else:
                         others.add(release)
             return TheGraph.list_to_ranges(sorted(set(self.ranges_to_list(ranges)) | others))
-        if _is_assembly_gene(node_type):
-            return self.active_ranges(node)
         raise UnknownIdentifierError(
-            f"Cannot get active ranges for {node!r}: node type {node_type!r} is not a gene type. "
-            f"Expected 'ensembl_gene' or an assembly-specific gene type."
+            f"Cannot get active ranges for {node!r}: node type {node_type!r} is not {ids.ENSEMBL_TYPE['gene']!r}."
         )
 
     def get_active_ranges_of_base_id_alternative(self, base_id: str) -> list[list]:
@@ -1285,30 +1656,41 @@ class TheGraph(NameResolution, nx.MultiDiGraph):
     def save(self, path: str) -> None:
         """Write the graph to a file, atomically.
 
-        The file is a NumPy ``.npz`` archive (no pickled objects): the node names, node types, edge arrays,
+        The file is a NumPy ``.npz`` archive, deflated (no pickled objects): the node names, node types, edge arrays,
         the table of distinct connections with their release bit masks, the genes outside the reference sequence
-        with their releases, the name indices, and one JSON document with the graph attributes, the manifest and the
-        graph-wide tables. It is written to a temporary file in the same
-        folder and renamed, so an interrupted run leaves either the previous file or none, never a part of one.
+        with their releases, the name indices, the spellings of the external ids, the places of the genes and those
+        carried onto later assemblies (:py:meth:`carried_places`), Ensembl's assembly exceptions
+        (:py:attr:`assembly_exceptions`), the versions of the accessions per link and release and the display names of
+        the genes per release with the database each is filed under (:py:meth:`accession_versions`,
+        :py:meth:`display_releases`), and one JSON document with the graph's
+        :py:attr:`record` and the tables computed from the content when it was built (the external ids that several
+        genes share, the label families). It is written to a temporary file in the same folder and renamed, so an interrupted run
+        leaves either the previous file or none, never a part of one.
 
         Args:
             path (str): File to write.
 
         Raises:
-            ValueError: If the graph holds edges or node attributes that the file cannot express (graphs made by
-                hand with other attributes than a connection or a release pair).
+            IntegrityError: If the graph has no record (a graph made in memory), or holds edges or node attributes
+                that the file cannot express (graphs made by hand with other attributes than a connection or a release
+                pair).
         """
         store = self._frozen()
+        record = self.record
+        if record is None:
+            raise IntegrityError("Only a built graph, which has a record of what it is, can be saved.")
         if store.other_attributes or store.node_overrides:
             raise IntegrityError(
                 "Only graphs made of history edges and cross-reference edges, with nodes that carry nothing but "
                 "their type, can be saved."
             )
-        self.calculate_caches()
-        _ = self.external_database_connection_form
+        _ = self.shared_external_ids
+        _ = self.label_families
         for name in store.names:
             if _NAME_SEPARATOR in name:
                 raise IntegrityError(f"A node name contains a NUL character: {name!r}.")
+        if store.lower_hash is None:
+            store.build_name_indices()
 
         databases: list[str] = []
         database_code: dict[str, int] = {}
@@ -1326,22 +1708,68 @@ class TheGraph(NameResolution, nx.MultiDiGraph):
         masks = _masks_to_words(c_mask)
         marked = sorted(store.non_reference)
 
-        attributes = dict(self.graph)
+        # The spellings per link as arrays (read without parsing JSON): key, database, the latest spelling, and the
+        # other spellings with their releases; every text an index into one list of texts.
+        spelling_items = sorted(store.spellings.items())
+        texts: list[str] = []
+        text_code: dict[str, int] = {}
+
+        def code_of(text: str) -> int:
+            code = text_code.get(text)
+            if code is None:
+                code = text_code[text] = len(texts)
+                texts.append(text)
+            return code
+
+        s_key, s_db, s_latest, o_ptr, o_mask, o_text = [], [], [], [0], [], []
+        for (i, target, db), (latest, otherwise) in spelling_items:
+            code = database_code.get(db)
+            if code is None:
+                code = database_code[db] = len(databases)
+                databases.append(db)
+            s_key.append((i, target))
+            s_db.append(code)
+            s_latest.append(code_of(latest))
+            for mask, text in otherwise:
+                o_mask.append(mask)
+                o_text.append(code_of(text))
+            o_ptr.append(len(o_text))
+        for text in texts:
+            if _NAME_SEPARATOR in text:
+                raise IntegrityError(f"A spelling contains a NUL character: {text!r}.")
+
         document = {
             "format_version": GRAPH_FORMAT_VERSION,
-            "graph": _to_json(attributes),
-            "available_forms": self.available_forms,
+            "record": record.to_json(),
             "node_types": store.node_types,
             "databases": databases,
-            "globals": _to_json({k: store.globals[k] for k in _STORED_GLOBALS}),
-            "spellings": [
-                [i, db, latest, [[format(mask, "x"), text] for mask, text in otherwise]]
-                for (i, db), (latest, otherwise) in sorted(store.spellings.items())
-            ],
+            "tables": {
+                "shared_external_ids": _to_json(store.globals["shared_external_ids"]),
+                "label_families": _to_json(store.globals["label_families"]),
+                "place_regions": store.places.regions,
+                "carried_regions": store.carried.regions,
+                "version_databases": store.versions.databases,
+                "display_databases": store.displays.databases,
+                "assembly_exceptions": [
+                    [
+                        row.assembly, row.region, row.start, row.end, row.type, row.ref_region, row.ref_start,
+                        row.ref_end, row.ref_kind, [list(r) for r in row.releases.ranges()],
+                        [list(c) for c in row.carried],
+                    ]
+                    for row in store.exceptions
+                ],  # fmt: skip
+            },
         }
         arrays = {
             "document": np.frombuffer(json.dumps(document, sort_keys=True).encode("utf-8"), dtype=np.uint8),
             "names": np.frombuffer(_NAME_SEPARATOR.join(store.names).encode("utf-8"), dtype=np.uint8),
+            "s_key": np.asarray(s_key, dtype=np.int64).reshape(-1, 2),
+            "s_db": np.asarray(s_db, dtype=np.int32),
+            "s_latest": np.asarray(s_latest, dtype=np.int64),
+            "s_texts": np.frombuffer(_NAME_SEPARATOR.join(texts).encode("utf-8"), dtype=np.uint8),
+            "o_ptr": np.asarray(o_ptr, dtype=np.int64),
+            "o_mask": _masks_to_words(o_mask),
+            "o_text": np.asarray(o_text, dtype=np.int64),
             "ntype": store.ntype,
             "e_src": store.e_src,
             "e_dst": store.e_dst,
@@ -1362,9 +1790,34 @@ class TheGraph(NameResolution, nx.MultiDiGraph):
             "lower_idx": store.lower_idx,
             "separator_hash": store.separator_hash,
             "separator_idx": store.separator_idx,
+            "p_node": store.places.node,
+            "p_assembly": store.places.assembly,
+            "p_region": store.places.region,
+            "p_start": store.places.start,
+            "p_end": store.places.end,
+            "p_strand": store.places.strand,
+            "p_mask": store.places.masks,
+            "p_kind": store.places.kind,
+            "q_node": store.carried.node,
+            "q_assembly": store.carried.assembly,
+            "q_region": store.carried.region,
+            "q_start": store.carried.start,
+            "q_end": store.carried.end,
+            "q_strand": store.carried.strand,
+            "q_mask": store.carried.masks,
+            "q_kind": store.carried.kind,
+            "v_source": store.versions.source,
+            "v_target": store.versions.target,
+            "v_database": store.versions.database,
+            "v_version": store.versions.value,
+            "v_mask": store.versions.masks,
+            "d_source": store.displays.source,
+            "d_target": store.displays.target,
+            "d_database": store.displays.database,
+            "d_mask": store.displays.masks,
         }
-        with replacing(path) as tmp, open(tmp, "wb") as handle:
-            np.savez(handle, **arrays)  # type: ignore[arg-type]
+        with replacing(path) as tmp:
+            _write_arrays(tmp, arrays)
 
     @classmethod
     def load(
@@ -1374,9 +1827,9 @@ class TheGraph(NameResolution, nx.MultiDiGraph):
 
         Args:
             path (str): The graph file.
-            expect (Mapping[str, Any] | None): Fields of the manifest that the graph must have, e.g.
-                ``{"organism": "homo_sapiens", "genome_assembly": 38}``. See
-                :py:meth:`idtrack.build.GraphMaker.graph_identity`.
+            expect (Mapping[str, Any] | None): Fields of the record that say which graph the file must hold (any of
+                :py:data:`idtrack.graph.record.IDENTITY_FIELDS`), e.g. ``{"organism": "homo_sapiens",
+                "primary_assembly": 38}``. See :py:meth:`idtrack.build.GraphMaker.graph_identity`.
             graph_settings (GraphSettings | None): The caches and the hyper-connectivity threshold of this graph;
                 ``None`` for the defaults.
 
@@ -1393,24 +1846,31 @@ class TheGraph(NameResolution, nx.MultiDiGraph):
         if not os.path.isfile(path):
             raise GraphFileError(f"No graph file at `{path}`.", path)
         try:
-            with np.load(path, allow_pickle=False) as archive:
-                arrays = {name: archive[name] for name in archive.files}
+            arrays = _read_arrays(path)
             document = json.loads(arrays["document"].tobytes().decode("utf-8"))
-        except (OSError, ValueError, KeyError, zipfile.BadZipFile, EOFError) as error:
+        except (OSError, ValueError, KeyError, zipfile.BadZipFile, EOFError, zlib.error) as error:
             raise GraphFileError(
                 f"`{path}` cannot be read as an idtrack graph file ({type(error).__name__}: {error}). {_REBUILD_HINT}",
                 path,
             ) from error
-        if document.get("format_version") != GRAPH_FORMAT_VERSION:
+        if not isinstance(document, dict) or document.get("format_version") != GRAPH_FORMAT_VERSION:
+            found = document.get("format_version") if isinstance(document, dict) else None
             raise GraphMismatchError(
-                f"`{path}` has graph format version {document.get('format_version')!r}; this version of idtrack "
-                f"reads version {GRAPH_FORMAT_VERSION}. {_REBUILD_HINT}",
+                f"`{path}` has graph format version {found!r}; this version of idtrack reads version "
+                f"{GRAPH_FORMAT_VERSION}. {_REBUILD_HINT}",
                 path,
             )
-        attributes = _from_json_graph(document["graph"])
-        manifest = attributes.get("manifest", {})
+        try:
+            record = GraphRecord.from_json(document["record"])
+        except (KeyError, IntegrityError) as error:
+            raise GraphFileError(
+                f"`{path}` does not hold the record of a graph file of format version {GRAPH_FORMAT_VERSION} "
+                f"({type(error).__name__}: {error}). {_REBUILD_HINT}",
+                path,
+            ) from error
         if expect:
-            differing = {k: (manifest.get(k), v) for k, v in expect.items() if _to_json(manifest.get(k)) != _to_json(v)}
+            identity = record.identity()
+            differing = {k: (identity.get(k), v) for k, v in expect.items() if identity.get(k) != _to_json(v)}
             if differing:
                 details = "; ".join(
                     f"{k}: file has {have!r}, asked for {want!r}" for k, (have, want) in differing.items()
@@ -1437,17 +1897,68 @@ class TheGraph(NameResolution, nx.MultiDiGraph):
             )  # fmt: skip
             store.lower_hash, store.lower_idx = arrays["lower_hash"], arrays["lower_idx"]
             store.separator_hash, store.separator_idx = arrays["separator_hash"], arrays["separator_idx"]
-            store.globals = _from_json_globals(document["globals"])
-            store.spellings = {
-                (int(i), db): (latest, tuple((int(mask, 16), text) for mask, text in otherwise))
-                for i, db, latest, otherwise in document["spellings"]
+            tables = document["tables"]
+            store.globals = {
+                "shared_external_ids": {str(k): int(v) for k, v in tables["shared_external_ids"].items()},
+                "label_families": {str(k): int(v) for k, v in tables["label_families"].items()},
+                **_globals_of(record),
             }
+            texts = arrays["s_texts"].tobytes().decode("utf-8").split(_NAME_SEPARATOR) if len(arrays["s_db"]) else []
+            others = list(zip(_words_to_masks(arrays["o_mask"]), [texts[k] for k in arrays["o_text"].tolist()]))
+            ptr = arrays["o_ptr"].tolist()
+            store.spellings = dict(
+                zip(
+                    [
+                        (i, target, databases[db])
+                        for (i, target), db in zip(arrays["s_key"].tolist(), arrays["s_db"].tolist())
+                    ],
+                    [
+                        (texts[latest], tuple(others[start:end]))
+                        for latest, start, end in zip(arrays["s_latest"].tolist(), ptr, ptr[1:])
+                    ],
+                )
+            )
             marked = arrays["nonref_node"].tolist()
             if any(not 0 <= i < store.n for i in marked):
                 raise ValueError("a gene outside the reference sequence is not a node of the file")
             store.non_reference = dict(
                 zip(marked, (ReleaseSet.from_mask(mask) for mask in _words_to_masks(arrays["nonref_mask"])))
             )
+            store.places = _Places(
+                arrays["p_node"], arrays["p_assembly"], arrays["p_region"], arrays["p_start"], arrays["p_end"],
+                arrays["p_strand"], arrays["p_mask"], list(tables["place_regions"]), arrays["p_kind"],
+            )  # fmt: skip
+            store.carried = _Places(
+                arrays["q_node"], arrays["q_assembly"], arrays["q_region"], arrays["q_start"], arrays["q_end"],
+                arrays["q_strand"], arrays["q_mask"], list(tables["carried_regions"]), arrays["q_kind"],
+            )  # fmt: skip
+            for table in (store.places, store.carried):
+                if len(table) and not (0 <= int(table.node[0]) and int(table.node[-1]) < store.n):
+                    raise ValueError("a place belongs to no node of the file")
+            store.exceptions = tuple(
+                AssemblyException(
+                    int(row[0]), str(row[1]), int(row[2]), int(row[3]), str(row[4]), str(row[5]), int(row[6]),
+                    int(row[7]), str(row[8]), ReleaseSet.of(r for a, b in row[9] for r in range(int(a), int(b) + 1)),
+                    tuple((int(c[0]), str(c[1]), int(c[2]), int(c[3])) for c in row[10]),
+                )
+                for row in tables["assembly_exceptions"]
+            )  # fmt: skip
+            store.versions = _LinkMarks(
+                arrays["v_source"], arrays["v_target"], arrays["v_database"], arrays["v_version"], arrays["v_mask"],
+                list(tables["version_databases"]),
+            )  # fmt: skip
+            store.displays = _LinkMarks(
+                arrays["d_source"], arrays["d_target"], arrays["d_database"], np.zeros(len(arrays["d_source"]), np.int32),
+                arrays["d_mask"], list(tables["display_databases"]),
+            )  # fmt: skip
+            for marks in (store.versions, store.displays):
+                if len(marks) and not (
+                    0 <= int(marks.source[0])
+                    and int(marks.source[-1]) < store.n
+                    and 0 <= int(marks.target.min())
+                    and int(marks.target.max()) < store.n
+                ):
+                    raise ValueError("a version or a display name belongs to no link of the file")
         except (KeyError, IndexError, TypeError, ValueError) as error:
             raise GraphFileError(
                 f"`{path}` does not hold what a graph file of format version {GRAPH_FORMAT_VERSION} holds "
@@ -1458,19 +1969,37 @@ class TheGraph(NameResolution, nx.MultiDiGraph):
         graph = cls()
         if graph_settings is not None:
             graph.graph_settings = graph_settings
-        graph.graph.update(attributes)
-        graph.available_forms = document.get("available_forms")
+        graph._record = record
+        graph.available_forms = list(record.forms)
         graph._install(store)
         return graph
 
     @classmethod
-    def _from_store(cls, store: _Store, attributes: dict, available_forms: list[str] | None) -> "TheGraph":
-        """Make a frozen graph from a store (used by the builder)."""
+    def _from_store(cls, store: _Store, record: GraphRecord) -> "TheGraph":
+        """Make a frozen graph from a store and its record (used by the builder)."""
         graph = cls()
-        graph.graph.update(attributes)
-        graph.available_forms = available_forms
+        graph._record = record
+        graph.available_forms = list(record.forms)
         graph._install(store)
         return graph
+
+    def _with_record(self, record: GraphRecord) -> None:
+        """Replace the record of a built graph by its final one (used by the builder once the graph's tables exist)."""
+        self.__dict__["_record"] = record
+        rev = self.__dict__.get("rev")
+        if rev is not None:
+            rev.__dict__["_record"] = record
+
+
+def _globals_of(record: GraphRecord) -> dict[str, Any]:
+    """Return the graph-wide tables that a record states: the databases per assembly and their forms."""
+    per_assembly = {int(a): set(names) for a, names in record.external_databases.items()}
+    return {
+        "available_external_databases": set().union(*per_assembly.values()) if per_assembly else set(),
+        "available_genome_assemblies": set(record.releases_per_assembly),
+        "available_external_databases_assembly": per_assembly,
+        "external_database_connection_form": dict(record.connection_form),
+    }
 
 
 __all__ = ["GRAPH_FORMAT_VERSION", "TheGraph"]

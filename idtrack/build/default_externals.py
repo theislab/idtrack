@@ -12,10 +12,24 @@ A shipped ``<organism>_externals_modified.yml`` is the organism's template (made
 :py:func:`apply_allowlist`. Nothing else differs between template and modified file. The lists follow one
 conceptual set for every organism, with the species' own symbol databases:
 
-* **gene**: clone-based, Havana and Vega names, EntrezGene / NCBI gene, RFAM, UniProtKB gene names, the species'
-  symbol source(s), and the ``synonym_id::`` forms of the identifier and symbol databases;
-* **transcript**: CCDS, Havana transcripts and RefSeq mRNA / ncRNA (curated and predicted);
-* **translation**: Havana translations, RefSeq peptides (curated and predicted) and UniProt (Swiss-Prot, TrEMBL).
+* **gene**: clone-based, Havana and Vega names, RFAM with its labels (``RFAM label``, the names of the genes whose
+  display name they are), miRBase with its labels (``miRBase label``, on miRNA genes only), UniProtKB gene names, the
+  species' symbol source(s), and the ``synonym_id::`` forms of the identifier and symbol databases;
+* **transcript**: CCDS with its labels (``CCDS label``, the versioned accessions), Havana transcripts and RefSeq
+  mRNA / ncRNA (curated and predicted);
+* **translation**: Havana translations, RefSeq peptides (curated and predicted) and UniProt (Swiss-Prot, TrEMBL);
+* **every form**: NCBI's gene ids (``EntrezGene``) with their labels (``NCBI gene (formerly Entrezgene)``) and
+  synonyms (:py:data:`NCBI_GENE`).
+
+A list names a database by what it is; the graph reads it on every form and at every release at which Ensembl has it
+(NCBI's gene ids on translations up to release 62 and on genes from 63, Rfam's and miRBase's accessions on
+transcripts up to 62, MGI's symbols on translations up to 51), and with it every database of Ensembl whose links
+continue it (RefSeq's mRNA accessions under ``RefSeq_dna`` up to release 63, the HGNC projections of pig and macaque
+genes under ``HGNC_curated_gene`` and ``HGNC_automatic_gene`` up to 60): decision 104,
+:py:meth:`idtrack.DatabaseManager.database_filing`. The species' symbol source is what Ensembl names the genes by
+today. The names Ensembl gave the genes at a release, under whatever database it filed them (UniProt's entry names,
+clone-based names), are in the graph whatever this list says: a gene's display name at a release is a name of the
+gene at that release (:py:meth:`idtrack.DatabaseManager.create_external_db`).
 
 Names that an organism's template does not contain are skipped. Tutorial 02
 (``docs/_notebooks/02_prepare_new_external_yaml.ipynb``) shows the same lists as editable dictionaries.
@@ -29,9 +43,18 @@ from typing import Any
 Allowlist = dict[str, dict[str, list[int]]]
 
 
+#: NCBI's gene ids, their labels and their synonyms: listed on every form, since Ensembl attached them to translations
+#: up to release 62 and to genes from 63 (the graph reads a selected database on every form in any case).
+NCBI_GENE: tuple[str, ...] = (
+    "EntrezGene",
+    "NCBI gene (formerly Entrezgene)",
+    "synonym_id::NCBI gene (formerly Entrezgene)",
+)
+
+
 def _allowlist(assemblies: Sequence[int], **forms: Iterable[str]) -> Allowlist:
-    """Build ``{form: {database: assemblies}}`` with the same assemblies for every database."""
-    return {form: {db: list(assemblies) for db in databases} for form, databases in forms.items()}
+    """Build ``{form: {database: assemblies}}`` with the same assemblies for every database, NCBI's on every form."""
+    return {form: {db: list(assemblies) for db in (*databases, *NCBI_GENE)} for form, databases in forms.items()}
 
 
 DEFAULT_EXTERNALS: dict[str, Allowlist] = {
@@ -41,23 +64,21 @@ DEFAULT_EXTERNALS: dict[str, Allowlist] = {
         gene=(
             "Clone_based_ensembl_gene",
             "Clone_based_vega_gene",
-            "EntrezGene",
             "HGNC Symbol",
             "Havana gene",
-            "NCBI gene",
-            "NCBI gene (formerly Entrezgene)",
             "RFAM",
+            "RFAM label",
+            "miRBase",
+            "miRBase label",
             "UniProtKB Gene Name",
             "Vega gene",
             "Vega_gene",
-            "synonym_id::EntrezGene",
             "synonym_id::HGNC Symbol",
-            "synonym_id::NCBI gene",
-            "synonym_id::NCBI gene (formerly Entrezgene)",
             "synonym_id::UniProtKB Gene Name",
         ),
         transcript=(
             "CCDS",
+            "CCDS label",
             "Havana transcript",
             "RefSeq_mRNA",
             "RefSeq_mRNA_predicted",
@@ -78,23 +99,21 @@ DEFAULT_EXTERNALS: dict[str, Allowlist] = {
         gene=(
             "Clone_based_ensembl_gene",
             "Clone_based_vega_gene",
-            "EntrezGene",
             "MGI Symbol",
             "Havana gene",
-            "NCBI gene",
-            "NCBI gene (formerly Entrezgene)",
             "RFAM",
+            "RFAM label",
+            "miRBase",
+            "miRBase label",
             "UniProtKB Gene Name",
             "Vega gene",
             "Vega_gene",
-            "synonym_id::EntrezGene",
             "synonym_id::MGI Symbol",
-            "synonym_id::NCBI gene",
-            "synonym_id::NCBI gene (formerly Entrezgene)",
             "synonym_id::UniProtKB Gene Name",
         ),
         transcript=(
             "CCDS",
+            "CCDS label",
             "Havana transcript",
             "RefSeq_mRNA",
             "RefSeq_mRNA_predicted",
@@ -115,18 +134,15 @@ DEFAULT_EXTERNALS: dict[str, Allowlist] = {
         gene=(
             "Clone_based_ensembl_gene",
             "Clone_based_vega_gene",
-            "EntrezGene",
             "HGNC Symbol",
             "VGNC Symbol",
             "Havana gene",
-            "NCBI gene",
-            "NCBI gene (formerly Entrezgene)",
             "RFAM",
+            "RFAM label",
+            "miRBase",
+            "miRBase label",
             "UniProtKB Gene Name",
-            "synonym_id::EntrezGene",
             "synonym_id::HGNC Symbol",
-            "synonym_id::NCBI gene",
-            "synonym_id::NCBI gene (formerly Entrezgene)",
             "synonym_id::UniProtKB Gene Name",
         ),
         transcript=(
@@ -150,25 +166,23 @@ DEFAULT_EXTERNALS: dict[str, Allowlist] = {
         gene=(
             "Clone_based_ensembl_gene",
             "Clone_based_vega_gene",
-            "EntrezGene",
             "HGNC Symbol",
             "VGNC Symbol",
             "Havana gene",
-            "NCBI gene",
-            "NCBI gene (formerly Entrezgene)",
             "RFAM",
+            "RFAM label",
+            "miRBase",
+            "miRBase label",
             "UniProtKB Gene Name",
             "Vega gene",
             "Vega_gene",
-            "synonym_id::EntrezGene",
             "synonym_id::HGNC Symbol",
             "synonym_id::VGNC Symbol",
-            "synonym_id::NCBI gene",
-            "synonym_id::NCBI gene (formerly Entrezgene)",
             "synonym_id::UniProtKB Gene Name",
         ),
         transcript=(
             "CCDS",
+            "CCDS label",
             "Havana transcript",
             "RefSeq_mRNA",
             "RefSeq_mRNA_predicted",
@@ -189,25 +203,23 @@ DEFAULT_EXTERNALS: dict[str, Allowlist] = {
         gene=(
             "Clone_based_ensembl_gene",
             "Clone_based_vega_gene",
-            "EntrezGene",
             "HGNC Symbol",
             "VGNC Symbol",
             "Havana gene",
-            "NCBI gene",
-            "NCBI gene (formerly Entrezgene)",
             "RFAM",
+            "RFAM label",
+            "miRBase",
+            "miRBase label",
             "UniProtKB Gene Name",
             "Vega gene",
             "Vega_gene",
-            "synonym_id::EntrezGene",
             "synonym_id::HGNC Symbol",
             "synonym_id::VGNC Symbol",
-            "synonym_id::NCBI gene",
-            "synonym_id::NCBI gene (formerly Entrezgene)",
             "synonym_id::UniProtKB Gene Name",
         ),
         transcript=(
             "CCDS",
+            "CCDS label",
             "Havana transcript",
             "RefSeq_mRNA",
             "RefSeq_mRNA_predicted",

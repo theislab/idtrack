@@ -8,25 +8,15 @@ sus_scrofa:
                 "111":
                     Ensembl release: 90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
-        Clone-based (Ensembl):
-            Assembly:
-                "102":
-                    Ensembl release: 69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87
-                    Include: false
         Clone-based (Ensembl) gene:
             Assembly:
                 "102":
-                    Ensembl release: 88,89
-                    Include: false
-        Clone-based (Vega):
-            Assembly:
-                "102":
-                    Ensembl release: 69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87
+                    Ensembl release: 69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89
                     Include: false
         Clone-based (Vega) gene:
             Assembly:
                 "102":
-                    Ensembl release: 88,89
+                    Ensembl release: 69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89
                     Include: false
         Clone_based_ensembl_gene:
             Assembly:
@@ -104,18 +94,16 @@ sus_scrofa:
                 "102":
                     Ensembl release: 69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88
                     Include: true
-        NCBI gene:
-            Assembly:
-                "102":
-                    Ensembl release: 88,89
-                    Include: true
-                "111":
-                    Ensembl release: 90,91,92,93,94,95,96,97,98,99
-                    Include: true
         NCBI gene (formerly Entrezgene):
             Assembly:
+                "102":
+                    Ensembl release: 67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89
+                    Include: true
                 "111":
-                    Ensembl release: 100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Ensembl release: 90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Include: true
+                "9":
+                    Ensembl release: 63,64,65,66
                     Include: true
         OTTG:
             Assembly:
@@ -129,6 +117,17 @@ sus_scrofa:
                     Include: true
                 "111":
                     Ensembl release: 90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Include: true
+                "9":
+                    Ensembl release: 63,64,65,66
+                    Include: true
+        RFAM label:
+            Assembly:
+                "102":
+                    Ensembl release: 67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89
+                    Include: true
+                "111":
+                    Ensembl release: 90,91,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: true
                 "9":
                     Ensembl release: 63,64,65,66
@@ -202,7 +201,7 @@ sus_scrofa:
                 "9":
                     Ensembl release: 63,64,65,66
                     Include: false
-        miRBase:
+        WikiGene label:
             Assembly:
                 "102":
                     Ensembl release: 67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89
@@ -213,10 +212,24 @@ sus_scrofa:
                 "9":
                     Ensembl release: 63,64,65,66
                     Include: false
-        synonym_id::EntrezGene:
+        miRBase:
             Assembly:
                 "102":
-                    Ensembl release: 67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87
+                    Ensembl release: 67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89
+                    Include: true
+                "111":
+                    Ensembl release: 90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Include: true
+                "9":
+                    Ensembl release: 63,64,65,66
+                    Include: true
+        miRBase label:
+            Assembly:
+                "102":
+                    Ensembl release: 67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89
+                    Include: true
+                "111":
+                    Ensembl release: 90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: true
                 "9":
                     Ensembl release: 63,64,65,66
@@ -242,18 +255,16 @@ sus_scrofa:
                 "9":
                     Ensembl release: 61,64,65,66
                     Include: true
-        synonym_id::NCBI gene:
-            Assembly:
-                "102":
-                    Ensembl release: 88,89
-                    Include: true
-                "111":
-                    Ensembl release: 90,91,92,93,94,95,96,97,98,99
-                    Include: true
         synonym_id::NCBI gene (formerly Entrezgene):
             Assembly:
+                "102":
+                    Ensembl release: 67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89
+                    Include: true
                 "111":
-                    Ensembl release: 100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Ensembl release: 90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Include: true
+                "9":
+                    Ensembl release: 63,64,65,66
                     Include: true
         synonym_id::UniProtKB Gene Name:
             Assembly:
@@ -264,25 +275,15 @@ sus_scrofa:
                     Ensembl release: 63,64,65,66
                     Include: true
     transcript:
-        Clone-based (Ensembl):
-            Assembly:
-                "102":
-                    Ensembl release: 69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87
-                    Include: false
         Clone-based (Ensembl) transcript:
             Assembly:
                 "102":
-                    Ensembl release: 88,89
-                    Include: false
-        Clone-based (Vega):
-            Assembly:
-                "102":
-                    Ensembl release: 69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87
+                    Ensembl release: 69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89
                     Include: false
         Clone-based (Vega) transcript:
             Assembly:
                 "102":
-                    Ensembl release: 88,89
+                    Ensembl release: 69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89
                     Include: false
         Clone_based_ensembl_transcript:
             Assembly:
@@ -326,10 +327,7 @@ sus_scrofa:
         HGNC transcript name:
             Assembly:
                 "102":
-                    Ensembl release: 69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89
-                    Include: false
-                "111":
-                    Ensembl release: 90,91,92,93,94,95,96,97
+                    Ensembl release: 69,70,71,72
                     Include: false
         HGNC_automatic_transcript:
             Assembly:
@@ -370,6 +368,11 @@ sus_scrofa:
                     Ensembl release: 69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88
                     Include: false
         RFAM:
+            Assembly:
+                "9":
+                    Ensembl release: 56,57,58,59,60,61,62
+                    Include: false
+        RFAM label:
             Assembly:
                 "9":
                     Ensembl release: 56,57,58,59,60,61,62
@@ -530,8 +533,11 @@ sus_scrofa:
                     Include: false
         Transcript name:
             Assembly:
+                "102":
+                    Ensembl release: 73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89
+                    Include: false
                 "111":
-                    Ensembl release: 98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Ensembl release: 90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
         UniGene:
             Assembly:
@@ -541,12 +547,7 @@ sus_scrofa:
         UniProt transcript name:
             Assembly:
                 "102":
-                    Ensembl release: 71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89
-                    Include: false
-        Uniprot transcript name:
-            Assembly:
-                "102":
-                    Ensembl release: "70"
+                    Ensembl release: 70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89
                     Include: false
         Uniprot_genename_transcript_name:
             Assembly:
@@ -569,6 +570,11 @@ sus_scrofa:
                     Ensembl release: 69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88
                     Include: false
         miRBase:
+            Assembly:
+                "9":
+                    Ensembl release: 56,57,58,59,60,61,62
+                    Include: false
+        miRBase label:
             Assembly:
                 "9":
                     Ensembl release: 56,57,58,59,60,61,62
@@ -643,7 +649,7 @@ sus_scrofa:
             Assembly:
                 "9":
                     Ensembl release: 56,57,58,59,60,61,62
-                    Include: false
+                    Include: true
         European Nucleotide Archive:
             Assembly:
                 "102":
@@ -653,12 +659,7 @@ sus_scrofa:
                     Ensembl release: 90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
                     Include: false
                 "9":
-                    Ensembl release: 61,62,63,64,65,66
-                    Include: false
-        European Nucleotide Archive (was EMBL):
-            Assembly:
-                "9":
-                    Ensembl release: 59,60
+                    Ensembl release: 59,60,61,62,63,64,65,66
                     Include: false
         GO:
             Assembly:
@@ -679,10 +680,13 @@ sus_scrofa:
         INSDC protein ID:
             Assembly:
                 "102":
-                    Ensembl release: 71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89
+                    Ensembl release: 67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89
                     Include: false
                 "111":
                     Ensembl release: 90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
+                    Include: false
+                "9":
+                    Ensembl release: 56,57,58,59,60,61,62,63,64,65,66
                     Include: false
         KEGG Pathway and Enzyme:
             Assembly:
@@ -721,6 +725,11 @@ sus_scrofa:
                 "111":
                     Ensembl release: 90,91,92,93,94,95
                     Include: false
+        NCBI gene (formerly Entrezgene):
+            Assembly:
+                "9":
+                    Ensembl release: 56,57,58,59,60,61,62
+                    Include: true
         PDB:
             Assembly:
                 "102":
@@ -728,14 +737,6 @@ sus_scrofa:
                     Include: false
                 "111":
                     Ensembl release: 90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116
-                    Include: false
-                "9":
-                    Ensembl release: 56,57,58,59,60,61,62,63,64,65,66
-                    Include: false
-        Protein ID:
-            Assembly:
-                "102":
-                    Ensembl release: 67,68,69,70
                     Include: false
                 "9":
                     Ensembl release: 56,57,58,59,60,61,62,63,64,65,66
@@ -885,11 +886,11 @@ sus_scrofa:
                 "9":
                     Ensembl release: 56,57,58,59,60,61,62,63,64,65,66
                     Include: false
-        synonym_id::EntrezGene:
+        synonym_id::NCBI gene (formerly Entrezgene):
             Assembly:
                 "9":
                     Ensembl release: 56,57,58,59,60,61,62
-                    Include: false
+                    Include: true
         synonym_id::UniProtKB/Swiss-Prot:
             Assembly:
                 "102":

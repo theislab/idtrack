@@ -9,14 +9,37 @@ The fake answers :py:meth:`idtrack.engine.Track.convert` from a table, as the en
 
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 from collections import Counter
-from typing import Any
+from collections.abc import Iterable
+from typing import Any, cast
 
 from idtrack import API
 from idtrack.engine import Conversion, Track
+from idtrack.errors import InactiveAtReleaseError
+from idtrack.graph.names import Readings
 from idtrack.results import Candidate, ExplainedPath, PathStep
 from idtrack.settings import SearchSettings
+
+
+class _FakeRecord:
+    """The part of :py:class:`idtrack.graph.GraphRecord` that the API and the harmonizer read of a fake graph."""
+
+    def __init__(self, graph: FakeGraph):
+        """Describe *graph* as it is now."""
+        self.organism = graph.graph["organism"]
+        self.releases: tuple[int, ...] = tuple(cast(Iterable[int], graph.graph["confident_for_release"]))
+        self.counts: dict[str, int] = {}
+        self.package_version = self.package_commit = self.build_date = None
+        self.organism_table_fingerprint = None
+        # what decides the content of the fake: its organism and releases (the harmonizer's cache is keyed by it)
+        self.content_digest = hashlib.sha256(json.dumps(self.to_json(), sort_keys=True).encode()).hexdigest()
+
+    def to_json(self) -> dict:
+        """Return the record as JSON values."""
+        return {"organism": self.organism, "releases": list(self.releases)}
 
 
 class FakeGraph:
@@ -49,6 +72,26 @@ class FakeGraph:
         """Every release of the fake is served by assembly 38."""
         return {r: 38 for r in self.releases}
 
+    @property
+    def organism(self) -> str:
+        """The organism of the fake."""
+        return str(self.graph["organism"])
+
+    @property
+    def primary_assembly(self) -> int:
+        """The primary assembly of the fake."""
+        return int(cast(int, self.graph["genome_assembly"]))
+
+    @property
+    def misplaced_external_entries(self) -> tuple[str, ...]:
+        """No external id of the fake is an Ensembl id."""
+        return ()
+
+    @property
+    def record(self) -> _FakeRecord:
+        """What the fake is (what a harmonizer's result cache is keyed by)."""
+        return _FakeRecord(self)
+
     def resolve_name(
         self, identifier: str, release: int | None = None, database: str | None = None, target: int | None = None
     ) -> tuple[str | None, str | None]:
@@ -58,6 +101,21 @@ class FakeGraph:
             return identifier, "exact"
         folded = [n for n in sorted(self.nodes) if n.casefold() == identifier.casefold()]
         return (folded[0], "case") if folded else (None, None)
+
+    def places(self, node: str) -> tuple:
+        """The fake holds no place of any gene."""
+        return ()
+
+    def readings(
+        self, identifier: str, release: int | None = None, database: str | None = None, target: int | None = None
+    ) -> Readings:
+        """The readings of a string: the one :py:meth:`resolve_name` gives (the fake sets nothing aside)."""
+        node, how = self.resolve_name(identifier, release, database, target)
+        return Readings(() if node is None or how is None else ((node, how),))
+
+    def node_type(self, node: str) -> str:
+        """Every node of the fake is read as an Ensembl id (its origins are its trios)."""
+        return "ensembl_gene"
 
     def known_versions(self, identifier: str) -> tuple[str, ...]:
         """Return the versions of an id written with a version that the fake does not hold."""
@@ -111,6 +169,12 @@ class FakeTrack(Track):
         """Return the ids of a gene in a database: what the table says under the gene itself."""
         self.name_lookups.append((gene, final_database, release))
         return sorted(self.answers.get(gene, {}).get(gene, {}).get(final_database, [])), 0
+
+    def reads_at(self, identifier: str, release: int, to_release: int, from_database: str | None = None) -> bool:
+        """As the engine: ``False`` where the table raises :py:class:`idtrack.errors.InactiveAtReleaseError`."""
+        resolved, _ = self.graph.resolve_name(identifier, release, from_database)
+        node = identifier if resolved is None else resolved
+        return not isinstance(self.errors.get((node, release)), InactiveAtReleaseError)
 
     def _convert(
         self,
@@ -190,12 +254,17 @@ class FakeTrack(Track):
                         target=t,
                         best=True,
                         entry_gene=gene,
+                        entry_databases=(),
+                        authority=False,
+                        display_name=False,
+                        display_rank=2,
                         entry_support=1,
                         own_version=False,
                         final_confidence=None if no_target else 0,
                         bridges=0,
                         bridge_gap=0,
                         score=1.0,
+                        unscored_steps=0,
                         same_as_query=t == node,
                         external_steps=0,
                         history_steps=0,

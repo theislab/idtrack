@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import math
 import numbers
+import re
 from types import MappingProxyType
 from typing import Any
 
@@ -21,6 +22,23 @@ ID_VERSION_DELIMITER = "."
 
 #: The prefix of the graph's synonym nodes (``synonym_id::TP53``): the graph's bookkeeping, never part of an id.
 SYNONYM_PREFIX = "synonym_id::"
+
+#: The characters that join the parts of a name (``MIR138-2``, ``H1_0``, ``NKX2.1``): the step ``"separator"`` of
+#: the name resolution reads them as one (decision 87). A version (``NM_000546.6``, ``ENSG00000141510.18``) follows
+#: one of them, and so does the number a single-cell tool appends to a repeated name (``SRF.1``, ``SRF-1``,
+#: ``SRF_1``: decision 82).
+SEPARATORS = "-_."
+
+#: The form of an Ensembl stable id without its version, by Ensembl's scheme of identifiers: ``ENS``, the species'
+#: letters and the letter of the feature, then eleven digits (``ENSG00000141510``, ``ENSMUST00000000001``), or an LRG
+#: record's id (``LRG_<number>``). A pattern to embed (no anchors, no flags).
+STABLE_ID_FORM = r"(?:ENS[A-Z]*\d{11}|LRG_\d+)"
+#: An Ensembl stable id or an LRG id without version, in any letter case (:py:data:`STABLE_ID_FORM`).
+STABLE_ID = re.compile(rf"(?i)^{STABLE_ID_FORM}$")
+#: An LRG record's id, with or without version.
+LRG_ID = re.compile(r"^LRG_\d+(?:\.\d+)?$")
+#: A string that ends in one of the :py:data:`SEPARATORS` and digits: ``(string before, separator, digits)``.
+NUMBERED_SUFFIX = re.compile(rf"^(.+)([{re.escape(SEPARATORS)}])([0-9]+)$")
 
 #: The version of the node before the first version of a gene id (its birth).
 VOID = "Void"
@@ -53,11 +71,6 @@ BASE_ENSEMBL_TYPE = MappingProxyType({form: f"base_ensembl_{form}" for form in F
 GENE = ENSEMBL_TYPE[BACKBONE_FORM]
 #: The node type of gene ids without version.
 BASE_GENE = BASE_ENSEMBL_TYPE[BACKBONE_FORM]
-
-#: Beginnings of the names of the external databases whose ids are sequence accessions, which their sources write
-#: with a version (``NM_000546.6``, ``P04637.4``, ``CCDS11118.1``). Only an id of such a database is looked up
-#: without a version suffix that the graph does not hold; a gene symbol never is.
-ACCESSION_DATABASE_PREFIXES: tuple[str, ...] = ("RefSeq_", "Uniprot/", "CCDS", "EMBL", "protein_id")
 
 
 def _is_missing(value: Any) -> bool:
@@ -172,29 +185,50 @@ def versions_prefix(stable_id: str) -> str:
     return f"{stable_id}{ID_VERSION_DELIMITER}"
 
 
-def stable_id_of(identifier: str) -> str:
-    """Return an identifier without the synonym prefix and, for an Ensembl or LRG id, without its version.
+#: An Ensembl or LRG id (:py:data:`STABLE_ID_FORM`) with a version.
+_VERSIONED_STABLE_ID = re.compile(rf"(?i)^({STABLE_ID_FORM}){re.escape(ID_VERSION_DELIMITER)}(\d+)$")
 
-    This is how a conversion result is compared with the identifier it started from ("did the identifier change?"):
-    an Ensembl id is recognised by its prefix (``ENS``, ``LRG_``), so that a query without version, or in another
-    letter case, that maps to itself counts as unchanged.
+
+def stable_id_of(identifier: str) -> str:
+    """Return an identifier without its version when it is an Ensembl or LRG id with a version.
+
+    This is how a conversion result is compared with the identifier it started from ("did the identifier change?"),
+    so that a query without version, or in another letter case, that maps to itself counts as unchanged. An Ensembl id
+    is recognised by its whole form (a prefix of Ensembl and eleven digits, or ``LRG_<number>``), so that a symbol
+    such as ``ENSA`` is never cut.
 
     Args:
-        identifier: An identifier or node name.
+        identifier: An identifier.
 
     Returns:
         str: The identifier to compare.
     """
-    identifier = identifier.removeprefix(SYNONYM_PREFIX)
-    if identifier.upper().startswith(("ENS", "LRG_")):
-        head, sep, tail = identifier.rpartition(ID_VERSION_DELIMITER)
-        if sep and tail.isdigit():
-            return head
-    return identifier
+    found = _VERSIONED_STABLE_ID.match(identifier)
+    return found.group(1) if found is not None else identifier
+
+
+def public_name(name: str) -> str:
+    """Return a node name or database name as results show it: without the graph's synonym prefix (decision 56).
+
+    The graph keeps a synonym under ``synonym_id::<synonym>`` and its database as ``synonym_id::<database>``; a
+    result says that a match is a synonym in its own words (``match="synonym:exact"``, :py:attr:`NameMatch.synonym`,
+    a path node of kind ``synonym``) and names the identifier and the database as they are.
+
+    Args:
+        name: A node name or a database name of the graph.
+
+    Returns:
+        str: The name without the prefix.
+    """
+    return name.removeprefix(SYNONYM_PREFIX)
+
+
+def is_synonym_database(database: str) -> bool:
+    """Tell whether a database name of the graph is the synonyms of a database (``synonym_id::<database>``)."""
+    return database.startswith(SYNONYM_PREFIX)
 
 
 __all__ = [
-    "ACCESSION_DATABASE_PREFIXES",
     "BACKBONE_FORM",
     "BASE_ENSEMBL_TYPE",
     "BASE_GENE",
@@ -207,12 +241,19 @@ __all__ = [
     "ID_VERSION_DELIMITER",
     "NODE_TYPE_KEY",
     "RETIRED",
+    "LRG_ID",
+    "NUMBERED_SUFFIX",
     "SENTINEL_VERSIONS",
+    "SEPARATORS",
+    "STABLE_ID",
+    "STABLE_ID_FORM",
     "SYNONYM_PREFIX",
     "VOID",
+    "is_synonym_database",
     "is_versioned_name",
     "join",
     "join_columns",
+    "public_name",
     "split",
     "stable_id_of",
     "versions_prefix",
