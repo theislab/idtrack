@@ -828,6 +828,48 @@ judgement):
   id 100425060, while NCBI's ``gene2ensembl`` gives it ENSMMUG00000049684. Where the authority's assignment matters,
   check the answer against the authority's own file.
 
+.. _known-costs:
+
+Known Costs of This Version
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+What this version costs in time and memory, measured on the graphs of Ensembl 115 (the median of three runs, each in
+a new process) and, where a comparison is given, against the development version of 13 November 2026 on the same
+inputs and machines; :ref:`time-and-memory` gives the build, load and memory of each organism:
+
+* **The first conversion in a process that meets a copy of a gene sharing an identifier with another gene computes
+  a table of every gene of the graph, once.** Where a bridge would join a copy on a patch, a haplotype or an LRG
+  record to another gene through an identifier both carry, idtrack asks whether the genes that carry it are one gene,
+  and the first such question in a process computes the facts of every gene and keeps them: about 10 s and 0.8 GB in
+  human, 9 s and 0.7 GB in mouse; later calls do not pay it. Pig and the macaques have no such copies, and none of
+  their conversions computes it. A server that loads the graph and then forks its workers computes it again in every
+  worker that meets such a copy (in a server of the five organisms with four workers, each worker's private memory
+  was about 2 GB against 0.8 GB on 13 November, its slowest call 16 s). Make one such conversion when the process
+  starts, before the first request and before a server forks, so that the workers inherit the table:
+  ``api.convert("ENSG00000228326.1")`` in human, ``api.convert("ENSMUSP00000155749.1")`` in mouse (each computes it;
+  asked again, it answers in a few milliseconds).
+* **A name that is the display name of very many genes takes seconds on every call.** Ensembl displays the names of
+  some RNA families for hundreds or thousands of genes, and ranking them by their display names takes time that grows
+  with the number of genes: cynomolgus ``Metazoa_SRP`` (3,274 genes, a tie) 6.4 s and ``RF00026`` (1,212 genes)
+  0.7 s, rhesus ``Metazoa_SRP`` (3,419 genes) 7.5 s and ``U6`` (1,209 genes) 2.3 s, pig ``U6`` (876 genes) 1.2 s,
+  each time it is asked: nothing is kept between calls. Convert such a name once and reuse its result; in one
+  :py:meth:`idtrack.API.convert_many` each distinct string is converted once (pig ``U6`` three times in one batch
+  takes the time of one call).
+* **The harmonizer reads its own result cache 20 to 45 times as slowly as the version of 13 November.** Constructed
+  again over a valid result cache, :py:class:`idtrack.harmonize.HarmonizeFeatures` took pig 54 s (2.5 s then) and
+  human 138 s (6.0 s) on three test datasets of 50 cells that hold every gene of the organism (by id at release 115,
+  by id at an older release, by symbol), longer than converting every feature again took in pig (35 s); the first
+  construction, every feature converted, takes 1.2 to 1.6 times as long as then (human 210 s). Keep the harmonizer,
+  or the merged AnnData written to a file, rather than constructing it again.
+* **A typical conversion takes 1.3 to 1.8 times as long as on 13 November** (the median call 0.21 to 0.28 ms), because
+  every call reads the rules that make its answer right (the places of genes, the versions of accessions, the
+  display names); the slowest one in a hundred is 3 to 17 times faster, and human converts 1.3 times (single calls)
+  to 9 times (batches) as many identifiers per second.
+* **A loaded graph is 13 to 24 % larger in memory** (pig, rhesus, mouse and human; cynomolgus the same), for the facts
+  those rules read; its file is half the size.
+* **A graph build from stored tables takes 6 to 9 times as long** (pig 13 min against 2 min, cynomolgus 8 min
+  against 1 min), for the rules it applies to Ensembl's tables and the checks of the graph against them.
+
 
 Environment Variable Configuration
 ----------------------------------
