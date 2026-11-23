@@ -72,12 +72,13 @@ Installation and a first conversion
 
 IDTrack runs on Python 3.12 to 3.15 (on 3.15, install HDF5 and a C compiler first: h5py has no wheels for it yet; see
 the installation page) and supports human, mouse, pig, rhesus macaque and cynomolgus macaque. Install it from GitHub
-(with the ``harmonize`` extra for harmonizing ``.h5ad`` datasets, which brings anndata and scipy):
+(``@v0.1.1`` names this release; without it pip takes the current ``main``); the second line adds the ``harmonize``
+extra for harmonizing ``.h5ad`` datasets, which brings anndata and scipy:
 
 .. code-block:: console
 
-    $ pip install "git+https://github.com/theislab/idtrack.git"
-    $ pip install "idtrack[harmonize] @ git+https://github.com/theislab/idtrack.git"
+    $ pip install "git+https://github.com/theislab/idtrack.git@v0.1.1"
+    $ pip install "idtrack[harmonize] @ git+https://github.com/theislab/idtrack.git@v0.1.1"
 
 The release on PyPI (``pip install idtrack``, version 0.0.5) is an older, different version with another API; use
 GitHub until this version is published on PyPI.

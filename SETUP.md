@@ -6,23 +6,23 @@ Contents: [1. Install](#1-install) · [2. Configure](#2-configure) · [3. Data: 
 
 ## 1. Install
 
-idtrack runs on Python 3.12 to 3.15 (`python3 --version`). Install it from GitHub: the release on PyPI (`pip install idtrack`, 0.0.5) is an older version with another API, until this version is published there.
+idtrack needs Python 3.12 to 3.15. The commands below name the interpreter as `python3.12` (`python3.12 --version` checks that it is there), since a plain `python3` is often older (an older system or conda Python: `python3 --version`); any of 3.12 to 3.15 works in its place (`python3.14`, ...). Where none is installed, get one from the system's packages (`sudo apt-get install python3.12`, `sudo dnf install python3.12`, `brew install python@3.12`), from <https://www.python.org/downloads/>, or as a conda environment (`conda create -n py312 python=3.12`, then its `bin/python3.12`). Install idtrack from GitHub: the release on PyPI (`pip install idtrack`, 0.0.5) is an older version with another API, until this version is published there.
 
 ### For use
 
 In a new folder:
 
 ```bash
-python3 -m venv idtrack-env
+python3.12 -m venv idtrack-env
 source idtrack-env/bin/activate
-pip install "git+https://github.com/theislab/idtrack.git"
+pip install "git+https://github.com/theislab/idtrack.git@v0.1.1"
 idtrack --version
 ```
 
-`idtrack --version` prints the version (`idtrack 0.1.1`). To harmonize `.h5ad` datasets (`idtrack.harmonize.HarmonizeFeatures`), add the `harmonize` extra (anndata and scipy, about 150 MB):
+`idtrack --version` prints `idtrack 0.1.1`: `@v0.1.1` installs that release's tag; without it (`git+https://github.com/theislab/idtrack.git`) pip installs the current `main`, which may be ahead of this guide. To harmonize `.h5ad` datasets (`idtrack.harmonize.HarmonizeFeatures`), add the `harmonize` extra (anndata and scipy, about 150 MB):
 
 ```bash
-pip install "idtrack[harmonize] @ git+https://github.com/theislab/idtrack.git"
+pip install "idtrack[harmonize] @ git+https://github.com/theislab/idtrack.git@v0.1.1"
 ```
 
 **Python 3.15:** h5py publishes no wheels for Python 3.15 yet (h5py 3.16.0), so pip compiles h5py from source, which needs a C compiler and the HDF5 library with its headers: install them first (Debian or Ubuntu `sudo apt-get install build-essential libhdf5-dev`, Fedora or RHEL `sudo dnf install gcc hdf5-devel`, macOS `brew install hdf5`, or `conda install -c conda-forge hdf5` in a conda environment; if pip does not find HDF5, set `HDF5_DIR` to the folder that holds its `include/` and `lib/`). The install then takes about 6 minutes instead of 2.5. Python 3.12 to 3.14 need nothing of this.
@@ -32,16 +32,18 @@ pip install "idtrack[harmonize] @ git+https://github.com/theislab/idtrack.git"
 ```bash
 git clone https://github.com/theislab/idtrack.git
 cd idtrack
-python3 -m venv ../idtrack-tools
+python3.12 -m venv ../idtrack-tools
 ../idtrack-tools/bin/pip install poetry poetry-plugin-export nox nox-poetry
 export PATH="$PWD/../idtrack-tools/bin:$PATH"
+poetry env use python3.12
 make install
 poetry run idtrack --version
+poetry env info --path
 ```
 
-`make install` (`poetry install`) installs idtrack in editable mode with the development tools at the versions of `poetry.lock`, into a virtual environment that Poetry manages (`poetry env info --path` shows where); the block takes about 4 minutes. Every development command runs in it through `poetry run` (the `make` targets do so: `make` lists them). The tools folder `../idtrack-tools` holds Poetry and nox only; any other installation of them works (with pipx, for example), as long as the export plugin sits beside Poetry and nox-poetry beside nox.
+`make install` (`poetry install`) installs idtrack in editable mode with the development tools at the versions of `poetry.lock`, into a virtual environment that Poetry manages, of the Python that `poetry env use` names (without it Poetry takes the Python it runs on, or one it finds, and `poetry env info --path` prints nothing when that Python is too old); the last line shows where the environment is. The clone is the current `main` (the code under development); `git checkout v0.1.1` gives the code of this release. The block takes about 4 minutes. Every development command runs in it through `poetry run` (the `make` targets do so: `make` lists them). The tools folder `../idtrack-tools` holds Poetry and nox only; any other installation of them works (with pipx, for example), as long as the export plugin sits beside Poetry and nox-poetry beside nox.
 
-What else the checks need: [pandoc](https://pandoc.org/installing.html) for the documentation (`make docs`), Node.js for the prettier hook of `nox -s pre-commit` (pre-commit installs one if `node` is not on the path), and, for the sessions of several Python versions, each interpreter on the path as `python3.12` to `python3.15`.
+What else the checks need: [pandoc](https://pandoc.org/installing.html) for the documentation (`make docs` stops with "Please check that pandoc is installed" without it; without root, unpack the `linux-amd64` tarball of its [GitHub release](https://github.com/jgm/pandoc/releases) and put its `bin/` on the `PATH`), Node.js for the prettier hook of `nox -s pre-commit` (pre-commit installs one if `node` is not on the path), and, for the sessions of several Python versions, each interpreter on the path as `python3.12` to `python3.15`.
 
 ## 2. Configure
 
@@ -65,16 +67,16 @@ The last two lines it prints are the graph file and what it holds:
 
 ```text
 idtrack_cache/graph_macaca_fascicularis_assembly6_min91_max115.npz
-macaca_fascicularis, releases 91 to 115, 22.5 MB, 721 s
+macaca_fascicularis, releases 91 to 115, 24.1 MB, 700 s
 ```
 
-The organisms are `homo_sapiens` (`human`), `mus_musculus` (`mouse`), `sus_scrofa` (`pig`), `macaca_mulatta` (`rhesus`) and `macaca_fascicularis` (`cynomolgus`); `idtrack build --help` lists the options (`--first-release`, `--rebuild`). Building the graphs of snapshot release 115, one process (the time of the graph itself, after the tables are downloaded; a first build also downloads them, which depends on the network: the cynomolgus build above took 721 s and 816 s in two runs from nothing, 0.24 GB of tables; the table sizes of the other organisms were measured on repositories that also hold tables of earlier builds, so they are upper bounds):
+The organisms are `homo_sapiens` (`human`), `mus_musculus` (`mouse`), `sus_scrofa` (`pig`), `macaca_mulatta` (`rhesus`) and `macaca_fascicularis` (`cynomolgus`); `idtrack build --help` lists the options (`--first-release`, `--rebuild`). Sizes and times vary from build to build and machine to machine: take them as approximate (the cynomolgus graph has been 22.5 to 24.1 MB and its build from nothing 700 to 816 s). Building the graphs of snapshot release 115, one process (the time of the graph itself, after the tables are downloaded; a first build also downloads them, which depends on the network: cynomolgus took 12 to 14 minutes from nothing, 0.24 GB of tables, pig 31 minutes; the table sizes of the other organisms were measured on repositories that also hold tables of earlier builds, so they are upper bounds):
 
 |                          | cynomolgus | pig            | rhesus         | mouse          | human          |
 | ------------------------ | ---------- | -------------- | -------------- | -------------- | -------------- |
 | build time               | 8 min      | 13 min         | 14 min         | 40 min         | 2.6 h          |
 | peak memory              | 1.1 GB     | 1.8 GB         | 1.7 GB         | 4.6 GB         | 6.8 GB         |
-| graph file               | 22 MB      | 40 MB          | 34 MB          | 101 MB         | 156 MB         |
+| graph file               | 23 MB      | 42 MB          | 34 MB          | 101 MB         | 156 MB         |
 | tables in the repository | 0.24 GB    | at most 1.1 GB | at most 1.2 GB | at most 3.3 GB | at most 9.3 GB |
 
 Run a long build where it may run for hours (a batch job on a cluster, or `nohup`); an interrupted build starts again from the tables already downloaded.
@@ -163,7 +165,7 @@ nox --session=pre-commit --python=3.12
 nox --session=mypy --python=3.12
 ```
 
-The sessions are `pre-commit`, `pip-audit`, `mypy`, `tests`, `typeguard`, `xdoctest`, `docs-build`, `coverage` and `docs` (a live preview), each for Python 3.12 to 3.15 where it applies; without `--session`, nox runs the default sessions on every interpreter it finds. Besides the nox sessions, the workflows build the sdist and the wheel and run the unit suite against the installed wheel (`.github/scripts/test_wheel.sh`, runnable locally: `bash .github/scripts/test_wheel.sh dist/idtrack-*-py3-none-any.whl` after `make dist`), and install the wheel against the oldest and newest dependency versions (`dependency_compatibility.yml`). A change is ready when the workflows pass; `docs/contributing.rst` says how to propose it.
+The sessions are `pre-commit`, `pip-audit`, `mypy`, `tests`, `typeguard`, `xdoctest`, `docs-build`, `coverage` and `docs` (a live preview), each for Python 3.12 to 3.15 where it applies; without `--session`, nox runs the default sessions on every interpreter it finds. Besides the nox sessions, the workflows build the sdist and the wheel and run the unit suite against the installed wheel (`.github/scripts/test_wheel.sh`, runnable locally: `PYTHON=python3.12 bash .github/scripts/test_wheel.sh dist/idtrack-*-py3-none-any.whl` after `make dist`; `PYTHON` names the interpreter of its virtual environment, `python3` if unset), and install the wheel against the oldest and newest dependency versions (`dependency_compatibility.yml`). A change is ready when the workflows pass; `docs/contributing.rst` says how to propose it.
 
 ## 6. Release
 
@@ -180,4 +182,4 @@ The version is written in one place, `version` in `[project]` of `pyproject.toml
 
 3. Tag the commit `v<version>` (for version 0.1.1, for example: `git tag v0.1.1`, `git push origin v0.1.1`; a pushed tag is never moved: a change after it is a new version) and publish a GitHub release of that tag. Publishing the release starts `.github/workflows/publish_package.yml`, which checks that the tag equals the version, builds and uploads to PyPI by trusted publishing (no token: PyPI's project settings must list this repository, the workflow `publish_package.yml` and the environment `pypi` as a trusted publisher). A version that is already on PyPI fails. Read the Docs builds the documentation of `main` on every push.
 
-These three steps publish; the maintainer does them.
+Steps 1 and 3 change `main`, the tags and PyPI; the maintainer does them. The install lines of section 1, of the README and of the installation page name the release's tag (`@v0.1.1`): set them to the new tag in step 1.

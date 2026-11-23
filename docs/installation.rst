@@ -34,7 +34,7 @@ Before installing IDTrack, ensure your system meets these requirements:
     * - **Disk Space**
       - The tables a graph is built from stay in the local repository: 0.24 GB (cynomolgus) and at most 1.1 GB (pig),
         1.2 GB (rhesus), 3.3 GB (mouse) and 9.3 GB (human) for a graph of snapshot release 115, plus the graph file
-        itself (22 MB to 156 MB).
+        itself (about 23 MB to 156 MB; sizes vary a little from build to build).
     * - **Network**
       - HTTPS access to ``ftp.ensembl.org`` and ``rest.ensembl.org`` to build a graph (and for
         :py:meth:`idtrack.API.ensembl_organism` to learn the latest release); the Ensembl MySQL ports are optional
@@ -53,24 +53,25 @@ Install IDTrack from GitHub into a fresh environment (it is not on conda-forge o
 
 .. code-block:: console
 
-    $ python -m venv idtrack-env
+    $ python3.12 -m venv idtrack-env    # any Python 3.12 to 3.15: python3 --version tells which python3 is
     $ source idtrack-env/bin/activate      # Windows: idtrack-env\Scripts\activate
-    $ pip install "git+https://github.com/theislab/idtrack.git"
+    $ pip install "git+https://github.com/theislab/idtrack.git@v0.1.1"
 
-or into a conda/mamba environment, with pip:
+``@v0.1.1`` installs this release; without it, pip installs the current ``main`` of the repository, which may be ahead
+of these pages. Or into a conda/mamba environment, with pip:
 
 .. code-block:: console
 
     $ mamba create -n idtrack-env -c conda-forge python=3.13
     $ conda activate idtrack-env
-    $ pip install "git+https://github.com/theislab/idtrack.git"
+    $ pip install "git+https://github.com/theislab/idtrack.git@v0.1.1"
 
 To harmonize ``.h5ad`` datasets (:py:class:`idtrack.harmonize.HarmonizeFeatures`), install the ``harmonize`` extra,
 which brings anndata and scipy:
 
 .. code-block:: console
 
-    $ pip install "idtrack[harmonize] @ git+https://github.com/theislab/idtrack.git"
+    $ pip install "idtrack[harmonize] @ git+https://github.com/theislab/idtrack.git@v0.1.1"
 
 .. important::
 
@@ -136,7 +137,7 @@ Choose one of these methods:
 
 .. code-block:: console
 
-    $ pip install "git+https://github.com/theislab/idtrack.git"
+    $ pip install "git+https://github.com/theislab/idtrack.git@v0.1.1"
 
 **Verification:**
 
@@ -168,15 +169,15 @@ Using Mamba or conda
     $ conda activate idtrack-env
 
     # Install IDTrack (from GitHub, with pip)
-    $ pip install "git+https://github.com/theislab/idtrack.git"
+    $ pip install "git+https://github.com/theislab/idtrack.git@v0.1.1"
 
 Using venv + pip
 ~~~~~~~~~~~~~~~~
 
 .. code-block:: console
 
-    # Create a new virtual environment
-    $ python -m venv idtrack-env
+    # Create a new virtual environment (with a Python 3.12 to 3.15)
+    $ python3.12 -m venv idtrack-env
 
     # Activate the environment
     # On Linux/macOS:
@@ -185,7 +186,7 @@ Using venv + pip
     $ idtrack-env\Scripts\activate
 
     # Install IDTrack
-    $ pip install "git+https://github.com/theislab/idtrack.git"
+    $ pip install "git+https://github.com/theislab/idtrack.git@v0.1.1"
 
 
 Development Installation
@@ -313,7 +314,7 @@ the extra.
 
 .. code-block:: console
 
-    $ pip install "idtrack[harmonize] @ git+https://github.com/theislab/idtrack.git"
+    $ pip install "idtrack[harmonize] @ git+https://github.com/theislab/idtrack.git@v0.1.1"
 
 
 Troubleshooting
@@ -331,7 +332,7 @@ then IDTrack with pip:
 
     $ mamba create -n idtrack-env -c conda-forge python=3.13 h5py
     $ conda activate idtrack-env
-    $ pip install "git+https://github.com/theislab/idtrack.git"
+    $ pip install "git+https://github.com/theislab/idtrack.git@v0.1.1"
 
 **SSL Certificate errors during download**
 
@@ -350,12 +351,12 @@ If IDTrack encounters SSL errors when downloading external databases:
 .. code-block:: console
 
     # Option 1: Use --user flag with pip
-    $ pip install --user "git+https://github.com/theislab/idtrack.git"
+    $ pip install --user "git+https://github.com/theislab/idtrack.git@v0.1.1"
 
     # Option 2: Use a virtual environment (recommended)
-    $ python -m venv idtrack-env
+    $ python3.12 -m venv idtrack-env
     $ source idtrack-env/bin/activate
-    $ pip install "git+https://github.com/theislab/idtrack.git"
+    $ pip install "git+https://github.com/theislab/idtrack.git@v0.1.1"
 
 
 Getting Help
