@@ -3,16 +3,13 @@
 
 The offline tests of ``tests/unit/test_real_*.py`` build graphs from ``tests/data/real/<organism>.tables.json.xz``.
 This test downloads the raw tables of one release of each organism from Ensembl's HTTPS dumps through
-``DatabaseManager`` (the production download, parser and storage), cuts them with the build script's own rules and
-compares the result, table by table and row by row, with what the file holds. It is the end of the chain "real
-Ensembl data in, tested answers out" that needs the network, and it runs only when asked (``--runslow``): the
-tables of a release are tens to hundreds of megabytes.
+``DatabaseManager`` (the production download, parser and storage), cuts them with the rules of
+``tools/cut_tables.py`` and compares the result, table by table and row by row, with what the file holds. It is the
+end of the chain "real Ensembl data in, tested answers out" that needs the network, and it runs only when asked
+(``--runslow``): the tables of a release are tens to hundreds of megabytes.
 """
 
 from __future__ import annotations
-
-import importlib.util
-from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -22,17 +19,12 @@ from idtrack import ids, settings
 from idtrack.build.database_manager import DatabaseManager
 from idtrack.errors import EnsemblSchemaError
 from tests._real_tables import ORGANISMS, RealTables, tables_path
-
-BUILD_SCRIPT = Path(__file__).resolve().parents[1] / "data" / "real" / "build_real_tables.py"
+from tests._tools import load_tool
 
 
 def build_script():
-    """Import ``tests/data/real/build_real_tables.py`` (a script, not a module of a package)."""
-    spec = importlib.util.spec_from_file_location("build_real_tables", BUILD_SCRIPT)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    """Import ``tools/cut_tables.py`` (a script, not a module of a package)."""
+    return load_tool("cut_tables")
 
 
 def ensembl_dumps_reachable() -> bool:

@@ -5,7 +5,7 @@ the raw tables of Ensembl's core database that a graph build reads (``gene``, ``
 ``xref``, ``object_xref``, ``external_synonym``, ``identity_xref``, ``external_db``, ``seq_region``,
 ``coord_system``, ``seq_region_attrib``, ``attrib_type``, ``stable_id_event``, ``mapping_session``), restricted to the
 genes of
-``tests/data/real/<organism>.genes.txt``. They are written by ``tests/data/real/build_real_tables.py`` from the
+``tests/data/real/<organism>.genes.txt``. They are written by ``tools/cut_tables.py`` from the
 tables that ``DatabaseManager`` downloads over HTTPS; nothing in them is made up.
 
 :py:class:`RealTables` replays them at the two places where ``DatabaseManager`` reaches Ensembl (the download of a
@@ -143,14 +143,14 @@ class RealTables:
         Raises:
             EnsemblSchemaError: If Ensembl's schema of the release has no such table or lacks a column asked for.
             AssertionError: If the table or a column is not part of the cut tables (they are then out of date:
-                run ``tests/data/real/build_real_tables.py``).
+                run ``tools/cut_tables.py``).
         """
         key = (int(assembly), int(release), table_key)
         entry = self.tables.get(key)
         if entry is None:
             raise AssertionError(
                 f"The cut tables of {self.organism} have no table {table_key!r} of assembly {assembly}, release "
-                f"{release}: rebuild them with tests/data/real/build_real_tables.py."
+                f"{release}: rebuild them with tools/cut_tables.py."
             )
         names = [name for name, _kind in entry["columns"]]
         if not names:
@@ -162,7 +162,7 @@ class RealTables:
             if unknown:
                 raise AssertionError(
                     f"The cut tables of {self.organism} lack the columns {unknown} of {table_key!r} (assembly "
-                    f"{assembly}, release {release}): rebuild them with tests/data/real/build_real_tables.py."
+                    f"{assembly}, release {release}): rebuild them with tools/cut_tables.py."
                 )
             raise EnsemblSchemaError(
                 f"Missing columns in {table_key!r}: {missing}", table=table_key, missing_columns=tuple(missing)

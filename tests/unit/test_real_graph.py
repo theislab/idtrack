@@ -29,7 +29,7 @@ from tests._real_tables import (
 )
 
 pytestmark = pytest.mark.parametrize("organism", [o for o in ORGANISMS if tables_path(o).is_file()])
-SIZE_LIMIT = 600 * 1024  # bytes per table file: the repository's size check, as build_real_tables.py says why
+SIZE_LIMIT = 600 * 1024  # bytes per table file: the repository's size check, as tools/cut_tables.py says why
 SYNONYM = ids.SYNONYM_PREFIX
 
 

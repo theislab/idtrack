@@ -3,7 +3,7 @@
 
 Usage (from the root of the repository, with the package importable)::
 
-    IDTRACK_ENSEMBL_ACCESS=https python tests/data/real/build_real_tables.py \
+    IDTRACK_ENSEMBL_ACCESS=https python tools/cut_tables.py \
         --organism sus_scrofa --repository <local repository> [--snapshot 115] [--check-only]
 
 What it does:
@@ -73,7 +73,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from idtrack import ids, organisms, settings  # noqa: E402
@@ -505,7 +505,7 @@ def replay(organism: str, path: str, snapshot: int):
         shutil.rmtree(scratch, ignore_errors=True)
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     """Run the script; see the module docstring."""
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--organism", required=True)
@@ -513,7 +513,7 @@ def main() -> int:
     parser.add_argument("--snapshot", type=int, default=115)
     parser.add_argument("--out", help="write here instead of the repository's test data")
     parser.add_argument("--check-only", action="store_true", help="only build from the existing file and report")
-    arguments = parser.parse_args()
+    arguments = parser.parse_args(argv)
     organism, snapshot = arguments.organism, arguments.snapshot
     out = arguments.out or str(tables_path(organism))
 

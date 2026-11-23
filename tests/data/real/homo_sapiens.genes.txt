@@ -1,4 +1,4 @@
-# The gene ids (without version) that tests/data/real/build_real_tables.py cuts Ensembl's tables of homo_sapiens down to.
+# The gene ids (without version) that tools/cut_tables.py cuts Ensembl's tables of homo_sapiens down to.
 # The list must be closed under Ensembl's gene events; the script names the ids to add when it is not.
 ASMPATCHG00000000328
 ASMPATCHG00000000349

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Write the expected answers of the consumer-contract test: ``tests/data/real/consumer_contract.json``.
+"""Write the expected answers of the consumer-contract test, for ``tools/consumer_contract.py``.
 
 The test (``tests/unit/test_consumer_contract.py``) makes the calls of idtrack's main consumer, the rosetta project
 (``src/rosetta/reference/idtrack_graph.py`` and ``src/rosetta/preprocessing/genes.py``), with the API of this version
@@ -8,12 +8,19 @@ This script made those answers: it holds rosetta's functions as they were (``dra
 ``bins``, ``GraphView``, read on 2026-11-17, with only rosetta's imports and its ``Graph`` record removed), written
 for the API of idtrack before version 0.1.0, and runs them on the cut graphs of ``tests/_real_tables.py``.
 
-Usage, from a checkout of commit ``d4c2dda`` (the last commit with that API)::
+Usage, from a checkout of commit ``d4c2dda`` (the last commit with that API), with the cut tables of this checkout
+copied into it (``tests/data/real/<organism>.{genes.txt,tables.json.xz,truth.jsonl}``)::
 
     git worktree add ../idtrack_d4c2dda d4c2dda
-    cd ../idtrack_d4c2dda && PYTHONPATH=. python <this repository>/tests/data/real/build_consumer_contract.py out.json
+    cp tests/data/real/*.genes.txt tests/data/real/*.tables.json.xz tests/data/real/*.truth.jsonl \\
+        ../idtrack_d4c2dda/tests/data/real/
+    cd ../idtrack_d4c2dda && PYTHONPATH=. python <this repository>/tools/contract_answers.py answers.json
+    cd <this repository> && python tools/consumer_contract.py --answers ../idtrack_d4c2dda/answers.json
 
-The answers do not change unless the cut tables change; the file is then written again in the same way.
+Reads: the cut tables of the ``d4c2dda`` checkout it runs in. Writes: the answers file named on the command line
+(it holds descriptions of ``d4c2dda``'s graphs too; ``tools/consumer_contract.py`` keeps their answers only and writes
+the descriptions of this version's graphs). It needs the Python and packages of ``d4c2dda``'s time (3.11). The
+answers do not change unless the cut tables change; the file is then written again in the same way.
 """
 
 import json

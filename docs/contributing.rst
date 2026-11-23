@@ -136,7 +136,8 @@ Tests are located in the ``tests/`` directory:
     tests/
     ├── conftest.py               # Shared fixtures (among them the graphs of real organisms) and markers
     ├── _real_tables.py           # Serves real Ensembl tables, cut down to a few hundred genes, to DatabaseManager
-    ├── data/real/                # Per organism: the cut tables, the gene list, the expected answers, the build script
+    ├── _tools.py                 # Imports a tool of tools/ for its test (test_tools.py)
+    ├── data/real/                # Per organism: the cut tables, the gene list, the expected answers
     ├── unit/                     # Offline tests, one file per module (test_api.py, test_main.py: the command line, ...)
     │                             # and test_real_*.py
     └── integration/              # Network-backed tests against Ensembl (MySQL and HTTPS dumps)
@@ -159,11 +160,13 @@ genes that a new test needs:
 
 .. code-block:: console
 
-    $ poetry run python tests/data/real/build_real_tables.py --organism sus_scrofa --repository <local repository>
+    $ poetry run python tools/cut_tables.py --organism sus_scrofa --repository <local repository>
 
 It reads the tables from the local repository and downloads what the repository lacks over HTTPS.
 ``tests/integration/test_real_tables_source.py`` (``--runslow``, network) fetches one release of each organism again
-and compares it with the stored file.
+and compares it with the stored file. This tool and the others that write files of the repository (the shipped
+externals YAML files, the consumer-contract expectations) are in ``tools/``; ``tools/README.md`` says what each
+writes, from what, and how to check the result.
 
 
 Documentation Guidelines
