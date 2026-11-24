@@ -96,7 +96,7 @@ Checking the install
     import idtrack
     import idtrack.organisms
 
-    print(f"IDTrack version: {idtrack.__version__}")
+    print(f"idtrack version: {idtrack.__version__}")
     print("Organisms:", ", ".join(idtrack.organisms.supported_organisms()))       # offline
 
     organism, release = idtrack.API.ensembl_organism("human")                     # asks Ensembl REST
@@ -105,7 +105,7 @@ Checking the install
 
 .. code-block:: text
 
-    IDTrack version: 0.1.2
+    idtrack version: 0.1.2
     Organisms: homo_sapiens, macaca_fascicularis, macaca_mulatta, mus_musculus, sus_scrofa
     Resolved organism: homo_sapiens
     Latest Ensembl release: 116

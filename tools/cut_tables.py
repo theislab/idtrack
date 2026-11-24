@@ -30,7 +30,7 @@ genes to add otherwise, so the list is always closed under Ensembl's id history)
 ``coord_system`` are kept whole; of ``assembly_exception`` the rows of the kept genes' sequence regions (with the
 reference regions they stand for among the kept regions); of Ensembl's chain files the blocks over the kept genes'
 places and those reference regions (``assembly_chain`` entries of the file); of ``external_db`` and the cross
-references also the databases whose links continue a selected one (decision 104, found on the complete tables); of
+references also the databases whose links continue a selected one (found on the complete tables); of
 ``seq_region_attrib`` the rows of the kept genes' sequence regions that say
 ``toplevel``, ``non_ref``, ``karyotype_rank`` or ``codon_table`` (what a region is); of ``seq_region`` the kept genes'
 regions (their names and coordinate systems); the display name of every kept gene is kept with its cross reference
@@ -160,7 +160,7 @@ class Cutter:
             }
             prefix = ids.SYNONYM_PREFIX
             self._relevant = {name[len(prefix) :] if name.startswith(prefix) else name for name in names}
-            # and the databases whose links continue a selected one (decision 104), found on the complete tables
+            # and the databases whose links continue a selected one, found on the complete tables
             filing = DatabaseManager(
                 organism=self.organism,
                 form=ids.BACKBONE_FORM,
@@ -192,7 +192,7 @@ class Cutter:
         regions = source.get_table("gene", usecols=["gene_id", "seq_region_id"])
         regions = regions[regions["gene_id"].isin(list(number["gene"]))]
         kept_regions = set(regions["seq_region_id"].astype(int))
-        # the assembly exceptions of the kept genes' regions, with the reference regions they stand for (I148)
+        # the assembly exceptions of the kept genes' regions, with the reference regions they stand for
         exceptions = source.get_table("assembly_exception", usecols=list(ASSEMBLY_EXCEPTION_COLUMNS))
         exceptions = exceptions[exceptions["seq_region_id"].astype(int).isin(kept_regions)]
         number["assembly_exception"] = set(
@@ -400,7 +400,7 @@ class Cutter:
         """Answer ``assembly_chain``: the complete mapping for the source repository, cut and recorded otherwise.
 
         The blocks kept are those of a region of the earlier assembly that holds a kept gene or the reference region of
-        a kept assembly exception, and that overlap such a place or region (decision 103: what the build carries).
+        a kept assembly exception, and that overlap such a place or region (what the build carries).
         """
         found = self.original_chain(self.source(manager), earlier, later)  # the source repository keeps the file
         if os.path.realpath(manager.local_repository) == self.source_repository or found is None:

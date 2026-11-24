@@ -114,9 +114,9 @@ class _Store:
         # The node names in sorted order, made at the first lookup by prefix (:py:meth:`names_with_prefix`).
         self.sorted_names: list[str] | None = None
         self.places: _Places = _Places.empty()
-        # The places on the reference sequence carried onto later assemblies by Ensembl's mapping of the assemblies
-        # (decision 103): a table of places whose assembly is the later one and whose releases are those of the place
-        # carried; and Ensembl's assembly exceptions of every release (:py:class:`AssemblyException`).
+        # The places on the reference sequence carried onto later assemblies by Ensembl's mapping of the assemblies: a
+        # table of places whose assembly is the later one and whose releases are those of the place carried; and
+        # Ensembl's assembly exceptions of every release (:py:class:`AssemblyException`).
         self.carried: _Places = _Places.empty()
         self.exceptions: tuple[AssemblyException, ...] = ()
         # The version each link of an accession attaches at each release (`xref.version`), and the links that are a

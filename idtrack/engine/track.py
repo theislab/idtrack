@@ -374,7 +374,7 @@ class _GraphReader:
             tuple[str, ...]: The databases.
         """
         if self._external_databases is None:
-            # A database's synonyms are read under the database's own name (decision 56): their bookkeeping name
+            # A database's synonyms are read under the database's own name: their bookkeeping name
             # `synonym_id::<database>` is no database of its own.
             self._external_databases = tuple(
                 sorted({ids.public_name(d) for d in self.graph.available_external_databases})
@@ -398,7 +398,7 @@ class _GraphReader:
                 for database in self.graph.available_external_databases_assembly.get(
                     self.serving_assembly[release], set()
                 )
-                if not ids.is_synonym_database(database)  # synonyms are no target (decision 56)
+                if not ids.is_synonym_database(database)  # synonyms are no target
             }
             allowed.update({ids.ENSEMBL_TYPE[ids.BACKBONE_FORM], ids.BASE_ENSEMBL_TYPE[ids.BACKBONE_FORM]})
             found = self._final_databases[release] = tuple(sorted(allowed))
@@ -1320,8 +1320,8 @@ class Track:
         reader = self._reader
         sides = search.sides(reader.base_id(gene)) if reader.base_id(gene) == reader.base_id(other) else {}
         if sides and sides.get(gene) != sides.get(other):
-            # the two sides of an id Ensembl reused across the mitochondrial genome and a nuclear sequence (decision
-            # 100): two genes, joined by no id, as the step between them joins nothing (decision 91)
+            # the two sides of an id Ensembl reused across the mitochondrial genome and a nuclear sequence:
+            # two genes, joined by no id, as the step between them joins nothing
             return "mitochondrial_genome"
         relation = search.relation(gene, other)
         if relation in ("same_place", "places_apart"):
@@ -1495,7 +1495,7 @@ class Track:
         settled: dict[tuple, tuple] = {}
         destinations: dict[str, tuple] = {}
         # Every step the search considered, also into a state already reached (one path is kept per state), and every
-        # state that arrived at a gene: the entry genes whose paths reach a gene are read from them (decision 106).
+        # state that arrived at a gene: the entry genes whose paths reach a gene are read from them.
         children: dict[tuple, set] = {}
         arrivals: dict[str, set] = {}
         counter = 0
@@ -1572,8 +1572,8 @@ class Track:
                 if math.isinf(entered):
                     continue
                 if self._joins_mitochondrial_and_nuclear(search, gene, other, old, new, key, reverse):
-                    continue  # decision 91: no lineage between the mitochondrial genome and a nuclear sequence
-                # decision 57: Ensembl's score 0 between two different ids (stored as no score) is no measured score;
+                    continue  # no lineage between the mitochondrial genome and a nuclear sequence
+                # Ensembl's score 0 between two different ids (stored as no score) is no measured score;
                 # such a step ranks a path below every path whose scores are measured
                 no_score = weight != weight and reader.base_id(other) != reader.base_id(gene)
                 push(
@@ -2140,7 +2140,7 @@ class Track:
         if from_database is not None and (versions or reader.node_type(node) != ids.EXTERNAL):
             return self._nothing(node, None, given is None, target, "not_an_id_of_database", explain)
         if from_database is not None and node.startswith(ids.SYNONYM_PREFIX):
-            from_database = ids.SYNONYM_PREFIX + from_database  # the synonyms of the database named (decision 56)
+            from_database = ids.SYNONYM_PREFIX + from_database  # the synonyms of the database named
 
         memory = _Search(reader, node, search)
         read_at = given
@@ -2164,7 +2164,7 @@ class Track:
         )
         support = {gene: max(1, len(attached.get(gene, ()))) for gene, _ in entries}
         if identifier.isdigit() and len(support) > 1:
-            # decision 86: a number is an id of every database whose ids are numbers; the databases of one gene are no
+            # a number is an id of every database whose ids are numbers; the databases of one gene are no
             # evidence against a gene that other databases (other numbers spelt alike) attach it to
             strongest = max(sorted(support), key=lambda gene: support[gene])
             for gene in support:
@@ -2174,7 +2174,7 @@ class Track:
         authority = {gene: bool(attached.get(gene, set()) & authorities) for gene, _ in entries}
         # Ensembl's display name of a gene at the starting release: its own statement of the gene's name there, which
         # ranks a gene first among the genes that carry the name (decided before support: :py:mod:`ranking`), for the
-        # string as typed (decision 102: its letter case is evidence where it has both cases)
+        # string as typed (its letter case is evidence where it has both cases)
         external = reader.node_type(node) == ids.EXTERNAL
         typed = identifier
         if spelt is not None and spelt.version is not None:
@@ -2188,7 +2188,7 @@ class Track:
 
         found, own, alternative_locus_genes = self._without_copies(node, versions, found, target)
         entry_of = {gene: record["entry_gene"] for gene, record in found.items()}
-        # Decision 106: where the history merges several entry genes into one gene, the query is that gene's display
+        # Where the history merges several entry genes into one gene, the query is that gene's display
         # name and supported on it as on the best of them, not only as on the entry gene of the one path kept.
         display_of = {gene: min(display[entry] for entry in record["entry_genes"]) for gene, record in found.items()}
         support_of = {gene: max(support[entry] for entry in record["entry_genes"]) for gene, record in found.items()}
@@ -2220,7 +2220,7 @@ class Track:
 
         # The answer is a gene before it is an id of a database: the genes of the best answer are ranked as Ensembl
         # genes, and a target in a final database is an id attached to one of them; where none of them has one, the
-        # genes are the answer (no_target), and another gene the search reached is never answered by its id (I151).
+        # genes are the answer (no_target), and another gene the search reached is never answered by its id.
         answered: set[str] | None = None
         if database is not None:
             gene_pairs = sorted(pair_of(gene, gene, 0) for gene in found)
@@ -2346,7 +2346,7 @@ class Track:
         if copies and any(not self.graph.is_non_reference(gene, target) for gene in found):
             alternative_locus_genes = copies
             found = {gene: record for gene, record in found.items() if gene not in set(copies)}
-        # Decision 95: the Y copy of a pseudoautosomal gene, beside its gene on X, is listed apart as a copy is.
+        # The Y copy of a pseudoautosomal gene, beside its gene on X, is listed apart as a copy is.
         y_copies = self.graph.y_copies(found, target) - own
         if y_copies:
             alternative_locus_genes = sorted(set(alternative_locus_genes) | y_copies)

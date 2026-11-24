@@ -126,7 +126,7 @@ Statuses
     * - ``unconverted_merge_partner``
       - shares its gene with another input feature that names the gene itself (``merge="flag"``).
     * - ``unconverted_ambiguous``
-      - stands for several genes (a tie or a split), each with a name in the final database.
+      - stands for several genes: the best answer of its conversion is a tie of genes (:ref:`concept-ties`).
     * - ``unconverted_no_conversion``
       - is in the graph but has no gene at the target release (a retired id).
     * - ``unconverted_not_in_graph``

@@ -203,8 +203,9 @@ MATCH_PREFIXES: dict[str, str] = {
         "and Unicode dashes read as their plain characters."
     ),
     "punctuation": (
-        "Stray punctuation was removed before matching: quotes around the identifier, a trailing semicolon, comma or "
-        "full stop."
+        "Stray punctuation was removed before matching: quotes around the identifier, and the punctuation that ends a "
+        "sentence, a clause or an item of a list at its end (a semicolon, comma, full stop, colon, exclamation or "
+        "question mark)."
     ),
     "par_y": (
         "GENCODE's form of the Y copy of a pseudoautosomal gene (<id>_PAR_Y) was read as the gene's id; the Y copy is "

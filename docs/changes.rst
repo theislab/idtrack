@@ -2,8 +2,9 @@ Changes
 =======
 
 What changed for users, newest first. For each version: what you must do, the answers that change, and what is new.
-Version numbers follow ``pyproject.toml``; the package, its web app and its benchmark repository carry one version
-number, and each release tags all three ``v<version>``.
+Version numbers follow ``pyproject.toml``; the package, its web app (`idtrack-web
+<https://github.com/theislab/idtrack-web>`_) and its benchmark repository (private for now) carry one version number,
+and each release tags all three ``v<version>``.
 
 
 0.1.2
@@ -25,10 +26,13 @@ with 0.1.0 or 0.1.1 are read, and their answers are the same.
   other), :doc:`reading`, :doc:`limitations`, :doc:`organisms`, :doc:`databases`, :doc:`harmonization` and
   :doc:`performance`; the :doc:`reference/index` one page per module, after an overview of the public API; the
   tutorials in the order a reader needs them (the externals configuration after the API). The tutorials' numbers of
-  time, size and memory are those of this version.
+  time, size and memory are those of this version. Links to the old pages change: the reference is
+  ``reference/index.html`` (was ``reference.html``), and the tutorial notebooks are renumbered (``02_prepare_new_external_yaml``
+  is ``06_prepare_new_external_yaml``; ``03`` to ``06`` are ``02`` to ``05``).
 * **Messages and docstrings.** The texts of some messages, log lines and descriptions
   (:py:data:`idtrack.results.MATCH_PREFIXES`, :py:data:`idtrack.results.READING_REASONS`) say their rule in words
-  where they cited a number of the maintainers' records; codes, statuses and reasons are unchanged.
+  where they cited internal reference numbers, and the text of ``punctuation`` names every mark that is removed; codes,
+  statuses and reasons are unchanged.
 * ``idtrack --help`` prints the version on a line of its own.
 
 

@@ -128,7 +128,8 @@ release unless ``--to-release`` says otherwise.
       - Print the full results as a JSON list (``ConversionResult.to_dict()`` of each).
 
 **Output.** A header line, then one tab-separated line per identifier: the identifier, its status, its targets
-(separated by commas: several targets of the best answer are a tie, ``status`` says so, or several ids of one gene)
+(separated by commas: several targets of the best answer are a tie, of several genes or of several ids of one gene:
+:ref:`concept-ties`)
 and its reason (:ref:`concept-statuses`). An identifier that cannot be converted is a line with its status, never an
 error of the command. To another database (the genes of cynomolgus's newest assembly carry few VGNC or HGNC
 symbols, so ``--final-database "VGNC Symbol"`` answers these ``no_target``; UniProt's gene names they do carry):

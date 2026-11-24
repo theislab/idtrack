@@ -1,4 +1,4 @@
-**IDTrack**
+**idtrack**
 ===========
 
 |PyPI| |PyPIDownloads| |Python Version| |License| |Read the Docs| |Build| |Tests| |Codecov|
@@ -30,12 +30,12 @@
 
 .. image:: https://raw.githubusercontent.com/theislab/idtrack/main/docs/_logo/logo.png
     :width: 350
-    :alt: IDTrack logo
+    :alt: idtrack logo
 
 Cross-Temporal and Cross-Database Biological Identifier Mapping
 --------------------------------------------------------------------
 
-**IDTrack** converts gene identifiers (Ensembl gene, transcript and translation ids, symbols, and the ids of external
+**idtrack** converts gene identifiers (Ensembl gene, transcript and translation ids, symbols, and the ids of external
 databases such as HGNC, NCBI Gene, RefSeq and UniProt) to the genes of one chosen Ensembl release, or to their ids in
 a chosen database. It is for anyone with gene lists or matrices made with different Ensembl releases, genome
 assemblies or databases. It follows each identifier through Ensembl's own history of retired, merged and split ids,
@@ -69,7 +69,7 @@ The same from the command line:
 What it does
 ------------
 
-* **Across releases**: an identifier of any release from the organism's first one in IDTrack to the graph's
+* **Across releases**: an identifier of any release from the organism's first one in idtrack to the graph's
   snapshot release converts to any other, through Ensembl's id history (versions, replacements, splits, merges, with
   Ensembl's mapping scores).
 * **Across assemblies**: identifiers of earlier genome builds (human NCBI36 and GRCh37, mouse NCBIM37 and GRCm38, ...)
@@ -80,17 +80,17 @@ What it does
   gives the same answer in every run, and records what built it.
 * **Transparent**: every result has a status and, where it has no target, a reason; ties are returned as ties; with
   ``explain=True`` the path behind the answer is data.
-* **Fast once built**: a graph loads from disk in 1 to 6 seconds into 0.3 to 1.5 GB of memory, without network, and a
+* **Fast once built**: a graph loads from disk in 0.5 to 4 seconds into 0.25 to 1.4 GB of memory, without network, and a
   conversion takes about 0.2 to 0.3 ms at the median.
 * **Harmonization** of ``.h5ad`` datasets onto one release (``pip install "idtrack[harmonize]"``).
 
 Documentation
 -------------
 
-https://idtrack.readthedocs.io/: the `Quickstart <https://idtrack.readthedocs.io/en/latest/usage.html>`_, `how IDTrack
-answers <https://idtrack.readthedocs.io/en/latest/concepts.html>`_, its `limitations
-<https://idtrack.readthedocs.io/en/latest/limitations.html>`_, the `command line
-<https://idtrack.readthedocs.io/en/latest/cli.html>`_, the tutorials and the reference. Setting up, building and
+https://idtrack.readthedocs.io/: the `Quickstart <https://idtrack.readthedocs.io/en/stable/usage.html>`_, `how idtrack
+answers <https://idtrack.readthedocs.io/en/stable/concepts.html>`_, its `limitations
+<https://idtrack.readthedocs.io/en/stable/limitations.html>`_, the `command line
+<https://idtrack.readthedocs.io/en/stable/cli.html>`_, the tutorials and the reference. Setting up, building and
 checking graphs, testing and releasing: `SETUP.md`_.
 
 .. _SETUP.md: https://github.com/theislab/idtrack/blob/main/SETUP.md

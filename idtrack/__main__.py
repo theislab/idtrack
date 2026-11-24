@@ -130,8 +130,9 @@ def _build_parser() -> argparse.ArgumentParser:
         description=(
             "Convert identifiers with a graph file, to the graph's snapshot release unless --to-release says "
             "otherwise, and print one tab-separated line per identifier: the identifier, the status, the targets "
-            "(separated by commas; several targets of the best answer are a tie or a split) and the reason. An "
-            "identifier that cannot be converted is a line with its status, never an error of the command."
+            "(separated by commas; several targets of the best answer are a tie, of genes or of ids of one gene) "
+            "and the reason. An identifier that cannot be converted is a line with its status, never an error of the "
+            "command."
         ),
     )
     convert.add_argument("graph", help="The graph file.")

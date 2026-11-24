@@ -1,7 +1,7 @@
 .. _concepts:
 
 ===================
-How IDTrack Answers
+How idtrack Answers
 ===================
 
 This page says what an answer of :py:meth:`idtrack.API.convert` means, how it was found, and when it can be wrong.
@@ -45,7 +45,8 @@ version that each cross reference attached to an accession. Loading a graph need
                "OLD1" (HGNC Symbol)    "OLD1" (HGNC Symbol)          "NEW1" (HGNC Symbol)
 
     convert("OLD1", from_release=100) reads OLD1 at 100 (entry gene ENSG_A), follows the history to 115 and
-    answers the genes that descend from it there (ENSG_B.1 and ENSG_C.3, ranked: below).
+    reaches the two genes that descend from it there, ENSG_B.1 and ENSG_C.3: the best answer is the one that
+    Ensembl's scores rank first, or both as a tie where they are equal (below).
 
 A graph is fixed by four things, and the same graph gives the same answer to the same call in every run:
 
@@ -131,7 +132,7 @@ one gene became the other, so it is taken only where the identifier is evidence 
     :header-rows: 1
     :widths: 28 72
 
-    * - Check (``BridgeCheck.rule``)
+    * - Check (the rule in ``BridgeCheck.through``)
       - A bridge is taken or refused because
     * - ``same_place`` (taken)
       - The two genes overlap on one assembly (same sequence region and strand), or, across an assembly change for
@@ -159,7 +160,7 @@ one gene became the other, so it is taken only where the identifier is evidence 
 
 Identifiers of databases that name a family or a clone, not a gene (Rfam's accessions, the clone-based names:
 :py:data:`idtrack.settings.NON_BRIDGING_DATABASES`), and labels that named more genes over their releases than
-:py:attr:`idtrack.settings.GraphSettings.hyperconnective_threshold`, are never bridges. ``result.path.bridges`` lists
+:py:attr:`idtrack.settings.GraphSettings.hyperconnective_threshold` (5 by default), are never bridges. ``result.path.bridges`` lists
 every bridge the search considered, taken or refused, with its rule (:py:class:`idtrack.results.BridgeCheck`), also
 when nothing was found. How often a bridge decides an answer, and why its answer is a plausible successor rather
 than a proven one: :doc:`limitations`.
@@ -258,13 +259,57 @@ answers that gene, not ``DCAF11``, the symbol of another gene that UniProt names
 The best answer and ties
 ------------------------
 
-The **best answer** is the first-ranked candidate, or, when several genes are equal in every lineage criterion, all of
-them: a **tie** (``result.tie`` is true, ``status == "tie"``), in ascending order of gene id and target id. idtrack
-returns a tie rather than a guess: human ``SNORD116`` answers the three genes whose name it is at 115. A tie is judged
-among the genes that can be named in the final database: genes of a tie without an id there leave the result
-(``result.no_target_genes``), so a symbol that two databases give to two genes is a tie converted to Ensembl gene ids,
-and one answer converted to a symbol database in which only one of the two genes has a symbol. Several targets of one
-gene (two RefSeq accessions of one gene) are one answer, not a tie.
+The ranking decides the best answer in two stages (:py:mod:`idtrack.engine.ranking`). First, if the queried gene id's
+own version is among the candidates, only its candidates count (``own_version``). Then the **entry genes** (the genes
+the identifier names at the starting release) are compared by the lineage criteria (``final_confidence``, ``bridges``,
+``bridge_gap``, ``display_name``, ``entry_support``): every entry gene that is equal to the first in all five stays.
+Then, among the successors of those entry genes at the target release, ``score``, ``same_as_query`` and
+``annotation`` decide. What remains is the best answer. When it holds more than one (gene, target) pair, the result is
+a **tie** (``result.tie`` is true, ``status == "tie"``), its targets in ascending order of gene id and target id:
+idtrack returns a tie rather than a guess.
+
+So a split is a tie only where its descendants are also equal in score and annotation: the successors of one entry
+gene share its lineage, and Ensembl's mapping scores usually tell them apart (then ``decided_by`` is ``"score"`` or
+``"annotation"``, and ``view("all")`` lists the other descendants). Several ids of one gene in ``final_database`` (two
+RefSeq accessions) are also a tie: one gene, several targets. A tie is judged among the genes that can be named in the
+final database (genes without an id there leave the result, ``result.no_target_genes``), so a symbol that two
+databases give to two genes is a tie converted to Ensembl gene ids and one answer converted to a symbol database in
+which only one of the two genes has a symbol.
+
+The cases, on the mouse graph of 115 (``convert_many`` returns, for each, what ``convert`` returns; the harmonizer's
+columns are those of :doc:`harmonization`):
+
+.. list-table::
+    :header-rows: 1
+    :widths: 18 20 32 30
+
+    * - Case
+      - Identifier
+      - ``convert`` and ``convert_many``
+      - Harmonizer (``final_database="MGI Symbol"``)
+    * - One gene
+      - ``Trp53``
+      - ``converted``: ENSMUSG00000059552.14
+      - ``converted``
+    * - One gene, several ids in the final database
+      - ``Trp53``, ``final_database="RefSeq_mRNA"``
+      - ``tie``: NM_001127233, NM_011640 (one gene)
+      - ``converted`` (``final_database="RefSeq_mRNA"``): the first id as the gene's name, the other in
+        ``<final database>_alternatives``
+    * - A split with a best descendant
+      - ``ENSMUSG00000001417``
+      - ``converted``: ENSMUSG00000103766.6, ``decided_by="score"``; ``view("all")`` adds ENSMUSG00000104445.2
+      - ``converted``
+    * - A split with tied descendants
+      - ``ENSMUSG00000037381``
+      - ``tie``: ENSMUSG00000096235.2, ENSMUSG00000096716.2
+      - ``ambiguous`` in ``conversion_report()``, ``unconverted_ambiguous`` in ``var``
+    * - A merge
+      - ``ENSMUSG00000021874`` and ``ENSMUSG00000090104``
+      - each ``converted``: ENSMUSG00000090104.3
+      - two features of one dataset on one gene: ``merge="flag"`` keeps ``ENSMUSG00000090104`` (it names the gene)
+        as the gene's feature and flags the other ``unconverted_merge_partner``; ``merge="sum"`` makes one feature,
+        ``merged``
 
 ``result.view("best")`` and ``result.view("all")`` are two views of one search; ``result.targets("best")`` (the
 default) and ``result.targets("all")`` their target ids. In ``"all"`` the genes of the best answer lead and the others
@@ -295,7 +340,7 @@ version was not judged; ``result.reason`` is the first). :py:meth:`idtrack.API.r
       -
     * - ``tie``
       - none (or a caveat below)
-      - Several genes equal in all evidence.
+      - Several genes equal in all evidence, or several ids of one gene in ``final_database`` (:ref:`concept-ties`).
       - Give ``from_release`` or ``from_database`` where you know them; else keep the tie.
     * - ``no_target``
       - ``no_id_in_final_database``
@@ -361,15 +406,15 @@ The same outcome is counted in four places, with these words:
     * - ``converted`` (one target)
       - ``matching_1_to_1``
       - ``converted``, or ``converted_no_final_id`` (no name in the final database)
-      - ``converted``, ``converted_no_final_id``, ``merged``, ``unconverted_merge_partner``
-    * - ``converted`` (several targets of one gene), ``tie``
+      - ``converted``, ``converted_no_final_id``, ``merged``, ``merged_no_final_id``, ``unconverted_merge_partner``
+    * - ``tie`` (several genes, or several ids of one gene)
       - ``matching_1_to_n``
-      - ``converted`` (one gene), ``ambiguous`` (several genes)
-      - ``converted``, ``unconverted_ambiguous``
+      - ``ambiguous`` (several genes), ``converted`` (one gene)
+      - ``unconverted_ambiguous``; ``converted`` and the others of the row above (one gene)
     * - ``no_target``
       - ``alternative_target_1_to_1`` or ``alternative_target_1_to_n``
-      - ``converted_no_final_id`` or ``ambiguous``
-      - ``converted_no_final_id``, ``unconverted_ambiguous``
+      - ``converted_no_final_id`` (one gene) or ``ambiguous`` (several genes)
+      - ``converted_no_final_id``, ``merged_no_final_id``, ``unconverted_ambiguous``
     * - ``not_found``, ``unknown_version``
       - ``matching_1_to_0``
       - ``not_in_graph``

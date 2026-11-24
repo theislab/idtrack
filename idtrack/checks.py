@@ -1127,7 +1127,7 @@ class GraphChecks:
         manager = self._manager(release, assembly).change_form(ids.BACKBONE_FORM)
         table = manager.get_db("external" if self.graph.all_external else "external_relevant")
         table = table[table["name_db"] == database]
-        # an entry the build left out by decision 73's rule is no id the gene can convert to
+        # an entry the build left out (it names several genes) is no id the gene can convert to
         several = self.graph.entries_of_several_genes
         left_out = several if several and database in manager.one_gene_only_names() else frozenset()
         expected: dict[str, set[str]] = {}

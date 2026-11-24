@@ -2,7 +2,7 @@
 Contributor Guide
 =================
 
-Thank you for your interest in contributing to IDTrack! This project is open-source
+Thank you for your interest in contributing to idtrack! This project is open-source
 under the `BSD 3-Clause License`_ and welcomes contributions from the community.
 
 .. contents::
@@ -14,7 +14,7 @@ under the `BSD 3-Clause License`_ and welcomes contributions from the community.
 Ways to Contribute
 ------------------
 
-There are many ways to contribute to IDTrack, regardless of your experience level:
+There are many ways to contribute to idtrack, regardless of your experience level:
 
 .. list-table::
     :header-rows: 1
@@ -64,7 +64,7 @@ Found a bug? Please report it on the `Issue Tracker`_.
 A good bug report includes:
 
 1. **Summary** - A clear, concise description of the problem
-2. **Environment** - Python version, IDTrack version, operating system
+2. **Environment** - Python version, idtrack version, operating system
 3. **Steps to reproduce** - Minimal code example that triggers the bug
 4. **Expected behavior** - What you expected to happen
 5. **Actual behavior** - What actually happened (include error messages)
@@ -75,7 +75,7 @@ Bug Report Template
 .. code-block:: markdown
 
     ## Environment
-    - IDTrack version: 0.1.x (run `idtrack --version`)
+    - idtrack version: 0.1.x (run `idtrack --version`)
     - Python version: 3.12.x (run `python --version`)
     - OS: Ubuntu 22.04 / macOS 14.x / Windows 11
 
@@ -185,8 +185,8 @@ When contributing to the documentation website:
   snapshot release the tutorials use, 115) so that every shown output is what the code prints; never edit an output
   by hand. The examples of the pages and the README show outputs of the same snapshot.
 - **One place per concept**: a rule is explained once, on the page where a reader first needs it (:doc:`concepts`,
-  :doc:`reading`, :doc:`limitations`), and linked from elsewhere; numbers of time and memory are on
-  :doc:`performance` only.
+  :doc:`reading`, :doc:`limitations`), and linked from elsewhere; the table of time and memory is on
+  :doc:`performance`, and other pages give a range and link to it.
 
 
 Submitting Changes
@@ -305,7 +305,7 @@ Pull Request Template
 Code Style
 ----------
 
-IDTrack follows these conventions:
+idtrack follows these conventions:
 
 .. list-table::
     :header-rows: 1
@@ -364,7 +364,7 @@ If you have questions or need help:
 - **Questions, bug reports and features**: Use the `Issue Tracker`_
 - **Direct contact**: See :doc:`authors`
 
-We appreciate all contributions, no matter how small. Thank you for helping make IDTrack better!
+We appreciate all contributions, no matter how small. Thank you for helping make idtrack better!
 
 
 .. _BSD 3-Clause License: https://opensource.org/licenses/BSD-3-Clause

@@ -96,7 +96,7 @@ _EXPORTS: dict[str, str] = {
 }
 
 # Names that need the `harmonize` extra: reachable by name, left out of `__all__` so that a star import works on the
-# plain install (decision 48: the extra is optional).
+# plain install (the extra is optional).
 _EXTRA_EXPORTS: dict[str, str] = {"HarmonizeFeatures": "idtrack.harmonize"}
 
 __all__: list[str] = sorted(_EXPORTS)

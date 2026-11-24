@@ -67,7 +67,7 @@ is ``sus_scrofa``, not one of the pig breeds that Ensembl also lists). Another c
 species share raises an error listing the candidates.
 
 The symbol databases (:py:data:`idtrack.organisms.SYMBOL_DATABASES`) are the default final database of
-:py:class:`idtrack.harmonize.HarmonizeFeatures` (the first one) and the ones to try for gene symbols. In current Ensembl, macaque genes carry VGNC symbols on the newest assemblies
+:py:class:`idtrack.harmonize.HarmonizeFeatures` (the first one) and the ones to try for gene symbols. In current Ensembl, macaque genes carry mostly VGNC symbols on the newest assemblies
 and HGNC symbols on earlier ones, and cynomolgus 6.0 has few symbols of either kind.
 
 idtrack reads Ensembl ids with their versions: an organism whose Ensembl ids carry no versions is not supported (a
@@ -107,7 +107,7 @@ from it. Rhesus and cynomolgus macaque were added this way. The recipe, for a co
    and may be listed for human GRCh37 only, see :py:attr:`idtrack.settings.EnsemblSettings.mysql_port_assembly`); ``Priority`` 1 is the preferred, newest
    assembly. Add the organism's symbol databases to ``SYMBOL_DATABASES`` (e.g. ``("VGNC Symbol", "HGNC
    Symbol")``) and its short names to ``ALIASES`` (lower case, unique across organisms, e.g.
-   ``("rhesus",)``). The table is validated at import. IDTrack reads Ensembl ids with versions: an organism whose ids
+   ``("rhesus",)``). The table is validated at import. idtrack reads Ensembl ids with versions: an organism whose ids
    carry no versions is not supported.
 
 3. **Try it without editing the package.** ``idtrack.organisms.register_organism(name, assemblies,

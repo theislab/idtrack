@@ -611,7 +611,7 @@ class API:
             return tuple(sorted({ids.public_name(d) for d in databases}))
 
         def synonyms(databases) -> tuple[str, ...]:
-            # the databases that record synonyms, by their own names (decision 56)
+            # the databases that record synonyms, by their own names
             return tuple(sorted({ids.public_name(d) for d in databases if ids.is_synonym_database(d)}))
 
         assemblies = tuple(
@@ -838,7 +838,7 @@ class API:
             # The engine is given the string (its arguments checked by the engine's checks) and reads it by the same
             # rule at the release decided above.
             conversion = self.engine._convert(query, from_release=read_at, **arguments)
-        # The other readings: those of the same step (a tie, decision 87) and those a rule set aside (55, 80, 82).
+        # The other readings: those of the same step (a tie) and those a rule set aside (letter case, make-unique suffixes).
         others: list[OtherReading] = []
         partners: list[Conversion] = []
         for node, how in found.taken[1:]:
@@ -850,7 +850,7 @@ class API:
             other = self._reading(node, read_at, arguments)
             others.append(OtherReading(ids.public_name(node), reading.prefix + how, why, _best_genes(other)))
         for node, how, releases in found.other_releases:
-            # what the string meant at other releases only: read where it had that meaning (decision 99)
+            # what the string meant at other releases only: read where it had that meaning
             other = self._reading(node, releases[-1], arguments)
             others.append(
                 OtherReading(
@@ -862,13 +862,13 @@ class API:
         lrg = False
         record = self._lrg_record(conversion)
         if record is not None and conversion is not None:
-            # Decision 96: every id of an LRG record (the record's, its transcripts' and translations') answers the gene
+            # Every id of an LRG record (the record's, its transcripts' and translations') answers the gene
             # the record describes, the record itself listed apart.
             described = self._lrg_conversion(conversion, arguments, record)
             if described is not None:
                 conversion, lrg = described, True
         if "par_y" in reading.kinds and conversion is not None and conversion.candidates:
-            # Decision 93: GENCODE's Y copy of a pseudoautosomal gene answers the gene; its Y copy is listed apart.
+            # GENCODE's Y copy of a pseudoautosomal gene answers the gene; its Y copy is listed apart.
             twins = self._par_y_twins(conversion, to_release)
             if twins:
                 conversion = dataclasses.replace(
@@ -877,7 +877,7 @@ class API:
         # The conversion when it found candidates, else None.
         hit = conversion if conversion is not None and conversion.candidates else None
         # Every reason that applies, the one of the status first: why there is no target, then that the identifier was
-        # read at another release than the one given, then that a version written was not judged (decision 101).
+        # read at another release than the one given, then that a version written was not judged.
         reasons: list[str] = []
         if graph_id is None:
             status = "unknown_version" if known_versions else "not_found"
@@ -989,7 +989,7 @@ class API:
                 if gene != record and graph.node_type(gene) == ids.GENE and symbol_at(link):
                     if graph.is_active(gene, start) and not graph.is_non_reference(gene, start):
                         genes.add(gene)
-        # decision 95: the Y copy of a pseudoautosomal gene is not the gene the record describes, beside its X gene
+        # the Y copy of a pseudoautosomal gene is not the gene the record describes, beside its X gene
         y_copies = graph.y_copies(genes, start)
         genes -= y_copies
         found = [
@@ -1106,7 +1106,7 @@ class API:
             allow_bridges, "allow_bridges"
         )
         distinct = list(dict.fromkeys(items))
-        # Decision 82: an item that is another item with a make-unique suffix (and no exact name of its own) is that
+        # An item that is another item with a make-unique suffix (and no exact name of its own) is that
         # item's copy; it is answered after the item it copies.
         copies = self._copies(distinct, from_rel, source, to_rel)
         distinct = [identifier for identifier in distinct if identifier not in copies]
@@ -1117,7 +1117,7 @@ class API:
             loop = tqdm(distinct, mininterval=0.25, ncols=100)
         by_identifier: dict[str, ConversionResult] = {}
         for identifier in loop:
-            if not isinstance(identifier, str):  # a missing value as a table holds it (decision 81)
+            if not isinstance(identifier, str):  # a missing value as a table holds it
                 error = MissingValueError(
                     f"`identifiers` holds a missing value ({identifier!r}), not an identifier.",
                     argument="identifiers",

@@ -65,9 +65,9 @@ import numpy as np
 import pandas as pd
 
 #: The least share of a database's links of one identifier form that move to a selected database between two adjacent
-#: releases for the database to be read as the selected one. The renames and refilings measured on the
-#: five organisms move 0.82 to 1.00 of a database's links (per identifier form 0.94 to 1.00); the most that a database
-#: Ensembl keeps beside a selected one moves into it at one boundary is 0.38.
+#: releases for the database to be read as the selected one. In the builds of the graphs of Ensembl 115 of pig and
+#: rhesus, every database read so moved 0.82 to 1.00 of its links (rhesus ``RefSeq_dna`` into ``RefSeq_mRNA`` at 63 to
+#: 64 the lowest, 2,079 of 2,543); cynomolgus has none.
 CONTINUITY_SHARE = 0.5
 
 #: Version of the rule of this module; a stored filing (:py:meth:`idtrack.DatabaseManager.database_filing`) of another
@@ -449,7 +449,7 @@ def database_filing(
     # rule 2: a candidate continues a selected database when, at some boundary, the links that move between them are at
     # least `share` of the links of the database that leaves there (and, where the selected database leaves, of the
     # candidate's there too: a later name is, at its first release, the selected database's links), or, where the
-    # candidate ends there, of the selected database's links at the next release (decision 107); the candidate's
+    # candidate ends there, of the selected database's links at the next release; the candidate's
     # identifiers of each form are the selected database that most of that form's links went with at such boundaries,
     # the other forms the main one's (unless it has another identifier scheme)
     order = sorted(int(r) for r in releases)
@@ -479,7 +479,7 @@ def database_filing(
         leaves = base == candidate
         # the links of the database that receives them, at the release after the boundary
         received = sizes.get((SELECTED + target if leaves else candidate, following[at]), 0)
-        # decision 107: a candidate that holds no link at the next release (it ends there) hands its links over to the
+        # a candidate that holds no link at the next release (it ends there) hands its links over to the
         # selected database whose links at that release they are at least `share` of, however few of its own move
         ends = leaves and following[at] not in seen.get(candidate, set())
         handed = ends and received > 0 and count >= share * received

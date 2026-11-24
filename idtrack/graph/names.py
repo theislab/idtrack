@@ -347,7 +347,7 @@ class NameResolution:
     def edit_counter_databases(self) -> frozenset[str]:
         """Return the databases whose stored number of an accession is an edit counter, not a version of the sequence.
 
-        Decision 101: a version dates an accession only where it is a property of the sequence record that holds over
+        A version dates an accession only where it is a property of the sequence record that holds over
         time. Measured from the graph's own versions (:py:meth:`version_change_shares`): a database in which the
         version differs in more than :py:data:`idtrack.settings.VERSION_EDIT_COUNTER_SHARE` of the pairs of
         consecutive releases of one link counts the record's edits (UniProt's entry version: ``Q9TSV4.120``); a version
@@ -744,7 +744,7 @@ class NameResolution:
         spellings = ((identifier, ""), (f"{ids.SYNONYM_PREFIX}{identifier}", "synonym:"))
         if at is None:
             # One release decides both which node the string means and where it is read: without a release asked
-            # about, the release a conversion goes to (decision 94 for calls that name only the target release).
+            # about, the release a conversion goes to (for calls that name only the target release).
             at = goal if goal is not None else self._last_release_kept()
         candidates: Iterable[int]
         # every match that does not exist at the release, in the order of the steps, with the database it is read in:
@@ -752,7 +752,7 @@ class NameResolution:
         elsewhere: list[list[tuple[str, str, str | None, int | None]]] = [[], []]
         aside: list[tuple[str, str, str]] = []
         # Each step on names, then on synonyms; with a database named, every step on its names before any on the
-        # synonyms it records (decision 56: a database's synonyms are read under its name, after all its names)
+        # synonyms it records (a database's synonyms are read under its name, after all its names)
         order = (
             [(step, spelling) for step in _RESOLVE_STEPS for spelling in spellings]
             if database is None
@@ -764,7 +764,7 @@ class NameResolution:
             # a named database's synonyms are ids of `synonym_id::<database>` in the graph
             db = database if database is None or not prefix else f"{ids.SYNONYM_PREFIX}{database}"
             if rules and step == "exact" and prefix:
-                # decisions 55 and 80: before the exact synonyms, a string against the organism's convention of
+                # before the exact synonyms, a string against the organism's convention of
                 # letter case is read as one of its symbols without letter case where that names one gene
                 symbol = self._symbol_without_case(store, identifier, at, database)
                 if symbol is not None:
@@ -804,10 +804,10 @@ class NameResolution:
                     continue
                 how, version = f"{prefix}{step}", None
                 if step == "version":
-                    # decision 14's rule for accessions: the version written, where the accession's links attached it;
+                    # the rule of Ensembl ids, for accessions: the version written, where the accession's links attached it;
                     # one above every version they attached, the latest (flagged), where the accession is attached at
                     # the graph's last release (the version may be newer than the graph); any other version, no
-                    # reading. Decision 101: where the accession's numbers are edit counters only, the version is not
+                    # reading. Where the accession's numbers are edit counters only, the version is not
                     # judged.
                     written = int(_VERSION_SUFFIX.match(query).group(3))  # type: ignore[union-attr]
                     attached = self._judged_versions(name)
@@ -829,7 +829,7 @@ class NameResolution:
                 if here:
                     if step != "separator":
                         return _settled(((name, how),), aside, other=self._other_releases(elsewhere[0]))
-                    tie.append((name, how))  # decision 87: every name the step reaches
+                    tie.append((name, how))  # every name the step reaches
                     continue
                 elsewhere[0 if known else 1].append((name, how, db, version))
             if tie:
@@ -837,7 +837,7 @@ class NameResolution:
         if settle and elsewhere[0]:
             # No reading exists at the release: the string is read at the latest release at which one of its readings
             # exists, by the steps and rules of that release, so that the readings taken exist at one release
-            # (decision 87's tie joins only such readings) and the node and the release it is read at are one choice.
+            # (the tie of a step joins only such readings) and the node and the release it is read at are one choice.
             newest = max((self._latest_release(name, db, v) for name, _how, db, v in elsewhere[0]), default=-1)
             if newest >= 0:
                 there = self._c_readings(identifier, newest, database, None, rules, False)
@@ -1306,7 +1306,7 @@ class NameResolution:
     def _attached_at_last(self, name: str) -> bool:
         """Tell whether a link of a database whose versions date it attaches an accession at the graph's last release.
 
-        Decision 14's condition, for accessions as for Ensembl ids: a version above every version the graph holds can
+        The condition for accessions, as for Ensembl ids: a version above every version the graph holds can
         be newer than the graph only for an accession that Ensembl still attaches at the last release (on the assembly
         that serves it); one that it no longer attaches cannot have a version newer than Ensembl's last import of it.
         """

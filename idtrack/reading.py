@@ -96,7 +96,7 @@ _ASCII_QUOTES = "'\""
 # No identifier of the graphs ends with ``!`` or ``:``; those that end with ``;``, ``,``, ``.`` or ``?`` are names that
 # databases wrote with the punctuation of the text they came from (``A1BG;``, ``14-3-3?``).
 _TERMINAL_PUNCTUATION = "!,.:;?"
-# The graph's marks of a gene id's birth and retirement after an Ensembl or LRG id, with any separator (decision 56).
+# The graph's marks of a gene id's birth and retirement after an Ensembl or LRG id, with any separator.
 _SENTINEL = re.compile(
     rf"(?i)^({ids.STABLE_ID_FORM})[{re.escape(ids.SEPARATORS)}](?:{'|'.join(sorted(ids.SENTINEL_VERSIONS))})$"
 )

@@ -66,15 +66,22 @@ graph reads each selected database, at every release, as every database of Ensem
 
 * RefSeq's mRNA and ncRNA accessions were ``RefSeq_dna`` up to release 63 (``RefSeq_mRNA`` and ``RefSeq_ncRNA`` from
   64), the predicted ones ``RefSeq_dna_predicted``; each accession goes by its form (``NM_`` to ``RefSeq_mRNA``,
-  ``NR_`` to ``RefSeq_ncRNA``);
+  ``NR_`` to ``RefSeq_ncRNA``). In human, Ensembl's tables still hold a few links under ``RefSeq_dna`` after 63 (13
+  to 20 on transcripts at GRCh37's releases 65, 67, 68 and 70) and 15,962 on genes at release 76, the first of GRCh38:
+  the record below lists those releases, and their accessions are read by the same rule;
 * NCBI's gene ids lay on translations up to release 62, Rfam's and miRBase's accessions on transcripts up to 62;
 * the HGNC symbols projected onto pig and macaque genes were ``HGNC_curated_gene`` and ``HGNC_automatic_gene`` up to
   release 60.
 
-An Ensembl database continues a selected one where, between two adjacent releases, at least half of its links (an
-identifier and its gene) move to it (:py:data:`idtrack.build.continuity.CONTINUITY_SHARE`): the renames and refilings
-of the five organisms move 82 to 100 % of a database's links, while a database that Ensembl keeps beside a selected
-one moves at most 38 % into it at one boundary. What each selected database holds is in the graph's record:
+An Ensembl database continues a selected one where, between two adjacent releases, at least half of the links (an
+identifier and its gene) of the database that leaves move to the other
+(:py:data:`idtrack.build.continuity.CONTINUITY_SHARE`, 0.5), and, where the selected database is the one that leaves,
+they are also at least half of the other's links (:py:mod:`idtrack.build.continuity` states the rule in full). In the
+builds of the graphs of Ensembl 115 of pig and rhesus, every database read as a selected one moved 82 to 100 % of its
+links (rhesus ``RefSeq_dna`` into ``RefSeq_mRNA`` at release 63 to 64 the lowest: 2,079 of 2,543); the one database
+refused, rhesus ``WikiGene`` at 54, took over 215 of the 219 NCBI symbols on genes, which are 1 % of its own links: it
+mirrors NCBI's symbols rather than continuing them. Cynomolgus has no such refiling. What each selected database
+holds is in the graph's record:
 
 .. code-block:: python
 
@@ -107,8 +114,9 @@ Three things make the names of a graph differ from the names of its configuratio
    name).
 2. **Display names are held under the name of their database's labels.** A gene's display name that no selected
    database gives it is held as a label of the database Ensembl filed it under: ``HGNC (curated)`` and ``HGNC
-   (automatic)`` (HGNC's projections), ``UniProtKB/Swiss-Prot`` and ``UniProtKB/TrEMBL`` (UniProt's entry names),
-   ``RefSeq DNA``, ``RFAM gene name``, ``miRBase gene name``, ``IMGT/GENE-DB``. They are not in the configuration, since
+   (automatic)`` (HGNC's projections), ``UniProtKB/Swiss-Prot``, ``UniProtKB/TrEMBL`` and ``UniProtKB/SpliceVariant``
+   (UniProt's entry names), ``RefSeq DNA`` and ``RefSeq peptide`` (RefSeq's), ``RFAM gene name``, ``miRBase gene
+   name``, ``IMGT/GENE-DB``. They are not in the configuration, since
    they are held whatever it selects.
 3. **Synonyms are read under their database's name.** The configuration selects the synonyms a database records as
    ``synonym_id::<database>``; a graph has no database of that name: ``from_database="HGNC Symbol"`` covers HGNC's

@@ -2,7 +2,7 @@
 Credits
 =======
 
-IDTrack is developed and maintained by researchers committed to reproducible
+idtrack is developed and maintained by researchers committed to reproducible
 and transparent biological identifier mapping.
 
 .. contents::
@@ -37,7 +37,7 @@ Contributors are credited through the project's Git history; the list is on GitH
 Acknowledgments
 ---------------
 
-IDTrack builds upon the work of many open-source projects and biological databases.
+idtrack builds upon the work of many open-source projects and biological databases.
 We are grateful to the developers and maintainers of these resources.
 
 Data Sources
@@ -69,7 +69,7 @@ Data Sources
 Software Dependencies
 ~~~~~~~~~~~~~~~~~~~~~
 
-IDTrack relies on excellent open-source software:
+idtrack relies on excellent open-source software:
 
 .. list-table::
     :header-rows: 1
@@ -124,10 +124,10 @@ This project was developed at:
 We thank the lab members and collaborators for their feedback and support during development.
 
 
-Citing IDTrack
+Citing idtrack
 --------------
 
-If you use IDTrack in your research, please cite:
+If you use idtrack in your research, please cite:
 
 .. code-block:: bibtex
 
@@ -145,6 +145,6 @@ Cite the version you used: ``version`` is the value of ``idtrack.__version__`` (
 License
 -------
 
-IDTrack is released under the `BSD 3-Clause License <https://opensource.org/licenses/BSD-3-Clause>`_.
+idtrack is released under the `BSD 3-Clause License <https://opensource.org/licenses/BSD-3-Clause>`_.
 For the full license text, see the repository file:
 `LICENSE <https://github.com/theislab/idtrack/blob/main/LICENSE>`_.

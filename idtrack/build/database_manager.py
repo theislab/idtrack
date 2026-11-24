@@ -295,7 +295,7 @@ class DatabaseManager:
     _core_db_index_cache: dict[tuple[str, int, int], dict[str, Any]] = {}
     # Keyed by (organism, first release, snapshot release, local repository): :py:meth:`label_names`.
     _label_names_cache: dict[tuple[str, int, int | None, str], dict[str, str]] = {}
-    # The filing of the selected databases (decision 104), per organism, window, repository and selection.
+    # The filing of the selected databases, per organism, window, repository and selection.
     _filing_cache: dict[tuple, continuity.Filing] = {}
     _ftp_schema_cache: dict[str, dict[str, list[tuple[str, str]]]] = {}
     # (latest release, time.monotonic() of the answer)
@@ -2548,7 +2548,7 @@ class DatabaseManager:
         return res.reset_index(drop=True)
 
     # ------------------------------------------------------------------------------------------------------------
-    # Which of Ensembl's databases a selected database is at each release (decision 104, idtrack.build.continuity)
+    # Which of Ensembl's databases a selected database is at each release (idtrack.build.continuity)
 
     def _release_links(self) -> pd.DataFrame:
         """Return every cross reference of the release as a link: database name, identifier, gene (every form).
@@ -3170,7 +3170,7 @@ class DatabaseManager:
             ~res[db_id].astype(object).str.startswith(prefix, na=False), res[db_id].str[len(prefix) :]
         )
         res = res[~(res[id_graph].isna() | res[db_name].isna() | res[db_id].isna()) & (bare_id != "")]
-        # A value is read as a typed string is read (decisions 83 and 84: Unicode's invisible characters, forms and
+        # A value is read as a typed string is read (Unicode's invisible characters, forms and
         # dashes; the punctuation that ends a sentence, quotation marks around it), so that the graph holds the name a
         # database wrote with the punctuation of the text it came from (UniProt's ``A1BG;``) as the name.
         res[db_id] = _read_values(res[db_id])

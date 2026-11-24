@@ -25,7 +25,7 @@ the **local repository**:
 
     from idtrack import API
 
-    os.makedirs("./idtrack_cache", exist_ok=True)
+    os.makedirs("./idtrack_cache", exist_ok=True)  # API.build needs the folder to exist
     # The first time: downloads Ensembl's tables and builds the graph (minutes for cynomolgus, hours for human).
     # Afterwards: loads the graph file from the folder in seconds, without network.
     api = API.build("homo_sapiens", 115, "./idtrack_cache")
@@ -34,7 +34,9 @@ the **local repository**:
 gives the same answers in every run, while a script that builds at Ensembl's newest release
 (:py:meth:`idtrack.API.ensembl_organism` gives it) builds a new graph, with possibly other answers, after every Ensembl
 release. A graph of release 115 converts to and from every release from the organism's first one (human 48) to 115.
-How long a build takes and how much memory it needs, per organism: :doc:`performance`.
+How long a build takes and how much memory it needs, per organism: :doc:`performance`. To try idtrack before a
+build of hours, start with the smallest graph, cynomolgus (``API.build("macaca_fascicularis", 115, "./idtrack_cache")``,
+12 to 14 minutes from nothing): every example below works the same on it with cynomolgus identifiers.
 
 A graph file on disk loads alone, with no table and no network (a missing file is an
 :py:class:`idtrack.errors.GraphFileError`):
@@ -67,8 +69,8 @@ raises :py:class:`idtrack.errors.GraphMismatchError` rather than answering from 
     converted ('ENSG00000141510.20',)
 
 The target is the Ensembl gene id with its version at the target release. ``result.targets()`` is the best answer;
-it holds several genes when they are equal in all evidence (``status == "tie"``: idtrack returns a tie rather than a
-guess). A result without a target says why:
+it holds several targets when they are equal in all evidence (``status == "tie"``: idtrack returns a tie rather than a
+guess; :ref:`concept-ties` says when). A result without a target says why:
 
 .. code-block:: python
 
@@ -153,8 +155,10 @@ release (or, where it names nothing there, at its latest release), not as what i
 The arguments are checked once, before any conversion, and each distinct identifier is converted once. An error of
 one item (an empty string, a missing value such as ``nan``, a search past its budget) does not stop the batch: that
 item has ``status == "error"`` and the error in ``result.error``. An item that repeats another item of the batch with
-a suffix of a single-cell tool (``SRF.1`` beside ``SRF``) is that item's copy (:ref:`reading-rules`). The bins of the
-summary are explained in :ref:`concept-statuses`.
+a suffix of a single-cell tool (``SRF.1`` beside ``SRF``) is that item's copy (:ref:`reading-rules`). In the summary,
+"1→0" counts results without a target, "1→1" and "1→n" those with one or several targets, and "Changed only" those
+whose target is not the identifier itself (every symbol converted to its gene id is "changed");
+:ref:`concept-statuses` explains each bin.
 
 
 5. Another organism

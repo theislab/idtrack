@@ -70,7 +70,7 @@ idtrack_cache/graph_macaca_fascicularis_assembly6_min91_max115.npz
 macaca_fascicularis, releases 91 to 115, 24.1 MB, 700 s
 ```
 
-The organisms are `homo_sapiens` (`human`), `mus_musculus` (`mouse`), `sus_scrofa` (`pig`), `macaca_mulatta` (`rhesus`) and `macaca_fascicularis` (`cynomolgus`); `idtrack build --help` lists the options (`--first-release`, `--rebuild`). Sizes and times vary from build to build and machine to machine (the cynomolgus graph has been 22.5 to 24.1 MB and its build from nothing 700 to 816 s). From tables already downloaded, a build takes 8 minutes (cynomolgus) to 2 h 35 min (human) at a peak of 1.1 to 6.8 GB of memory; the documentation's page Time and memory (<https://idtrack.readthedocs.io/en/latest/performance.html>) gives each organism's build, peak memory, tables, graph file, load and conversion times.
+The organisms are `homo_sapiens` (`human`), `mus_musculus` (`mouse`), `sus_scrofa` (`pig`), `macaca_mulatta` (`rhesus`) and `macaca_fascicularis` (`cynomolgus`); `idtrack build --help` lists the options (`--first-release`, `--rebuild`). Sizes and times vary from build to build and machine to machine (the cynomolgus graph has been 22.5 to 24.1 MB and its build from nothing 700 to 816 s). From tables already downloaded, a build takes 8 to 10 minutes (cynomolgus) to 2 h 16 to 2 h 35 (human) at a peak of 1.1 to 9.6 GB of memory; the documentation's page Time and memory (<https://idtrack.readthedocs.io/en/latest/performance.html>) gives each organism's build, peak memory, tables, graph file, load and conversion times.
 
 Run a long build where it may run for hours (a batch job on a cluster, or `nohup`); an interrupted build starts again from the tables already downloaded.
 
@@ -174,7 +174,7 @@ The tools need a local repository with the organism's complete tables (one in wh
 
 The version is written in one place, `version` in `[project]` of `pyproject.toml`; the package, the documentation and the graph files read it from the installed metadata. For a release:
 
-1. Set the version in `pyproject.toml`, add its section to `docs/changes.rst` (what a user must do, the answers that change, what is new), set the install lines of section 1, of the README and of the installation page to the new tag, commit on `main`, and check that the workflows pass on that commit. idtrack, its web app (github.com/theislab/idtrack-web) and its benchmark repository (github.com/theislab/idtrack-reproducibility) carry one version number: a release sets the same version in all three, the web app pins the package's tag of that version, and the benchmark repository's default tree is that tag.
+1. Set the version in `pyproject.toml`, add its section to `docs/changes.rst` (what a user must do, the answers that change, what is new), set the install lines of section 1, of the README and of the installation page to the new tag, commit on `main`, and check that the workflows pass on that commit. idtrack, its web app (github.com/theislab/idtrack-web) and its benchmark repository (github.com/theislab/idtrack-reproducibility, private for now) carry one version number: a release sets the same version in all three, the web app pins the package's tag of that version, and the benchmark repository's default tree is that tag.
 2. Build and check the distributions locally:
 
     ```bash

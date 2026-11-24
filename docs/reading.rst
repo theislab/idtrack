@@ -22,28 +22,31 @@ on :doc:`concepts`.
 The starting release
 --------------------
 
-With ``from_release``, the identifier is read at that release. Without it, it is read at
-the target release if it exists there, and otherwise at the latest release at which it exists; the result says which
-release was used (``from_release``) and whether it was chosen for you (``from_release_inferred``). The rule is the
-same for Ensembl ids, symbols and the ids of other databases. A symbol given without ``from_release`` is therefore
-read as what it names at the target release (or at its latest release), not as what it named years ago. One release
-decides both what a string means and where it is read: ``RNR1`` with ``to_release=90`` is read at 90, where it is
-NCBI's symbol of MT-RNR1 (and a synonym of NR4A2), exactly as with ``from_release=90``. What a string meant at other
-releases only is not its answer, but the result reports it: ``result.other_readings`` lists such a reading with
-``reason="other_release"``, the gene it led to and the releases at which the string had that meaning (``RNR1`` without
-a release is NR4A2's synonym, and MT-RNR1's symbol of releases 86 to 93 and 95 is reported); give ``from_release`` to read it
-there.
+With ``from_release``, the identifier is read at that release. Without it, it is read at the target release if it exists
+there, and otherwise at the latest release at which it exists; the result says which release was used (``from_release``)
+and whether it was chosen for you (``from_release_inferred``). The rule is the same for Ensembl ids, symbols and the ids
+of other databases. A symbol given without ``from_release`` is therefore read as what it names at the target release (or
+at its latest release), not as what it named years ago.
 
-If the graph does not hold the identifier at a given ``from_release`` (a wrong release, an id of a database the graph does not include at that
-release, a name of an early release whose source the graph lacks), :py:meth:`idtrack.API.convert` reads it by the rule
-without ``from_release`` and says so: ``from_release_fallback`` is true, ``from_release_given`` is the release you
-gave, and ``result.reasons`` holds ``"read_at_another_release"`` (the ``reason`` of a result with targets, whose
-status stays ``"converted"`` or ``"tie"``; after the reason a result without targets has). ``from_release`` is the
-release the string was read at, also in a result without targets. Such an answer is what the identifier meant where
-it was read, which can be another gene than the one it meant at the release you gave: :py:meth:`idtrack.API.classify` puts it in a bin of its own
-(``read_at_another_release``), and the harmonizer says so in ``idtrack_reason``. (The engine,
-:py:meth:`idtrack.engine.Track.convert`, raises :py:class:`idtrack.errors.InactiveAtReleaseError` instead, naming the
-releases at which the identifier exists.)
+One release decides both what a string means and where it is read: ``RNR1`` with ``to_release=90`` is read at 90, where
+it is NCBI's symbol of MT-RNR1 (and a synonym of NR4A2), exactly as with ``from_release=90``. What a string meant at
+other releases only is not its answer, but the result reports it: ``result.other_readings`` lists such a reading with
+``reason="other_release"``, the gene it led to and the releases at which the string had that meaning (``RNR1`` without a
+release is NR4A2's synonym, and MT-RNR1's symbol of releases 86 to 93 and 95 is reported); give ``from_release`` to read
+it there.
+
+If the graph does not hold the identifier at a given ``from_release`` (a wrong release, an id of a database the graph
+does not include at that release, a name of an early release whose source the graph lacks),
+:py:meth:`idtrack.API.convert` reads it by the rule without ``from_release`` and says so: ``from_release_fallback`` is
+true, ``from_release_given`` is the release you gave, and ``result.reasons`` holds ``"read_at_another_release"`` (the
+``reason`` of a result with targets, whose status stays ``"converted"`` or ``"tie"``; after the reason a result without
+targets has).
+
+``from_release`` is the release the string was read at, also in a result without targets. Such an answer is what the
+identifier meant where it was read, which can be another gene than the one it meant at the release you gave:
+:py:meth:`idtrack.API.classify` puts it in a bin of its own (``read_at_another_release``), and the harmonizer says so in
+``idtrack_reason``. (The engine, :py:meth:`idtrack.engine.Track.convert`, raises
+:py:class:`idtrack.errors.InactiveAtReleaseError` instead, naming the releases at which the identifier exists.)
 
 
 .. _reading-cleaning:
@@ -100,28 +103,36 @@ name as a version, so it is no version).
 Matching the string
 -------------------
 
-When a string can mean several nodes of the graph (a
-symbol that was the name of one gene and is a synonym of another today), the one that exists at the release asked
-about (``from_release``; without it the target release) is taken; where none exists there, the string is read at the
-latest release at which one of them does, by the steps of that release. An Ensembl stable id is never passed over for
-a synonym spelt the same. An identifier exists at a release when a database has it there on the genome assembly that
-Ensembl maintained at that release: human GRCh37 is still listed beside GRCh38 with its names of release 75, and a
-name that only GRCh37 lists today does not exist today. Among those, the string is matched exactly, then ignoring
-letter case, then taking ``-``, ``_`` and ``.`` as the same character (``HLA_A`` is ``HLA-A``), then, for a
-versioned accession, with the version written (:ref:`reading-accession-versions`); each step is tried on names and then on synonyms
-before the next. "Exactly" means as a database wrote
-the identifier at the release it is read at: databases change the letter case of a name over the releases, two
-databases can write one name in two ways (at release 75 MGI wrote the mouse gene ``Bap1`` and UniProt wrote it
-``BAP1``), and one database can give two genes one name in two cases (``Tc`` is a synonym of one mouse gene, ``tc``
-one of Noto), so each of these spellings is an exact match where it was written, and is not taken for another gene's
-synonym spelt the same (``BAP1`` with ``from_release=75`` is that gene exactly; today no database writes the name so,
-and ``BAP1`` is exactly a synonym of another mouse gene, but as a string in one letter case it is first read as a
-mouse symbol without letter case, :ref:`reading-rules`, and answers ``Bap1``). The graph keeps one node per
-identifier, named as at its last release, which is what ``result.graph_id`` shows, and the spelling of every link of it (the identifier, an Ensembl id,
-a database, a release): a string matched exactly is followed only through the links spelt as it is typed (``Tc`` is
-the first gene's synonym alone, ``tc`` Noto's), a string matched only by letter case through all of them (``TC`` is
-both). Nothing else is ever cut off an external id (``SLA.7`` is not ``SLA``). Ensembl's own ids are written in capitals
-only, so an id in another letter case is found by case (``enst00000016171`` is ``ENST00000016171``).
+**Where.** An identifier exists at a release when a database has it there on the genome assembly that Ensembl
+maintained at that release: human GRCh37 is still listed beside GRCh38 with its names of release 75, and a name that
+only GRCh37 lists today does not exist today. When a string can mean several nodes of the graph (a symbol that was the
+name of one gene and is a synonym of another today), the one that exists at the release asked about (``from_release``;
+without it the target release) is taken; where none exists there, the string is read at the latest release at which
+one of them does. An Ensembl stable id is never passed over for a synonym spelt the same.
+
+**The steps**, in this order; each is tried on names, then on synonyms, before the next:
+
+1. exactly (``exact``);
+2. ignoring letter case (``case``: ``enst00000016171`` is ``ENST00000016171``, since Ensembl's own ids are written in
+   capitals only);
+3. taking ``-``, ``_`` and ``.`` as one character (``separator``: ``HLA_A`` is ``HLA-A``);
+4. for a versioned accession, with the version written (``version``: :ref:`reading-accession-versions`).
+
+Nothing else is ever cut off an external id (``SLA.7`` is not ``SLA``).
+
+**"Exactly" means as a database wrote the identifier at the release it is read at.** Databases change the letter case
+of a name over the releases, two databases can write one name in two ways (at release 75 MGI wrote the mouse gene
+``Bap1`` and UniProt wrote it ``BAP1``), and one database can give two genes one name in two cases (``Tc`` is a
+synonym of one mouse gene, ``tc`` one of Noto). Each of these spellings is an exact match where it was written, and is
+not taken for another gene's synonym spelt the same: ``BAP1`` with ``from_release=75`` is that gene exactly. (Today no
+database writes the name so, and ``BAP1`` is exactly a synonym of another mouse gene; but a string in one letter case
+is first read as a mouse symbol without letter case, :ref:`reading-rules`, and answers ``Bap1``.)
+
+**One node, every spelling.** The graph keeps one node per identifier, named as at its last release (what
+``result.graph_id`` shows), and keeps the spelling of every link of it (identifier, Ensembl id, database, release). A
+string matched exactly is followed only through the links spelt as it is typed (``Tc`` reaches the first gene's
+synonym alone, ``tc`` Noto's); a string matched only by letter case is followed through all of them (``TC`` reaches
+both).
 
 
 .. _reading-rules:
@@ -175,29 +186,51 @@ How the reading is reported, and naming the database
 -----------------------------------------------------
 
 ``result.match`` says how the string matched: a step (``"exact"``, ``"case"``, ``"separator"``, ``"version"``,
-``"version_newer_than_graph"``, ``"version_not_judged"``: :py:data:`idtrack.results.MATCH_STEPS`) after the
-prefixes that apply (``"copy:"``, ``"unicode:"``, ``"punctuation:"``, ``"par_y:"``, ``"lrg:"``, ``"synonym:"``:
+``"version_newer_than_graph"``, ``"version_not_judged"``: :py:data:`idtrack.results.MATCH_STEPS`) after the prefixes
+that apply (``"copy:"``, ``"unicode:"``, ``"punctuation:"``, ``"par_y:"``, ``"lrg:"``, ``"synonym:"``:
 :py:data:`idtrack.results.MATCH_PREFIXES`), for example ``"punctuation:synonym:exact"``. ``result.graph_id`` is the
 identifier it was read as (a synonym written as it is; the match says it is a synonym), and ``result.from_databases``
-the databases that attach the identifier to its genes at the release it was read at (to a gene itself or to one of
-its transcripts or translations; a synonym's database by its own name). With ``from_database="HGNC Symbol"`` the
-string is read as an id of that database (its names; where none of its names matches at any release, the synonyms
-it records): it stands only for the genes that HGNC attaches it to, and between those the evidence of every database
-still counts (a symbol that the named database gives to two genes, of which other databases confirm one, is that one). The synonyms a database records are no
-target: ``final_database`` is a database's ids.
+the databases that attach the identifier to its genes at the release it was read at (to a gene itself or to one of its
+transcripts or translations; a synonym's database by its own name).
 
+With ``from_database="HGNC Symbol"`` the string is read as an id of that database (its names; where none of its names
+matches at any release, the synonyms it records): it stands only for the genes that HGNC attaches it to, and between
+those the evidence of every database still counts (a symbol that the named database gives to two genes, of which other
+databases confirm one, is that one). The synonyms a database records are no target: ``final_database`` is a database's
+ids.
+
+
+.. _reading-copies:
 
 Copies and records
 ------------------
 
-Copies on alternative loci and patches are listed apart (``alternative_locus_genes``) beside a gene of the
-reference sequence (:ref:`concept-places`). So is the Y copy of a pseudoautosomal gene (a gene of a pseudoautosomal region of Y)
+Copies on alternative loci and patches are listed apart (``alternative_locus_genes``) beside a gene of the reference
+sequence (:ref:`concept-places`). So is the Y copy of a pseudoautosomal gene (a gene of a pseudoautosomal region of Y)
 beside the gene at its place on X, the region of Y read on the region of X it repeats (from release 110 Ensembl gives
 the Y copies ids of their own: ``PLCXD1`` is the X gene, the Y copy listed apart; the regions are GRC's,
 :py:data:`idtrack.organisms.PSEUDOAUTOSOMAL_REGIONS`; one rule of genes and places, :py:mod:`idtrack.graph.genes`).
-An LRG record's id (``LRG_321``) answers the gene the record describes (TP53), the match prefixed ``lrg:`` and the record listed apart;
-so does every id of the record: its transcripts and translations (``LRG_321t1``, ``LRG_321p1``) and the record's gene
-id of the GRCh37 releases (``LRG_7_g1``).
+
+An LRG record's id (``LRG_321``) answers the gene the record describes (TP53), the match prefixed ``lrg:`` and the
+record listed apart in ``alternative_locus_genes``; so do its transcripts and translations (``LRG_321t1``,
+``LRG_321p1``, and those of the GRCh37 releases, ``LRG_7_t1``). The record's gene id of the GRCh37 releases
+(``LRG_7_g1``) also answers the gene the record describes, but its result lists that answer itself in
+``alternative_locus_genes``, not the record (:ref:`limitation-lrg-gene-ids`):
+
+.. code-block:: python
+
+    from idtrack import API
+
+    api = API.load(API.graph_path("homo_sapiens", 115, "./idtrack_cache"))
+    for query in ["LRG_7", "LRG_7t1", "LRG_7_g1"]:
+        result = api.convert(query)
+        print(query, result.targets(), result.match, result.alternative_locus_genes)
+
+.. code-block:: text
+
+    LRG_7 ('ENSG00000141837.24',) lrg:exact ('LRG_7.1',)
+    LRG_7t1 ('ENSG00000141837.24',) lrg:exact ('LRG_7.1',)
+    LRG_7_g1 ('ENSG00000141837.24',) lrg:exact ('ENSG00000141837.24',)
 
 
 .. _reading-versions:
@@ -219,32 +252,29 @@ converted to their gene.
 Versions of sequence accessions
 -------------------------------
 
-Ensembl's cross references give the version of the sequence they attach (``xref.version``: RefSeq, UniProt, CCDS, the EMBL protein ids, Havana's ids; a symbol or an NCBI
-gene id has none), and the graph keeps it per link and release (:py:meth:`idtrack.graph.TheGraph.accession_versions`):
-which databases carry versions is Ensembl's statement, not a list of names. An accession's versions are not ids of
-their own, as an Ensembl id's versions are, but what its links attached at each release, so its rule is said of those
-links. An accession written with a version (``match="version"``) is the accession as the links that attached that version carry it, read where they did: without
-``from_release`` at the target release if they attached it there, else at the latest release at which they did (pig
-``XM_003129161.3``, attached at 67 to 77 to ENSSSCG00000009034 and ENSSSCG00000026015, is read at 77 and answers
-ENSSSCG00000026015, the one of the two that lives on; ``XM_003129161.4``, attached at 78 to 89 to ENSSSCG00000009034
-only, which Ensembl retired at 90, has no conversion to 115); with a ``from_release`` at which no link attached it, by
-that same rule (``from_release_fallback``). A version above every version the links attached is read as the latest
-(``match="version_newer_than_graph"``) only where the accession is attached at the graph's last release: only then can
-it be newer than Ensembl's import (pig ``XM_005662123.4``, an accession attached with version 1 at 78 to 82 and never
-after, is ``unknown_version``). Any version that no link attached (below the latest, in a gap, or above all versions of
-an accession Ensembl no longer attaches) is not answered (``status="unknown_version"``, ``known_versions`` the
-versions there are). An accession without a version is read as every identifier is.
+Ensembl's cross references give the version of the sequence they attach (``xref.version``: RefSeq, UniProt, CCDS, the
+EMBL protein ids, Havana's ids; a symbol or an NCBI gene id has none), and the graph keeps it per link and release
+(:py:meth:`idtrack.graph.TheGraph.accession_versions`): which databases carry versions is Ensembl's statement, not a
+list of names. An accession's versions are not ids of their own, as an Ensembl id's versions are, but what its links
+attached at each release, so its rule is said of those links.
 
-A version dates an accession only where it is a property of the sequence record that holds over time.
-UniProt's number in Ensembl's tables is UniProt's version of the entry (``Q9TSV4.120``), which changes with the entry's
-annotation in nearly every release; a typed ``P04637.4`` means a version of the sequence, which Ensembl's records do
-not hold. The graph tells the two kinds apart from its own versions
-(:py:meth:`idtrack.graph.TheGraph.edit_counter_databases`): of the pairs of consecutive releases at which one link (an
-accession, one version of an Ensembl id, a database) holds, the share in which the version differs; above one half
-(:py:data:`idtrack.settings.VERSION_EDIT_COUNTER_SHARE`) the database's number counts the record's edits. For such a
-database a typed version is not judged: the accession is read without it, and the result says so
-(``match="version_not_judged"``, ``"version_not_judged"`` among ``result.reasons``), never ``unknown_version``. The
-shares on the graphs of Ensembl 115 (per cent of the pairs; ``-``: the database has no versioned link in that graph):
+An accession written with a version (``match="version"``) is the accession as the links that attached that version carry it, read where they did: without ``from_release`` at the target release if they attached it there, else at the latest release at which they did (pig ``XM_003129161.3``, attached at 67 to 77 to ENSSSCG00000009034 and ENSSSCG00000026015, is read at 77 and answers ENSSSCG00000026015, the one of the two that lives on; ``XM_003129161.4``, attached at 78 to 89 to ENSSSCG00000009034 only, which Ensembl retired at 90, has no conversion to 115); with a ``from_release`` at which no link attached it, by that same rule (``from_release_fallback``). A version above every version the links attached is read as the latest (``match="version_newer_than_graph"``) only where the accession is attached at the graph's last release: only then can it be newer than Ensembl's import (pig ``XM_005662123.4``, an accession attached with version 1 at 78 to 82 and never after, is ``unknown_version``).
+
+Any version that no link attached (below the latest, in a gap, or above all versions of an accession Ensembl no longer
+attaches) is not answered (``status="unknown_version"``, ``known_versions`` the versions there are). An accession
+without a version is read as every identifier is.
+
+A version dates an accession only where it is a property of the sequence record that holds over time. UniProt's number
+in Ensembl's tables is UniProt's version of the entry (``Q9TSV4.120``), which changes with the entry's annotation in
+nearly every release; a typed ``P04637.4`` means a version of the sequence, which Ensembl's records do not hold.
+
+The graph tells the two kinds apart from its own versions (:py:meth:`idtrack.graph.TheGraph.edit_counter_databases`): of
+the pairs of consecutive releases at which one link (an accession, one version of an Ensembl id, a database) holds, the
+share in which the version differs; above one half (:py:data:`idtrack.settings.VERSION_EDIT_COUNTER_SHARE`) the
+database's number counts the record's edits. For such a database a typed version is not judged: the accession is read
+without it, and the result says so (``match="version_not_judged"``, ``"version_not_judged"`` among ``result.reasons``),
+never ``unknown_version``. The shares on the graphs of Ensembl 115 (per cent of the pairs; ``-``: the database has no
+versioned link in that graph):
 
 .. list-table::
     :header-rows: 1
@@ -322,16 +352,18 @@ long to be an identifier, :py:class:`idtrack.errors.UnknownReleaseError` and :py
 Where a list comes from
 -----------------------
 
-:py:meth:`idtrack.API.source_inference` says which release (or assembly, or database, by ``mode``) a list of
-identifiers comes from, as an :py:class:`idtrack.results.SourceInference`. Each distinct identifier counts once for
-every origin at which it is an identifier, read as name resolution reads it at that release: a name counts where it
-is a name (a name renamed later counts as the name it was where it was one), never where it is only a synonym (a
-synonym says the string was once a name or an alias, not that a table of that release wrote it). The answer is a
-*band*: the origins the list cannot tell apart from the best one (a one-sided sign test on the identifiers found at one and not the other, at
-:py:data:`idtrack.api.SOURCE_SIGNIFICANCE`), with the margin to the best origin outside it. In the mode ``release``
-a release counts on the assembly that serves it (a list of GRCh37's names of release 75 is release 75, not every later
-release at which Ensembl still lists GRCh37). :py:meth:`idtrack.API.infer_source` gives the band as a list, or with
-``report_only_winner=False`` every origin with its count.
+:py:meth:`idtrack.API.source_inference` says which release (or assembly, or database, by ``mode``) a list of identifiers
+comes from, as an :py:class:`idtrack.results.SourceInference`. Each distinct identifier counts once for every origin at
+which it is an identifier, read as name resolution reads it at that release: a name counts where it is a name (a name
+renamed later counts as the name it was where it was one), never where it is only a synonym (a synonym says the string
+was once a name or an alias, not that a table of that release wrote it).
+
+The answer is a *band*: the origins the list cannot tell apart from the best one (a one-sided sign test on the
+identifiers found at one and not the other, at :py:data:`idtrack.api.SOURCE_SIGNIFICANCE`), with the margin to the best
+origin outside it. In the mode ``release`` a release counts on the assembly that serves it (a list of GRCh37's names of
+release 75 is release 75, not every later release at which Ensembl still lists GRCh37).
+:py:meth:`idtrack.API.infer_source` gives the band as a list, or with ``report_only_winner=False`` every origin with its
+count.
 
 .. code-block:: python
 
