@@ -1,8 +1,9 @@
 # Release: Build and publish to PyPI when a GitHub Release is published.
 #
-# Publishing uses PyPI's trusted publishing (OpenID Connect): no token is stored in the repository. PyPI must list this
-# repository and this workflow file (publish_package.yml), with the environment `pypi`, as a trusted publisher of the
-# project idtrack (PyPI: project settings, "Publishing"). A release whose version exists on PyPI already fails.
+# Publishing uses the repository secret `PYPI_TOKEN` (an API token of the PyPI project with upload permission), as
+# every release so far did. A release whose version exists on PyPI already fails: a version is published once.
+# PyPI's trusted publishing (OpenID Connect, no stored token) can replace the token once the PyPI project lists this
+# repository and this workflow file as a trusted publisher (PyPI: project settings, "Publishing").
 name: Publish idtrack to PyPI
 
 on:
@@ -18,13 +19,6 @@ jobs:
         name: Build & publish
         runs-on: ubuntu-22.04
         timeout-minutes: 20
-        environment:
-            name: pypi
-            url: https://pypi.org/p/idtrack
-        # The OpenID Connect token that trusted publishing exchanges for a short-lived upload token.
-        permissions:
-            contents: read
-            id-token: write
         steps:
             - name: Check out the repository
               uses: actions/checkout@v7
@@ -83,9 +77,12 @@ jobs:
             - name: Check package metadata (twine)
               run: python -m twine check --strict dist/*
 
-            # Upload dist/* to PyPI (trusted publishing; the action also uploads attestations of the files).
+            # Upload dist/* to PyPI with the project's API token (attestations need trusted publishing: off).
             - name: Publish package on PyPI
               uses: pypa/gh-action-pypi-publish@release/v1
               with:
+                  user: __token__
+                  password: ${{ secrets.PYPI_TOKEN }}
                   packages-dir: dist
+                  attestations: false
                   verbose: true
