@@ -31,13 +31,14 @@ nbsphinx_execute = "never"
 nbsphinx_input_prompt = "%s"
 nbsphinx_output_prompt = "%s"
 
-# Add a small, consistent "Download notebook" link to every rendered notebook page.
+# Add a small, consistent "Download notebook" link to every rendered notebook page (nbsphinx copies each notebook
+# next to its page).
 nbsphinx_prolog = r"""
 {% set docname = env.docname %}
 .. raw:: html
 
    <div class="idtrack-notebook-meta">
-     <a class="idtrack-notebook-download" href="../_sources/{{ docname }}.ipynb">Download notebook</a>
+     <a class="idtrack-notebook-download" href="{{ docname.split('/')|last }}.ipynb" download>Download notebook</a>
    </div>
 """
 
@@ -181,6 +182,9 @@ html_css_files = [
 ]
 
 autoclass_content = "both"  # add init into the file class description
+# The source pages link each object to where the reference documents it; an object a package re-exports is documented
+# under its own module only, so the links follow the module that defines an object, not the package that imports it.
+viewcode_follow_imported_members = False
 add_module_names = False  # Prevent sphinx from displaying the full path to the class
 
 
