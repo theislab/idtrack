@@ -1,32 +1,35 @@
 **idtrack**
 ===========
 
-|PyPI| |PyPIDownloads| |Python Version| |License| |Read the Docs| |Build| |Tests| |Codecov|
+|PyPI| |Python Version| |License| |Downloads| |Docs| |Tests| |Build| |Dependencies| |Codecov|
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/idtrack.svg
    :target: https://pypi.org/project/idtrack/
-   :alt: PyPI
-.. |Python Version| image:: https://img.shields.io/pypi/pyversions/idtrack
-   :target: https://pypi.org/project/idtrack
-   :alt: Python Version
-.. |License| image:: https://img.shields.io/github/license/theislab/idtrack
-   :target: https://opensource.org/licenses/BSD-3-Clause
-   :alt: License
-.. |Read the Docs| image:: https://img.shields.io/readthedocs/idtrack/latest.svg?label=Read%20the%20Docs
-   :target: https://idtrack.readthedocs.io/
-   :alt: Read the documentation at https://idtrack.readthedocs.io/
-.. |Build| image:: https://github.com/theislab/idtrack/actions/workflows/build_package.yml/badge.svg?branch=main
-   :target: https://github.com/theislab/idtrack/actions/workflows/build_package.yml
-   :alt: Build Package Status
+   :alt: The version on PyPI
+.. |Python Version| image:: https://img.shields.io/pypi/pyversions/idtrack.svg
+   :target: https://pypi.org/project/idtrack/
+   :alt: Supported Python versions
+.. |License| image:: https://img.shields.io/pypi/l/idtrack.svg
+   :target: https://github.com/theislab/idtrack/blob/main/LICENSE
+   :alt: License: BSD 3-Clause
+.. |Downloads| image:: https://static.pepy.tech/badge/idtrack
+   :target: https://pepy.tech/project/idtrack
+   :alt: Downloads from PyPI
+.. |Docs| image:: https://img.shields.io/readthedocs/idtrack/stable.svg?label=docs
+   :target: https://idtrack.readthedocs.io/en/stable/
+   :alt: The documentation at https://idtrack.readthedocs.io/
 .. |Tests| image:: https://github.com/theislab/idtrack/actions/workflows/run_tests.yml/badge.svg?branch=main
    :target: https://github.com/theislab/idtrack/actions/workflows/run_tests.yml
-   :alt: Tests status
-.. |PyPIDownloads| image:: https://pepy.tech/badge/idtrack
-   :target: https://pepy.tech/project/idtrack
-   :alt: downloads
+   :alt: The tests on main
+.. |Build| image:: https://github.com/theislab/idtrack/actions/workflows/build_package.yml/badge.svg?branch=main
+   :target: https://github.com/theislab/idtrack/actions/workflows/build_package.yml
+   :alt: The package build on main
+.. |Dependencies| image:: https://github.com/theislab/idtrack/actions/workflows/dependency_compatibility.yml/badge.svg?branch=main
+   :target: https://github.com/theislab/idtrack/actions/workflows/dependency_compatibility.yml
+   :alt: The tests with the oldest and the newest supported dependencies
 .. |Codecov| image:: https://codecov.io/gh/theislab/idtrack/branch/main/graph/badge.svg
    :target: https://codecov.io/gh/theislab/idtrack
-   :alt: Codecov
+   :alt: Test coverage
 
 .. image:: https://raw.githubusercontent.com/theislab/idtrack/main/docs/_logo/logo.png
     :width: 350
@@ -94,3 +97,21 @@ answers <https://idtrack.readthedocs.io/en/stable/concepts.html>`_, its `limitat
 checking graphs, testing and releasing: `SETUP.md`_.
 
 .. _SETUP.md: https://github.com/theislab/idtrack/blob/main/SETUP.md
+
+Related repositories
+--------------------
+
+idtrack, its web app and its benchmarks carry one version number, and each release tags all three ``v<version>``.
+
+* `idtrack-web <https://github.com/theislab/idtrack-web>`_: the web app (an HTTP api and a frontend) that converts
+  identifiers with idtrack from a browser, without installing the package or building graphs.
+* `idtrack-reproducibility <https://github.com/theislab/idtrack-reproducibility>`_: the benchmarks that measure
+  idtrack's answers against Ensembl's own files and the naming authorities, their results, and the known limitations
+  with their measured sizes.
+
+Help and license
+----------------
+
+Questions and problems: the `issue tracker <https://github.com/theislab/idtrack/issues>`_; how to contribute:
+`Contributing <https://idtrack.readthedocs.io/en/stable/contributing.html>`_. idtrack is distributed under the BSD
+3-Clause license (`LICENSE <https://github.com/theislab/idtrack/blob/main/LICENSE>`_).
