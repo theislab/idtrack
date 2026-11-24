@@ -174,7 +174,7 @@ The tools need a local repository with the organism's complete tables (one in wh
 
 The version is written in one place, `version` in `[project]` of `pyproject.toml`; the package, the documentation and the graph files read it from the installed metadata. For a release:
 
-1. Set the version in `pyproject.toml`, add its section to `docs/changes.rst` (what a user must do, the answers that change, what is new), set the install lines of section 1, of the README and of the installation page to the new tag, commit on `main`, and check that the workflows pass on that commit. idtrack, its web app (github.com/theislab/idtrack-web) and its benchmark repository (github.com/theislab/idtrack-reproducibility, private for now) carry one version number: a release sets the same version in all three, the web app pins the package's tag of that version, and the benchmark repository's default tree is that tag.
+1. Set the version in `pyproject.toml`, add its section to `docs/changes.rst` (what a user must do, the answers that change, what is new), set the install lines of section 1, of the README and of the installation page to the new tag, commit on `main`, and check that the workflows pass on that commit. idtrack, its web app (github.com/theislab/idtrack-web) and its benchmark repository (github.com/theislab/idtrack-reproducibility) carry one version number: a release sets the same version in all three, the web app pins the package's tag of that version, and the benchmark repository's default tree is that tag.
 2. Build and check the distributions locally:
 
     ```bash
