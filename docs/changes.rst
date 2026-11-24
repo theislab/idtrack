@@ -3,8 +3,9 @@ Changes
 
 What changed for users, newest first. For each version: what you must do, the answers that change, and what is new.
 Version numbers follow ``pyproject.toml``; the package, its web app (`idtrack-web
-<https://github.com/theislab/idtrack-web>`_) and its benchmark repository (private for now) carry one version number,
-and each release tags all three ``v<version>``.
+<https://github.com/theislab/idtrack-web>`_) and its benchmark repository (`idtrack-reproducibility
+<https://github.com/theislab/idtrack-reproducibility>`_) carry one version number, and each release tags all three
+``v<version>``.
 
 
 0.1.2
