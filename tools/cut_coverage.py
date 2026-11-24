@@ -113,10 +113,10 @@ def coverage(
             if not have[name] & genes:
                 gaps.append((assembly, release, name, len(have[name])))
     need = {(a, r, n) for a, r, n, _ in gaps}
-    chosen = []
-    while need:
-        best = max(sorted(carriers), key=lambda gene: len(carriers[gene] & need), default=None)
-        covered = carriers[best] & need if best is not None else set()
+    chosen: list[tuple[str, int]] = []
+    while need and carriers:
+        best = max(sorted(carriers), key=lambda gene: len(carriers[gene] & need))
+        covered = carriers[best] & need
         if not covered:
             break
         chosen.append((best, len(covered)))

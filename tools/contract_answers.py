@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Write the expected answers of the consumer-contract test, for ``tools/consumer_contract.py``.
+r"""Write the expected answers of the consumer-contract test, for ``tools/consumer_contract.py``.
 
 The test (``tests/unit/test_consumer_contract.py``) makes the calls of idtrack's main consumer, the rosetta project
 (``src/rosetta/reference/idtrack_graph.py`` and ``src/rosetta/preprocessing/genes.py``), with the API of this version
@@ -12,7 +12,7 @@ Usage, from a checkout of commit ``d4c2dda`` (the last commit with that API), wi
 copied into it (``tests/data/real/<organism>.{genes.txt,tables.json.xz,truth.jsonl}``)::
 
     git worktree add ../idtrack_d4c2dda d4c2dda
-    cp tests/data/real/*.genes.txt tests/data/real/*.tables.json.xz tests/data/real/*.truth.jsonl \\
+    cp tests/data/real/*.genes.txt tests/data/real/*.tables.json.xz tests/data/real/*.truth.jsonl \
         ../idtrack_d4c2dda/tests/data/real/
     cd ../idtrack_d4c2dda && PYTHONPATH=. python <this repository>/tools/contract_answers.py answers.json
     cd <this repository> && python tools/consumer_contract.py --answers ../idtrack_d4c2dda/answers.json

@@ -19,9 +19,11 @@ import yaml
 
 from idtrack.build.database_manager import DatabaseManager
 from tests._real_tables import SNAPSHOT, RealTables, read_genes, tables_path
-from tests._tools import load_tool
+from tests._tools import TOOLS, load_tool
 
 ORGANISM = "sus_scrofa"  # the smaller of the two organisms of the cut tables
+# The test of an installed wheel copies the tests without the rest of the repository (.github/scripts/test_wheel.sh).
+pytestmark = pytest.mark.skipif(not TOOLS.is_dir(), reason="tools/ is not beside the tests")
 
 
 @pytest.fixture
