@@ -29,14 +29,9 @@ Development Lead
 Contributors
 ------------
 
-We welcome contributions from the community! The following individuals have contributed
-to IDTrack through code, documentation, bug reports, or feature suggestions:
-
-Contributors are credited automatically through the project’s Git history. The most up-to-date list is available on GitHub.
-
-See the :doc:`contributing` guide to learn how you can help improve IDTrack.
-You can also see the live contributor list on GitHub:
-`github.com/theislab/idtrack/graphs/contributors <https://github.com/theislab/idtrack/graphs/contributors>`_.
+Contributors are credited through the project's Git history; the list is on GitHub:
+`github.com/theislab/idtrack/graphs/contributors <https://github.com/theislab/idtrack/graphs/contributors>`_. The
+:doc:`contributing` guide says how to contribute.
 
 
 Acknowledgments
@@ -57,13 +52,19 @@ Data Sources
     * - `Ensembl <https://www.ensembl.org/>`_
       - Genome annotation, identifier history, and cross-references
     * - `HGNC <https://www.genenames.org/>`_
-      - Human Gene Nomenclature Committee - official human gene symbols
+      - HUGO Gene Nomenclature Committee - official human gene symbols
+    * - `VGNC <https://vertebrate.genenames.org/>`_
+      - Vertebrate Gene Nomenclature Committee - gene symbols of other vertebrates (pig, the macaques)
     * - `MGI <http://www.informatics.jax.org/>`_
       - Mouse Genome Informatics - mouse gene nomenclature and annotation
     * - `UniProt <https://www.uniprot.org/>`_
       - Universal Protein Resource - protein sequence and annotation
-    * - `NCBI Gene <https://www.ncbi.nlm.nih.gov/gene>`_
-      - National Center for Biotechnology Information - gene information
+    * - `NCBI Gene <https://www.ncbi.nlm.nih.gov/gene>`_ and `RefSeq <https://www.ncbi.nlm.nih.gov/refseq/>`_
+      - National Center for Biotechnology Information - gene ids, official symbols, reference sequences
+    * - `miRBase <https://www.mirbase.org/>`_ and `Rfam <https://rfam.org/>`_
+      - microRNA precursors and RNA families
+    * - `CCDS <https://www.ncbi.nlm.nih.gov/projects/CCDS/>`_, Havana and Vega
+      - Consensus coding sequences and the manual annotation of Ensembl/GENCODE
 
 Software Dependencies
 ~~~~~~~~~~~~~~~~~~~~~
@@ -134,11 +135,11 @@ If you use IDTrack in your research, please cite:
       author = {Inecik, Kemal},
       title = {IDTrack: Cross-Temporal and Cross-Database Biological Identifier Mapping},
       url = {https://github.com/theislab/idtrack},
-      year = {2025}
+      version = {0.1.2},
+      year = {2026}
     }
 
-For academic publications, also cite the version you used: add a ``version`` field with the value of
-``idtrack.__version__`` (or ``pip show idtrack``) to the entry above.
+Cite the version you used: ``version`` is the value of ``idtrack.__version__`` (or ``idtrack --version``).
 
 
 License

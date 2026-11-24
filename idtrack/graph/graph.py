@@ -461,7 +461,7 @@ class TheGraph(NameResolution, nx.MultiDiGraph):
 
     @property
     def label_names(self) -> dict[str, str]:
-        """The name of each database's label rows in the graph, by Ensembl's database name (decision 53).
+        """The name of each database's label rows in the graph, by Ensembl's database name.
 
         Ensembl names a database's label rows by its display name, which changed over the releases for some databases;
         the graph gives them one name, read from Ensembl's tables of its releases
@@ -472,7 +472,7 @@ class TheGraph(NameResolution, nx.MultiDiGraph):
 
     @property
     def authority_databases(self) -> frozenset[str]:
-        """The databases of a name authority of the graph's organism (decision 94).
+        """The databases of a name authority of the graph's organism.
 
         The organism's symbol databases (:py:data:`idtrack.organisms.SYMBOL_DATABASES`: HGNC, MGI, VGNC) and NCBI's
         official symbols, the label rows of NCBI Gene's database (:py:data:`idtrack.organisms.NCBI_GENE_DATABASE`) by
@@ -502,7 +502,7 @@ class TheGraph(NameResolution, nx.MultiDiGraph):
 
     @property
     def entries_of_several_genes(self) -> frozenset[str]:
-        """Entries (lower case) the build left out because Ensembl gives them to several genes (decision 73's rule)."""
+        """Entries (lower case) the build left out because Ensembl gives them to several genes."""
         record = self.record
         return frozenset(record.entries_of_several_genes) if record is not None else frozenset()
 
@@ -1120,7 +1120,7 @@ class TheGraph(NameResolution, nx.MultiDiGraph):
             raise self._unknown(node) from None
 
     def carried_places(self, node: str) -> tuple[Place, ...]:
-        """Return a gene's places on the reference sequence carried onto later assemblies by Ensembl's mapping (decision 103).
+        """Return a gene's places on the reference sequence carried onto later assemblies by Ensembl's mapping.
 
         Where Ensembl publishes a mapping of an earlier assembly of the organism onto a later one (its chain files,
         :py:mod:`idtrack.build.assembly_chain`), the builder carries every place of a version on the reference

@@ -3,7 +3,7 @@
 # Kemal Inecik
 # k.inecik@gmail.com
 
-"""Which of Ensembl's databases a selected database is at each release: the continuity of its links (decision 104).
+"""Which of Ensembl's databases a selected database is at each release: the continuity of its links.
 
 Ensembl renames and refiles external databases over the releases: RefSeq's mRNA accessions are ``RefSeq_dna`` up to
 release 63 and ``RefSeq_mRNA`` from 64 (and its ncRNA accessions, in the same ``RefSeq_dna`` up to 63, are
@@ -31,7 +31,7 @@ the identifier is attached to: a transcript's or a translation's gene):
    name is, at its first release, the selected database's links: ``WikiGene`` takes over 215 of the 219 gene-form NCBI
    symbols of rhesus 54, which are 1 % of its own). A candidate that ends at the boundary (it holds no link at the next
    release) also continues the selected database where the links that move are that share of the selected
-   database's links at the next release (decision 107): a database that Ensembl stopped hands over what it still had,
+   database's links at the next release: a database that Ensembl stopped hands over what it still had,
    however much of it Ensembl dropped (human ``RefSeq_dna_predicted`` at 63 to 64 moves 31 % of its links, which are
    59 % of ``RefSeq_mRNA_predicted``'s and 67 % of ``RefSeq_ncRNA_predicted``'s links at 64). Its identifiers are
    then the selected database's at every release (a selected name on another form: in the runs of releases next to
@@ -65,9 +65,9 @@ import numpy as np
 import pandas as pd
 
 #: The least share of a database's links of one identifier form that move to a selected database between two adjacent
-#: releases for the database to be read as the selected one (decision 104). The renames and refilings measured on the
+#: releases for the database to be read as the selected one. The renames and refilings measured on the
 #: five organisms move 0.82 to 1.00 of a database's links (per identifier form 0.94 to 1.00); the most that a database
-#: Ensembl keeps beside a selected one moves into it at one boundary is 0.38 (measurements in docs/changes.rst).
+#: Ensembl keeps beside a selected one moves into it at one boundary is 0.38.
 CONTINUITY_SHARE = 0.5
 
 #: Version of the rule of this module; a stored filing (:py:meth:`idtrack.DatabaseManager.database_filing`) of another
@@ -186,7 +186,7 @@ def moved_links(older: pd.DataFrame, newer: pd.DataFrame) -> pd.DataFrame:
 
 @dataclasses.dataclass
 class Filing:
-    """Which of Ensembl's database names each selected database holds, and where (decision 104).
+    """Which of Ensembl's database names each selected database holds, and where.
 
     Attributes:
         runs (dict[str, tuple[tuple[int, int], ...]]): For a selected name on another form (``name@form``), the runs of

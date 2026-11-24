@@ -1,6 +1,30 @@
 """idtrack: tracks gene identifiers through Ensembl releases, genome assemblies and external databases.
 
-The names below are imported on first access (``idtrack.API`` imports the query side only: the graph, the engine
+A graph of one organism (:py:class:`idtrack.TheGraph`) holds Ensembl's gene, transcript and translation ids of the
+releases it covers, Ensembl's history between the gene ids and the identifiers of external databases that Ensembl
+attaches to them. :py:class:`idtrack.API` opens a graph file (:py:meth:`idtrack.API.load`) or builds one from
+Ensembl (:py:meth:`idtrack.API.build`) and answers on it: :py:meth:`idtrack.API.convert` and
+:py:meth:`idtrack.API.convert_many` convert identifiers from one release and database to another and return the
+typed results of :py:mod:`idtrack.results`.
+
+The names of the package, each ``idtrack.<name>``:
+
+- the entry point: :py:class:`~idtrack.API`;
+- the results: :py:class:`~idtrack.ConversionResult` (with :py:class:`~idtrack.Candidate`,
+  :py:class:`~idtrack.OtherReading`, :py:class:`~idtrack.ErrorInfo`, :py:class:`~idtrack.ExplainedPath`,
+  :py:class:`~idtrack.PathNode` and :py:class:`~idtrack.PathStep`), :py:class:`~idtrack.NameMatch`,
+  :py:class:`~idtrack.SourceInference`, :py:class:`~idtrack.GraphDescription` and
+  :py:class:`~idtrack.AssemblyDescription`;
+- the settings: :py:class:`~idtrack.SearchSettings` (how a search runs) and :py:class:`~idtrack.GraphSettings`
+  (the graph's caches, and when an external id is too common to identify a gene);
+- the graph, its self-tests and building: :py:class:`~idtrack.TheGraph`, :py:class:`~idtrack.GraphChecks` and
+  :py:class:`~idtrack.CheckResult`, :py:class:`~idtrack.GraphMaker`, :py:class:`~idtrack.DatabaseManager` and
+  :py:class:`~idtrack.ExternalDatabases`;
+- the errors: :py:class:`~idtrack.IdtrackError` and the classes derived from it (:py:mod:`idtrack.errors`);
+- :py:class:`~idtrack.HarmonizeFeatures`, which converts the features of several AnnData files to one list of genes
+  (it needs the ``harmonize`` extra).
+
+The names are imported on first access (``idtrack.API`` imports the query side only: the graph, the engine
 and the results; building a graph imports the build stack; ``idtrack.HarmonizeFeatures`` needs the ``harmonize``
 extra), so that ``import idtrack`` itself is cheap. ``__all__``, and so ``from idtrack import *``, holds the names
 that every install has; ``HarmonizeFeatures`` is imported by its name only.

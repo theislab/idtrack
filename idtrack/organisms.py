@@ -124,15 +124,15 @@ SYMBOL_DATABASES: dict[str, tuple[str, ...]] = {
 }
 
 #: Ensembl's name of NCBI Gene's database (``external_db.db_name``, the same at every release). Its accessions are the
-#: NCBI gene numbers, its label rows NCBI's official symbols, which a graph names by the rule of decision 53 (the name
+#: NCBI gene numbers, its label rows NCBI's official symbols, which a graph names by one name at every release (the name
 #: Ensembl's tables give them: :py:attr:`idtrack.TheGraph.label_names`); NCBI's symbols are the symbols of a name
-#: authority beside :py:data:`SYMBOL_DATABASES` (:py:attr:`idtrack.TheGraph.authority_databases`, decision 94).
+#: authority beside :py:data:`SYMBOL_DATABASES` (:py:attr:`idtrack.TheGraph.authority_databases`).
 NCBI_GENE_DATABASE = "EntrezGene"
 
 #: The pseudoautosomal regions of an assembly, by Ensembl's name of the assembly: pairs of a region of Y and the region
 #: of X that it repeats, ``((region, first base, last base), (region, first base, last base))`` (the Genome Reference
 #: Consortium's PAR1 and PAR2 of GRCh38). From release 110 Ensembl gives the Y copies of the genes of these regions ids
-#: of their own (decisions 93 and 95). Ensembl records the same regions in its core databases as assembly exceptions of
+#: of their own. Ensembl records the same regions in its core databases as assembly exceptions of
 #: the type ``PAR`` (table ``assembly_exception``), which a built graph holds since the builder reads the exceptions
 #: for the copies on patches and haplotypes (:py:attr:`idtrack.TheGraph.assembly_exceptions`; GRCh38's two ``PAR``
 #: rows equal this table); the rule of the Y copies still reads this table, which also serves graphs made in memory.

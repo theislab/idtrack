@@ -195,22 +195,22 @@ MATCH_STEPS: dict[str, str] = {
 MATCH_PREFIXES: dict[str, str] = {
     "copy": (
         "In a batch: a name made unique by a single-cell tool (another item of the batch with -1, .1 or _1 appended, "
-        "itself no exact name at the release it is read at alone); the result is that item's (decision 82)."
+        "itself no exact name at the release it is read at alone); the result is that item's."
     ),
     "unicode": (
         "Unicode was normalised before matching: invisible and control characters (zero-width characters, byte-order "
         "marks, bidirectional marks, soft hyphens) removed, compatibility forms (NFKC: full-width letters and digits) "
-        "and Unicode dashes read as their plain characters (decision 84)."
+        "and Unicode dashes read as their plain characters."
     ),
     "punctuation": (
         "Stray punctuation was removed before matching: quotes around the identifier, a trailing semicolon, comma or "
-        "full stop (decision 83)."
+        "full stop."
     ),
     "par_y": (
         "GENCODE's form of the Y copy of a pseudoautosomal gene (<id>_PAR_Y) was read as the gene's id; the Y copy is "
-        "reported apart (decision 93)."
+        "reported apart."
     ),
-    "lrg": "An LRG record's id, answered with the gene the record describes (decision 96).",
+    "lrg": "An LRG record's id, answered with the gene the record describes.",
     "synonym": "A synonym that a database records for the gene, not the name the database gives it.",
 }
 
@@ -218,13 +218,13 @@ MATCH_PREFIXES: dict[str, str] = {
 READING_REASONS: dict[str, str] = {
     "symbol_without_case": (
         "In an organism whose symbols follow a letter-case convention, a string written otherwise that is not exactly "
-        "a name is read first as a symbol of the organism without letter case, where that names exactly one gene "
-        "(decisions 55 and 80); this reading came after it."
+        "a name is read first as a symbol of the organism without letter case, where that names exactly one gene; "
+        "this reading came after it."
     ),
     "make_unique_suffix": (
         "The string ends in a suffix that single-cell tools append to make names unique (-1, .1, _1); reading it, "
         "with its separators taken as one or without letter case, as a synonym of another gene than the string before "
-        "the suffix names is not taken (decision 82)."
+        "the suffix names is not taken."
     ),
     "other_release": (
         "The string means this identifier at other releases only (the releases listed), not at the release it was read "
@@ -238,7 +238,7 @@ READING_REASONS: dict[str, str] = {
         "readings, and this is the other one (the identifier as that database's id, without the suffix)."
     ),
     "same_step": (
-        "The step that matched reached this identifier as well, at the same release (decision 87); its candidates are "
+        "The step that matched reached this identifier as well, at the same release; its candidates are "
         "part of the answer, ranked with those of the reading taken by the same evidence of lineage."
     ),
 }
@@ -366,24 +366,24 @@ class Candidate(_Result):
             database by its own name.
         authority (bool): A name authority gives the identifier to the entry gene as its symbol at the starting
             release: HGNC, MGI or VGNC (the symbol databases of the organism) or NCBI's official symbol
-            (``NCBI gene (formerly Entrezgene)``), not as a synonym (decision 94: such a symbol is read before any
-            synonym of another gene, :py:meth:`idtrack.graph.TheGraph.resolve_name`).
+            (``NCBI gene (formerly Entrezgene)``), not as a synonym (such a symbol is read before any synonym of
+            another gene, :py:meth:`idtrack.graph.TheGraph.resolve_name`).
         display_name (bool): The identifier is the display name of an entry gene at the starting release
             (``gene.display_xref_id``: Ensembl's own name of the gene there, whatever database it came from). Among
             the genes that carry a name at one release such a gene ranks first, before :py:attr:`entry_support`
             (:py:mod:`idtrack.engine.ranking`; ``decided_by`` is ``"display_name"`` where it decided). It holds for the
-            string as typed (decision 102): where the string has letters of both cases, only a display name that its
+            string as typed: where the string has letters of both cases, only a display name that its
             database spelt so; a string in one letter case carries no evidence of case and is read without it. Where
             the history merges several entry genes into :py:attr:`gene`, this and :py:attr:`display_rank` and
             :py:attr:`entry_support` are the best over all of them, whichever one :py:attr:`entry_gene` names (the
-            path shown starts from one; decision 106).
+            path shown starts from one).
         display_rank (int): How the identifier is the display name of an entry gene, as the ranking compares it: 0 the
             display name (for a string in one letter case in an organism whose symbols are written in mixed case, the
             display name of a name authority, read without letter case); 1 for such a string, the display name of
             another source; 2 not its display name (:py:attr:`display_name` is ``False`` only then).
         entry_support (int): The number of databases that attach the identifier to an entry gene at the starting
             release (1 for an Ensembl id). For an identifier of digits only, databases of other numbers (an NCBI gene
-            id and a Havana number spelt alike) are not counted against each other: their genes tie (decision 86).
+            id and a Havana number spelt alike) are not counted against each other: their genes tie.
         own_version (bool): The gene is the queried gene id's own version at the target release (an id that exists
             at the target release is its own answer).
         final_confidence (int | None): 0: the target is attached to the gene at the target release; 1: attached to a
@@ -396,7 +396,7 @@ class Candidate(_Result):
             event).
         unscored_steps (int): The history steps of the path between two different ids that Ensembl gave no score
             (it writes 0 where it measured nothing); a path with such a step ranks below every path whose scores are
-            measured, before :py:attr:`score` compares them (decision 57).
+            measured, before :py:attr:`score` compares them.
         same_as_query (bool): The target is the identifier itself (or the gene id it was read as).
         external_steps (int): Cross-reference edges on the path.
         history_steps (int): History edges on the path.
@@ -650,7 +650,8 @@ class ConversionResult(_Result):
             has no target in the requested database (no candidates, or ``no_target``: genes stand in for the missing
             id); ``"read_at_another_release"`` where the identifier was read at another release than the one given
             (:py:attr:`from_release_fallback`); ``"version_not_judged"`` where a version written after an accession
-            was not judged (decision 101). Empty for a result with targets read as asked.
+            was not judged (its database's versions count edits of the record and do not date it). Empty for a
+            result with targets read as asked.
         other_readings (tuple[OtherReading, ...]): The other nodes the identifier was read as: those a rule of name
             resolution put after :py:attr:`graph_id`, with what they would answer, those read by the same step,
             whose candidates are part of a tie, and those the string has at other releases only, with those releases

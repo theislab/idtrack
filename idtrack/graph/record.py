@@ -62,7 +62,7 @@ class GraphRecord:
         connection_form (dict[str, str]): External database to the Ensembl form its ids are attached to.
         label_names (dict[str, str]): The external databases whose ids are labels (display names, symbols) rather
             than accessions, by Ensembl's database name (``external_db.db_name``): the one name a database's label rows
-            take at every release of the graph (decision 53), for the databases whose labels the graph holds.
+            take at every release of the graph, for the databases whose labels the graph holds.
         renamed_databases (dict[str, str]): Names that Ensembl gives a database's labels at some release and the
             graph does not, with the name the graph gives them (one name at every release).
         misplaced_external_entries (tuple[str, ...]): External ids left out because they are Ensembl ids.
@@ -71,10 +71,10 @@ class GraphRecord:
             several loci over the releases of the graph (lower case).
         database_names (dict[str, dict[str, tuple[tuple[int, int], ...]]]): Per database of the graph's selection, the
             names of Ensembl's databases it holds and the releases (inclusive ranges) at which they hold links: its own
-            name on every form, and the names whose links continue it (decision 104,
-            :py:mod:`idtrack.build.continuity`).
+            name on every form, and the names whose links continue it
+            (:py:mod:`idtrack.build.continuity`).
         assembly_mappings (dict[str, dict[str, Any]]): Ensembl's mappings of one assembly onto a later one that the
-            graph carried places by (decision 103): per chain file, ``from`` and ``to`` (assembly keys), the
+            graph carried places by: per chain file, ``from`` and ``to`` (assembly keys), the
             ``release`` whose ``assembly_chain`` folder held it and its ``sha256``; empty where Ensembl publishes none.
         package_version (str | None): The idtrack version that built the graph; for a graph built from a source folder
             that is not an installed idtrack, the statement :py:data:`idtrack._version.SOURCE_FOLDER_BUILD` (no

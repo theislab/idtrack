@@ -4,19 +4,19 @@ Ensembl gives a gene a new stable id more often than the gene changes: a model i
 place, two models are merged, a gene is annotated again on an alternative locus, an assembly patch or an LRG record
 beside the reference sequence. Several stable ids can therefore stand for one gene, and a rule that counts genes by
 stable id counts these as several. The rules that ask how many genes an identifier names over the releases
-(decision 73: an entry of :py:data:`idtrack.build.database_manager.ONE_GENE_ONLY` links genes only where it names one
-gene; decision 74: a label of more genes than an identity can is a family name,
-:py:attr:`idtrack.TheGraph.label_families`), the rule of bridges (decision 72: an id is evidence of a lineage only
-where it leaves one gene for another at the same place) and the Y copies of pseudoautosomal genes (decisions 93 and
-95, :py:meth:`idtrack.TheGraph.y_copies`) read it here, from what the graph holds of Ensembl's own tables (the count
-of genes at one release, :py:meth:`idtrack.TheGraph.genes_linked_at_once`, counts stable ids; it says why):
+(an entry of :py:data:`idtrack.build.database_manager.ONE_GENE_ONLY` links genes only where it names one gene; a
+label of more genes than an identity can is a family name, :py:attr:`idtrack.TheGraph.label_families`), the rule of
+bridges (an id is evidence of a lineage only where it leaves one gene for another at the same place) and the Y copies
+of pseudoautosomal genes (:py:meth:`idtrack.TheGraph.y_copies`) read it here, from what the graph holds of Ensembl's
+own tables (the count of genes at one release, :py:meth:`idtrack.TheGraph.genes_linked_at_once`, counts stable ids;
+it says why):
 
 - **places** (:py:meth:`idtrack.TheGraph.places`, from Ensembl's ``gene`` and ``seq_region`` tables): two genes are
   at one place when, on one assembly, a place of one shares a base with a place of the other on one sequence region
   and one strand (:py:func:`overlap`). Places are compared base by base on the reference sequence; a patch, a
   haplotype, an alternative locus or an LRG record lies on a sequence of its own, whose coordinates are not those of
   the reference sequence;
-- **places carried across an assembly change** (:py:meth:`idtrack.TheGraph.carried_places`, decision 103): where
+- **places carried across an assembly change** (:py:meth:`idtrack.TheGraph.carried_places`): where
   Ensembl publishes a mapping of an earlier assembly onto a later one (its chain files,
   :py:mod:`idtrack.build.assembly_chain`), a place on the earlier assembly is carried onto the later one by its aligned
   bases at build, and compared there by overlap as places on one assembly are; where Ensembl publishes none (pig
@@ -43,7 +43,7 @@ of genes at one release, :py:meth:`idtrack.TheGraph.genes_linked_at_once`, count
 - **a region that repeats another**: a pseudoautosomal region of Y is the same sequence as the region of X it repeats,
   so a place in it is read on that region of X (:py:func:`idtrack.organisms.pseudoautosomal_repeats`, GRC's regions,
   equal to Ensembl's ``PAR`` assembly exceptions): the Y copy of a pseudoautosomal gene, which Ensembl gives an id of
-  its own from release 110, lies at its gene's place (decisions 93 and 95).
+  its own from release 110, lies at its gene's place.
 
 The rule of bridges compares two genes by their places only (:py:func:`relation`, the keys of
 :py:data:`idtrack.results.PLACE_RELATIONS`: the walk follows Ensembl's history itself), over every version of each
@@ -419,7 +419,7 @@ def place_kinds(graph: TheGraph, node: str, release: int) -> set[str]:
 def joins_mitochondrial_and_nuclear(
     graph: TheGraph, older: str, old_release: int, newer: str, new_release: int
 ) -> bool:
-    """Tell whether a history step joins a gene of the mitochondrial genome and a gene of a nuclear sequence (decision 91).
+    """Tell whether a history step joins a gene of the mitochondrial genome and a gene of a nuclear sequence.
 
     One version lies on the mitochondrial genome at its side of the event, the other has a place at its side and none
     on the mitochondrial genome (a chromosome or a scaffold: the kind says it is nuclear, whatever the relation of the
@@ -491,7 +491,7 @@ def on_other_sequences(one: GeneFacts, other: GeneFacts) -> bool:
 
 
 def _carried_relation(one: GeneFacts, other: GeneFacts) -> str | None:
-    """Compare a gene's places carried onto another assembly with the other gene's places there (decision 103).
+    """Compare a gene's places carried onto another assembly with the other gene's places there.
 
     Returns:
         str | None: ``same_place`` when a carried place of one overlaps a place of the other on its assembly,
@@ -553,7 +553,7 @@ def relation(one: GeneFacts, other: GeneFacts) -> str:
         str: In this order: ``same_place`` when, on an assembly on whose reference sequence both lie, a place of one
         overlaps a place of the other (:py:func:`same_place`); ``places_apart`` when they lie on the reference sequence
         of a common assembly and no places overlap there; else, where a place of one was carried onto an assembly on
-        whose reference sequence the other lies (Ensembl's mapping of the assemblies, decision 103), ``same_place``
+        whose reference sequence the other lies (Ensembl's mapping of the assemblies), ``same_place``
         when a carried place overlaps a place of the other there and ``places_apart`` when none does; else, where
         either lies outside the reference sequence, ``places_apart`` when the reference region a copy stands for
         (Ensembl's assembly exception) shares no base with what the other stands for, or lies on whole sequences of

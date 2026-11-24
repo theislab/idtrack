@@ -56,8 +56,10 @@ how to start:
   idtrack info idtrack_cache/graph_homo_sapiens_assembly38_min48_max115.npz
   idtrack convert idtrack_cache/graph_homo_sapiens_assembly38_min48_max115.npz TP53 BRCA1
 
-Each command has its own help (idtrack <command> --help). idtrack {__version__}; documentation:
-https://idtrack.readthedocs.io/"""
+Each command has its own help (idtrack <command> --help).
+
+idtrack {__version__}
+documentation: https://idtrack.readthedocs.io/"""
 
 
 def _build_parser() -> argparse.ArgumentParser:

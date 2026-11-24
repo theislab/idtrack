@@ -31,8 +31,8 @@ _fallback_announced: set[tuple[str, str]] = set()
 
 # Where the documented recipe for making an externals YAML lives (shown in error messages).
 _EXTERNALS_RECIPE = (
-    "the tutorial 'External database configuration' (docs/_notebooks/02_prepare_new_external_yaml.ipynb) and "
-    "'Adding organism support' in the contributing guide"
+    "the tutorial 'External database configuration' (docs/_notebooks/06_prepare_new_external_yaml.ipynb) and "
+    "'Adding an organism' on the documentation's page Organisms"
 )
 
 

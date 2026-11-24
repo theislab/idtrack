@@ -39,7 +39,7 @@ MAX_ENSEMBL_VERSION = 2**16 - 1
 MAX_VERSION_DIGITS = len(str(MAX_ENSEMBL_VERSION))
 
 #: The strings that pandas reads as a missing value by default (``pandas._libs.parsers.STR_NA_VALUES`` of pandas 3.1):
-#: the lists and tables people paste are mostly written by pandas or read with it (decision 52). Copied here, not read,
+#: the lists and tables people paste are mostly written by pandas or read with it. Copied here, not read,
 #: because the query path imports no pandas (it needs numpy and networkx only); a unit test compares the copy with
 #: pandas' own list, so that a change of the source fails a test instead of drifting.
 PANDAS_MISSING_VALUES: frozenset[str] = frozenset(
@@ -66,7 +66,7 @@ PANDAS_MISSING_VALUES: frozenset[str] = frozenset(
     }
 )
 #: The spellings of a missing value, compared without letter case after the reading below: pandas' missing values
-#: (:py:data:`PANDAS_MISSING_VALUES`) and the two that decision 81 adds, pandas' text of a missing date or time
+#: (:py:data:`PANDAS_MISSING_VALUES`) and two that idtrack adds, pandas' text of a missing date or time
 #: (``NaT``) and UniProt's placeholder name (``unknown``). They stand for nothing far more often than for a gene
 #: (``NaN`` is an old alias of SCN11A, ``NA`` a synonym of a few genes); a caller who names the source database
 #: (``from_database``) has them looked up as identifiers of that database.

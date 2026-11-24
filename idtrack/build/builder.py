@@ -778,7 +778,7 @@ class GraphMaker:
         return chains, mappings
 
     def _database_names(self) -> dict[str, dict[str, tuple[tuple[int, int], ...]]]:
-        """Return, per selected database, the names of Ensembl it holds with their releases (decision 104)."""
+        """Return, per selected database, the names of Ensembl it holds with their releases."""
         dm = self.database_manager
         prefix = ids.SYNONYM_PREFIX
         selected = {n[len(prefix) :] if n.startswith(prefix) else n for n in dm.external_inst.selected_names()}
@@ -1717,7 +1717,7 @@ def _carry(
     later: int,
     serving_assembly: dict[int, int],
 ) -> list[tuple[str, int, int, int]]:
-    """Carry a place of one assembly onto a later one by Ensembl's mapping (decision 103).
+    """Carry a place of one assembly onto a later one by Ensembl's mapping.
 
     By the chain of the pair where Ensembl publishes one; else through the assembly that follows the earlier one,
     where Ensembl maps the earlier onto it and that one onto the later (a published mapping at every step); else none.

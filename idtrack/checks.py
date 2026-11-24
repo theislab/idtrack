@@ -1045,7 +1045,8 @@ class GraphChecks:
         that serves the release. The invariant holds when every gene that the table gives an id converts to
         exactly those ids (letter case ignored), and no gene converts to an id that the table does not give it. A
         gene without an id in the database converts to nothing; that is the only loss that is not a violation. The
-        entries the build left out by decision 73's rule (:py:attr:`idtrack.TheGraph.entries_of_several_genes`) are no
+        entries the build left out because Ensembl gives them to several genes
+        (:py:attr:`idtrack.TheGraph.entries_of_several_genes`) are no
         ids of the table here.
 
         Args:

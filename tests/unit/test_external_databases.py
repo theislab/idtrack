@@ -586,7 +586,7 @@ class TestMissingYaml:
             edb.load_modified_yaml()
         message = str(info.value)
         assert os.path.join(temp_dir, "danio_rerio_externals_modified.yml") in message
-        assert "create_template_yaml" in message and "02_prepare_new_external_yaml" in message
+        assert "create_template_yaml" in message and "06_prepare_new_external_yaml" in message
 
     def test_file_without_the_organism_means_no_externals(self, temp_dir):
         """File without the organism means no externals."""
@@ -692,7 +692,7 @@ class TestShippedFiles:
         assert modified["sus_scrofa"]["translation"]["EntrezGene"]["Assembly"]["9"]["Include"] is True
 
     def test_notebook_allowlists_match_the_package(self):
-        """Tutorial 02 shows the allowlists as editable dicts; they must equal the package's lists."""
+        """Tutorial 06 shows the allowlists as editable dicts; they must equal the package's lists."""
         import ast
         import json
         import re
@@ -700,7 +700,7 @@ class TestShippedFiles:
         from idtrack.build.default_externals import DEFAULT_EXTERNALS
 
         notebook = os.path.join(
-            os.path.dirname(__file__), "..", "..", "docs", "_notebooks", "02_prepare_new_external_yaml.ipynb"
+            os.path.dirname(__file__), "..", "..", "docs", "_notebooks", "06_prepare_new_external_yaml.ipynb"
         )
         if not os.path.isfile(notebook):
             pytest.skip("the docs are not beside the tests (the suite runs against an installed package)")

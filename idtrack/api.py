@@ -101,7 +101,7 @@ def _origin_key(origin: Any) -> tuple:
 
 
 def _public(node: str | None) -> str | None:
-    """Return a node as results name it (without the graph's synonym prefix, decision 56)."""
+    """Return a node as results name it (without the graph's synonym prefix, no part of any identifier)."""
     return None if node is None else ids.public_name(node)
 
 
@@ -138,7 +138,7 @@ def _lineage(candidate: Candidate) -> tuple:
 
 
 def _tie_of_readings(conversions: list[Conversion]) -> Conversion:
-    """Join the conversions of several readings of one identifier into one answer (decision 87).
+    """Join the conversions of several readings of one identifier into one answer.
 
     The readings exist at one release (:py:meth:`idtrack.graph.TheGraph.readings`). Their candidates are ranked as the
     candidates of one conversion rank the genes an identifier enters (:py:mod:`idtrack.engine.ranking`): the best
@@ -925,7 +925,7 @@ class API:
         )
 
     def _lrg_record(self, conversion: Conversion | None) -> str | None:
-        """Return the LRG record an Ensembl id of a conversion is an id of, at the release it was read at (decision 96).
+        """Return the LRG record an Ensembl id of a conversion is an id of, at the release it was read at.
 
         An LRG record (a fixed reference sequence of one gene) is annotated by Ensembl as a gene of its own on a sequence
         region of its own, both named by the record's id (``LRG_321``), with its transcripts and translations; in the
@@ -956,7 +956,7 @@ class API:
         return entry if on_record else None
 
     def _lrg_conversion(self, conversion: Conversion, arguments: dict[str, Any], record: str) -> Conversion | None:
-        """Convert the gene an LRG record describes in place of the record (decision 96).
+        """Convert the gene an LRG record describes in place of the record.
 
         The record's gene at the release it is read at is the gene of the reference sequence to which a symbol database
         of the organism gives the record's symbol there (Ensembl gives an LRG record the HGNC symbol of its gene).
@@ -1008,7 +1008,7 @@ class API:
         )
 
     def _par_y_twins(self, conversion: Conversion, to_release: int) -> set[str]:
-        """Return the Y copies of the genes of a conversion's best answer at the target release (decision 93).
+        """Return the Y copies of the genes of a conversion's best answer at the target release.
 
         A Y copy is a gene in a pseudoautosomal region of Y (:py:meth:`idtrack.graph.TheGraph.in_pseudoautosomal_y`)
         to which a symbol database gives a symbol of the gene on X at that release.
@@ -1075,7 +1075,8 @@ class API:
         written as text) and any other error of one identifier (an exceeded budget, an internal error) is that item's
         :py:attr:`idtrack.results.ConversionResult.error`, with status ``error``, and the batch goes on. Each
         distinct identifier is converted once; repeated identifiers get the same (immutable) result. An item is
-        answered as :py:meth:`convert` answers it alone, but for the copies of decision 82 (below).
+        answered as :py:meth:`convert` answers it alone, but for the copies of other items made unique by a single-cell
+        tool (below).
 
         Args:
             identifiers: The identifiers (a list, tuple, NumPy array, pandas Index or Series of strings, which may hold
@@ -1171,14 +1172,14 @@ class API:
     def _copies(
         self, identifiers: list[str], from_release: int | None, from_database: str | None, to_release: int
     ) -> dict[str, str]:
-        """Find the items of a batch that are copies of other items made unique by a single-cell tool (decision 82).
+        """Find the items of a batch that are copies of other items made unique by a single-cell tool.
 
         An item is a copy when it is another item followed by ``-<digits>``, ``.<digits>`` or ``_<digits>`` (scanpy's,
         R's and other tools' suffixes for repeated names), is not itself an exact name at the release its own
         conversion reads it at (``IGHV3-30-2``, ``MIR486-2`` are names of their own), and the item it extends is no
         Ensembl or LRG id (``ENSG00000141510.5`` beside ``ENSG00000141510`` is a version) and no versioned accession
         that the item writes with a version (``NM_000546.5`` beside ``NM_000546`` is a version of it, read as one,
-        not judged, decision 101, or a version the accession never had,
+        not judged, or a version the accession never had,
         :py:meth:`idtrack.graph.TheGraph.known_versions`). The release is the one
         :py:meth:`convert` reads the item at: *from_release* where the graph holds the item there, else (as without
         *from_release*) the target release if one of its readings exists there, else the latest release at which one
@@ -1389,8 +1390,8 @@ class API:
     def source_inference(self, identifiers: Iterable[str], mode: str = "assembly_release") -> SourceInference:
         """Infer where a list of identifiers comes from: the origins it cannot tell apart, and by how much.
 
-        Each distinct identifier counts once (decision 97) for every origin (database, assembly, release) at which it
-        is an identifier, read as it is at that release (decision 79): a string counts at a release where name
+        Each distinct identifier counts once for every origin (database, assembly, release) at which it
+        is an identifier, read as it is at that release: a string counts at a release where name
         resolution at that release (:py:meth:`idtrack.graph.TheGraph.readings`) reads it as a name of that release,
         so that a name renamed later counts as the name it was where it was one, and not at the releases where it is
         only a synonym (a synonym says the string was once a name or an alias, not that a table of that release wrote

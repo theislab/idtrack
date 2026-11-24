@@ -240,13 +240,23 @@ class AssemblyException(NamedTuple):
     """Which region of the reference sequence a patch, a haplotype or a pseudoautosomal region stands for.
 
     One row of Ensembl's ``assembly_exception`` table (:py:meth:`idtrack.DatabaseManager.create_assembly_exceptions`)
-    at the releases that list it. The fields: ``assembly``, the key of the assembly; ``region``, ``start`` and
-    ``end``, the bases of the sequence region outside the reference sequence (or of the pseudoautosomal region of Y);
-    ``type``, Ensembl's type of the exception (``PATCH_FIX``, ``PATCH_NOVEL``, ``HAP``, ``PAR``); ``ref_region``,
-    ``ref_start`` and ``ref_end``, the region of the reference sequence it stands for; ``ref_kind``, what that region
-    is (:py:data:`idtrack.graph.genes.PLACE_KINDS`); ``releases``, the releases that list it, on the assembly that
-    serves them; ``carried``, the reference region carried onto later assemblies by Ensembl's mapping of the
-    assemblies, ``((assembly, region, start, end), ...)`` (decision 103).
+    at the releases that list it (:py:meth:`idtrack.TheGraph.assembly_exceptions`).
+
+    Attributes:
+        assembly (int): The key of the assembly (:py:data:`idtrack.organisms.ORGANISM_TABLE`).
+        region (str): The name of the sequence region outside the reference sequence (a patch or a haplotype), or of
+            chromosome Y for a pseudoautosomal region.
+        start (int): The first base of the exception on *region*, as Ensembl counts them (1-based).
+        end (int): The last base of the exception on *region* (inclusive).
+        type (str): Ensembl's type of the exception: ``PATCH_FIX``, ``PATCH_NOVEL``, ``HAP`` or ``PAR``.
+        ref_region (str): The name of the sequence region of the reference sequence that the exception stands for.
+        ref_start (int): The first base of the region it stands for.
+        ref_end (int): The last base of the region it stands for.
+        ref_kind (str): What that region is, one of :py:data:`idtrack.graph.genes.PLACE_KINDS`.
+        releases (ReleaseSet): The releases that list the exception, on the assembly that serves them.
+        carried (tuple[tuple[int, str, int, int], ...]): The region it stands for carried onto later assemblies by
+            Ensembl's mapping of the assemblies (:py:mod:`idtrack.build.assembly_chain`), as
+            ``(assembly, region, start, end)``; empty where nothing was carried.
     """
 
     assembly: int

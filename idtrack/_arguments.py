@@ -98,7 +98,7 @@ def strings(values: Any, name: str, missing: bool = False) -> list[Any]:
         name: The name of the argument, for the message.
         missing: Keep the items that are missing values as Python, NumPy and pandas hold them
             (:py:func:`is_missing_object`: ``None``, NaN, ``pd.NA``, ``NaT``), for the caller to answer each as a
-            missing value (decision 81: a missing value is never a gene, and one item never stops a batch); ``False``:
+            missing value (a missing value is never a gene, and one item never stops a batch); ``False``:
             they are refused like any other item that is not a string.
 
     Returns:

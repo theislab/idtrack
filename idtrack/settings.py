@@ -28,7 +28,7 @@ from idtrack.errors import ArgumentTypeError, InvalidArgumentError
 #: The version of the rules by which identifiers are read and converted. It is raised with every change of the code
 #: that changes an answer (with the same graph), so that a store of answers (the result cache of
 #: :py:class:`idtrack.harmonize.HarmonizeFeatures`) is keyed by what decides its content: this number and the graph's
-#: content digest, not the package's version (decision 69).
+#: content digest, not the package's version.
 RULES_VERSION = 4
 
 #: External databases whose entries name a family of genes, by the database's own definition (Rfam: families of RNA):
@@ -39,12 +39,13 @@ FAMILY_DATABASES: frozenset[str] = frozenset({"RFAM"})
 
 #: The share of the pairs of consecutive releases of one link (an accession, one version of an Ensembl id, a database) in
 #: which the version that Ensembl's cross reference gives the accession differs, above which a database's number is an
-#: edit counter of its records and not a version of the sequence (decision 101;
-#: :py:meth:`idtrack.graph.TheGraph.edit_counter_databases`): a version of the sequence holds while the link holds, so
+#: edit counter of its records and not a version of the sequence
+#: (:py:meth:`idtrack.graph.TheGraph.edit_counter_databases`): a version of the sequence holds while the link holds, so
 #: that "the releases at which the accession had that version" are a stretch of time; a number that changes with nearly
 #: every release (UniProt's entry version, ``Q9TSV4.120``) identifies no state that a typed version could mean. Measured
 #: on the five graphs of Ensembl 115: RefSeq, CCDS, Havana and Vega 0 to 3.8 % of the pairs (human's Havana translations
-#: 14.6 %), UniProt's Swiss-Prot and TrEMBL 58 to 99.7 % (docs/usage.rst); one half lies in the gap between the two.
+#: 14.6 %), UniProt's Swiss-Prot and TrEMBL 58 to 99.7 % (the documentation's page How an identifier is read); one
+#: half lies in the gap between the two.
 VERSION_EDIT_COUNTER_SHARE = 0.5
 
 #: External databases whose ids name a clone or a region rather than a gene, or a family of genes

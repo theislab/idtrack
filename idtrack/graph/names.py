@@ -23,10 +23,13 @@ _RESOLVE_STEPS = ("exact", "case", "separator", "version")
 class Readings(NamedTuple):
     """What a string means in a graph at a release (:py:meth:`NameResolution.readings`).
 
+    A ``how`` below is the step of name resolution that matched (a key of :py:data:`idtrack.results.MATCH_STEPS`;
+    ``"synonym:<step>"`` for a synonym).
+
     Attributes:
         taken: ``(node, how)`` of each reading taken: the first is :py:meth:`NameResolution.resolve_name`'s answer;
             several when the step that matched found several identifiers that exist at the release (a tie of
-            readings, decision 87); empty when the string means nothing.
+            readings); empty when the string means nothing.
         set_aside: ``(node, how, reason)`` of the readings that a rule put after the one taken (``reason``: a key of
             :py:data:`idtrack.results.READING_REASONS`).
         here: The readings taken exist at the release asked about (``False``: the string means an identifier that
@@ -87,7 +90,7 @@ def _version_written_so(identifier: str, node: str) -> bool:
     """Tell whether a string that the step ``"separator"`` reads as an Ensembl id writes its version as Ensembl does.
 
     Ensembl writes a version after ``.`` (``ENSG00000141510.5``); ``-<digits>`` and ``_<digits>`` after an Ensembl id
-    are as often the suffixes that tools append to make repeated names unique (decision 82) as versions written
+    are as often the suffixes that tools append to make repeated names unique as versions written
     otherwise, so they are read as no version: such a form stays not found, never another version's answer.
 
     Args:
@@ -379,7 +382,7 @@ class NameResolution:
         return found
 
     def _judged_versions(self, node: str) -> dict[int, int]:
-        """Return the versions of an accession attached by links of databases whose versions date it (decision 101)."""
+        """Return the versions of an accession attached by links of databases whose versions date it."""
         counters = self.edit_counter_databases()
         store = self._frozen()
         number = store.index.get(node)
@@ -459,13 +462,13 @@ class NameResolution:
         return found
 
     def display_rank(self, node: str, gene: str, release: int, typed: str) -> int:
-        """Rank how a typed string is a gene's display name at a release (decision 102; :py:mod:`idtrack.engine.ranking`).
+        """Rank how a typed string is a gene's display name at a release (:py:mod:`idtrack.engine.ranking`).
 
         The display name holds for the spelling typed. Letter case is evidence only where the string has letters of
         both cases: then the gene's display name is the string only where its database spelt it so at the release
         (mouse ``Foxl1`` at 70 is the display name of the gene MGI names so, not of the gene UniProt displays as
         ``FOXL1``); separators are not compared (the step ``"separator"`` reads them as one). A string in one letter
-        case carries no evidence of case (decisions 55 and 80): it is read without case, and in an organism whose
+        case carries no evidence of case: it is read without case, and in an organism whose
         symbols are written in mixed case (:py:meth:`symbol_case`) the display name of a name authority
         (:py:attr:`authority_databases`) ranks before another source's (mouse ``GAPDH`` is the gene MGI displays as
         ``Gapdh`` before the gene UniProt displays as ``GAPDH``).
@@ -585,11 +588,11 @@ class NameResolution:
            UniProt, CCDS, the EMBL protein ids; :py:meth:`accession_versions`) and no id of a symbol database of the
            organism (:py:attr:`idtrack.organisms.SYMBOL_DATABASES`), and some link attached that version:
            ``NM_000546.5`` for ``NM_000546`` as the links that attached version 5 carry it, at the releases at which
-           they did (decision 14's rule for Ensembl ids, applied to accessions). Where the accession's numbers come only
-           from databases whose number is an edit counter of their records (:py:meth:`edit_counter_databases`:
-           UniProt's entry version), the version is not judged: the accession is read without it, as
-           ``"version_not_judged"`` (decision 101). Nothing else is ever cut off the name
-           of an external identifier: ``SLA.7`` and ``SLA_11`` are not ``SLA``, ``NM_713028147`` is not ``NM``.
+           they did (the rule of Ensembl ids, whose versions are read at the releases of each version, applied to
+           accessions). Where the accession's numbers come only from databases whose number is an edit counter of
+           their records (:py:meth:`edit_counter_databases`: UniProt's entry version), the version is not judged: the
+           accession is read without it, as ``"version_not_judged"``. Nothing else is ever cut off the name of an
+           external identifier: ``SLA.7`` and ``SLA_11`` are not ``SLA``, ``NM_713028147`` is not ``NM``.
         5. ``"version_newer_than_graph"``: the string is an Ensembl id with a version higher than every version the
            graph holds of it (written with ``.``), and the id is active at the last release of the
            graph: the version may belong to a release newer than the graph, so the string stands for the latest
@@ -657,14 +660,14 @@ class NameResolution:
         :py:meth:`resolve_name` returns the first reading taken. Two rules take a reading before the order of the
         steps would, and the reading the steps would have taken is then *set aside*, so that a caller can report it:
 
-        - **Symbols without letter case first** (decisions 55 and 80). In an organism whose symbol databases write
+        - **Symbols without letter case first**. In an organism whose symbol databases write
           symbols in mixed case (:py:meth:`symbol_case`, read from the graph: MGI writes ``Trp53``), a string in one
           letter case (``AR``, ``nos2``) that is not exactly a name of the release is read first as a symbol of the
           organism's symbol databases without letter case; where that
           names exactly one gene at the release, it is the reading taken (match ``"case"``), and the reading of the
           steps (an exact synonym of another gene, ``AR`` of three) is set aside. A named ``from_database`` that is
           not a symbol database of the organism turns the rule off.
-        - **No separator variant joins a make-unique suffix into another gene's synonym** (decision 82). A string
+        - **No separator variant joins a make-unique suffix into another gene's synonym**. A string
           that ends in ``-<digits>``, ``.<digits>`` or ``_<digits>`` (``SRF.1``: single-cell tools append such
           suffixes to repeated names) is not read by the steps ``"separator"`` and ``"case"`` as a synonym whose genes
           at the release are none of the genes to which a name authority gives the string before the suffix, written
@@ -679,7 +682,7 @@ class NameResolution:
         identifier as that other database's id is set aside beside it (``"unversioned_database"``): never one reading
         silently.
 
-        A step that finds several identifiers that exist at the release takes them all (decision 87: a separator
+        A step that finds several identifiers that exist at the release takes them all (a separator
         reading that reaches several names is a tie, ``AY172335_1`` for ``AY172335-1`` and ``AY172335.1`` where both
         are names at the release read). Readings are joined only where they exist at one release: when none exists at
         the release asked about, the string is read at the latest release at which one does (:py:meth:`resolve_name`),
@@ -688,7 +691,7 @@ class NameResolution:
 
         A reading the steps reached before the one taken that exists only at other releases is reported with those
         releases (:py:attr:`Readings.other_releases`): a name of one gene then, read as a synonym of another gene at
-        the release asked about, says what the string meant at another time (decision 99: the release asked about
+        the release asked about, says what the string meant at another time (the release asked about
         decides; ask at the other release for the other meaning).
 
         Args:
@@ -726,8 +729,9 @@ class NameResolution:
             at (int | None): The release asked about; ``None``: ``goal``.
             database (str | None): The database the string is meant as an id of.
             goal (int | None): Without ``at``, the release a conversion goes to; ``None``: the last release.
-            rules (bool): Apply the rules of decisions 55, 80 and 82 (:py:meth:`readings`); ``False``: the order of
-                the steps alone.
+            rules (bool): Apply the rules that put one reading before another (:py:meth:`readings`: symbols
+                without letter case first; no separator variant joins a make-unique suffix into another gene's
+                synonym); ``False``: the order of the steps alone.
             settle (bool): When no reading exists at the release, read the string at the latest release at which one
                 does (:py:meth:`readings`); ``False``: return the first reading in the order of the steps (the
                 reading at that latest release asks for it, so that it is asked once).
@@ -854,7 +858,7 @@ class NameResolution:
         return _settled((), aside)
 
     def _symbol_without_case(self, store: _Store, identifier: str, release: int, database: str | None) -> str | None:
-        """Read a string against the organism's convention of letter case as one of its symbols (decisions 55, 80).
+        """Read a string against the organism's convention of letter case as one of its symbols.
 
         Args:
             store (_Store): The frozen store of the graph.
@@ -894,7 +898,7 @@ class NameResolution:
         return None
 
     def symbol_case(self) -> str | None:
-        """Return how the organism's symbol databases write their symbols, read from the graph (decisions 55 and 80).
+        """Return how the organism's symbol databases write their symbols, read from the graph.
 
         ``"mixed"`` when more than half of the names that the organism's symbol databases
         (:py:data:`idtrack.organisms.SYMBOL_DATABASES`) attach to genes, at any release, are written with a small
@@ -937,7 +941,7 @@ class NameResolution:
         return "mixed" if 2 * small > len(written) else "capitals"
 
     def _joins_suffix(self, identifier: str, name: str, release: int, database: str | None) -> bool:
-        """Tell whether a separator reading joins a make-unique suffix into another gene's name (decision 82).
+        """Tell whether a separator reading joins a make-unique suffix into another gene's name.
 
         Args:
             identifier (str): The string as typed (``SRF.1``).
@@ -1092,7 +1096,7 @@ class NameResolution:
         return None
 
     def in_pseudoautosomal_y(self, gene: str, release: int) -> bool:
-        """Tell whether a gene lies in a pseudoautosomal region of chromosome Y at a release (decisions 93, 95).
+        """Tell whether a gene lies in a pseudoautosomal region of chromosome Y at a release.
 
         Such a region repeats a region of X (:py:attr:`idtrack.TheGraph.repeated_regions`); a gene in it is the Y copy
         of the gene at its place on X, where there is one (:py:meth:`y_copies`).
@@ -1111,7 +1115,7 @@ class NameResolution:
         return number is not None and bool(masks.get(number, 0) >> release & 1)
 
     def y_copies(self, genes: Iterable[str], release: int) -> set[str]:
-        """Return the genes of a set that are the Y copies of other genes of the set at a release (decisions 93, 95).
+        """Return the genes of a set that are the Y copies of other genes of the set at a release.
 
         A Y copy lies in a pseudoautosomal region of Y at the release (:py:meth:`in_pseudoautosomal_y`) at the place of
         another gene of the set: the one rule of a gene reads its place on the region of X that the region of Y repeats
@@ -1167,8 +1171,7 @@ class NameResolution:
     def _name_match(self, name: str, gene: str, database: str, mask: int) -> NameMatch:
         """Return the public record of a name attached to a gene at the releases of a mask.
 
-        A synonym and its database are named without the graph's prefix and the record is marked as a synonym
-        (decision 56).
+        A synonym and its database are named without the graph's prefix and the record is marked as a synonym.
         """
         return NameMatch(
             name=ids.public_name(name),
@@ -1197,7 +1200,7 @@ class NameResolution:
 
         Raises:
             ArgumentTypeError: If *name* is not a string.
-            InvalidArgumentError: If *name* begins with the graph's internal prefix of synonyms (decision 56).
+            InvalidArgumentError: If *name* begins with the graph's internal prefix of synonyms.
         """
         _arguments.string(name, "name")
         if name.casefold().startswith(ids.SYNONYM_PREFIX.casefold()):
@@ -1311,7 +1314,7 @@ class NameResolution:
         return any(mask >> last & 1 for mask in self._judged_masks(name).values())
 
     def _judged_masks(self, name: str) -> dict[int, int]:
-        """Return ``{version: releases}`` of an accession on the assembly that serves each release (decision 101's)."""
+        """Return ``{version: releases}`` of an accession on the assembly that serves each release."""
         store = self._frozen()
         number = store.index.get(name)
         if number is None:
@@ -1332,7 +1335,7 @@ class NameResolution:
     def _unversioned_at(self, name: str, release: int) -> bool:
         """Tell whether an external node is, at a release, an id of a database that gives it no version.
 
-        A number can be the id of two numbering schemes (decision 86): a numeric Havana translation id of the NCBI36
+        A number can be the id of two numbering schemes: a numeric Havana translation id of the NCBI36
         releases, to which Ensembl's cross references give a version, and NCBI's gene id, which has none. Which
         databases give an identifier versions is read from the graph (:py:meth:`accession_versions`): a database none of
         whose links of the node attaches a version writes it without one.

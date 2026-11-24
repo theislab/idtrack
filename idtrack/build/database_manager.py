@@ -2604,7 +2604,7 @@ class DatabaseManager:
         return self.change_release_auto_assembly(int(release))
 
     def database_filing(self) -> continuity.Filing:
-        """Return which of Ensembl's database names each database the externals YAML selects holds (decision 104).
+        """Return which of Ensembl's database names each database the externals YAML selects holds.
 
         The selected databases are the ``(form, name)`` pairs the YAML enables anywhere (any assembly or release; a
         synonym's name by its entry's). The links of every release of the window are read on the assembly that serves it
@@ -2674,7 +2674,10 @@ class DatabaseManager:
         for database, label in names.items():
             database_of.setdefault(label, set()).add(database)
         releases = sorted(int(r) for r in self.available_releases_all_assemblies if int(r) <= self.snapshot_release)
-        self.log.info(f"The databases of {self.organism} are being read across its releases (decision 104).")
+        self.log.info(
+            f"The databases of {self.organism} are being read across its releases, to find the names under which "
+            "Ensembl filed each selected database at each release."
+        )
         return continuity.database_filing(
             lambda release: self.change_form(ids.BACKBONE_FORM)._serving_manager(release)._release_links(),
             releases,
@@ -2683,7 +2686,7 @@ class DatabaseManager:
         )
 
     def _selection(self) -> list[str]:
-        """Return the names whose rows the manager's ``external_relevant`` table holds (decision 104).
+        """Return the names whose rows the manager's ``external_relevant`` table holds.
 
         The databases the externals YAML enables for the manager's form, assembly and release, and every database that
         continues one of them (:py:meth:`database_filing`; a selected database's name on a form the YAML does not hold
@@ -2706,7 +2709,7 @@ class DatabaseManager:
         return sorted(chosen)
 
     def _filed(self, rows: pd.DataFrame, filing: continuity.Filing) -> pd.DataFrame:
-        """Return rows of cross references filed under the selected database each is (decision 104).
+        """Return rows of cross references filed under the selected database each is.
 
         A row of a database that continues a selected one is filed under it (by its identifier's form; a selected
         name on a form the YAML does not hold it on, in the runs of releases that continue it), and dropped where it
@@ -3092,11 +3095,11 @@ class DatabaseManager:
         like the accessions); a synonym row's database name carries :py:data:`ids.SYNONYM_PREFIX`. The labels of
         :py:data:`DISPLAY_LABEL_ONLY` are kept where they are the gene's display name, the identifiers of
         :py:data:`BIOTYPE_RESTRICTED` on genes of those biotypes (those of :py:data:`ONE_GENE_ONLY` are judged by the
-        graph, over all its releases). Every value is read as a typed identifier is read (decisions 83 and 84:
-        ``A1BG;`` is ``A1BG``). An identifier without a letter or a digit (``.``, ``-``) is no identifier, nor is a
-        synonym that carries UniProt's evidence text (``{ECO:...}``). Rows without an Ensembl id, a database or an
-        identifier are dropped. The rows are in a total order (database, Ensembl id, external id, identities), without
-        duplicates.
+        graph, over all its releases). Every value is read as a typed identifier is read (stray punctuation and quotes
+        at its ends removed, Unicode normalised: ``A1BG;`` is ``A1BG``). An identifier without a letter or a digit
+        (``.``, ``-``) is no identifier, nor is a synonym that carries UniProt's evidence text (``{ECO:...}``). Rows
+        without an Ensembl id, a database or an identifier are dropped. The rows are in a total order (database,
+        Ensembl id, external id, identities), without duplicates.
 
         Args:
             ed: ``external_db``.

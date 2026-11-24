@@ -46,7 +46,11 @@ if TYPE_CHECKING:
 
 
 class Written(NamedTuple):
-    """How an external identifier was written, where that restricts the links that carry it (:py:meth:`Track._read`).
+    """How an external identifier was written, where that restricts the links that carry it.
+
+    Where the query's spelling, or a version written after an accession, limits which links of its node carry it, a
+    conversion follows only those links from the node it read the query as (:py:meth:`idtrack.TheGraph.resolve_name`);
+    this records what limits them. It lives within one conversion: no result holds it.
 
     Attributes:
         text: The spelling as typed, where the string matched exactly a node that some link spells otherwise (only the
@@ -385,7 +389,7 @@ class _GraphReader:
 
         Returns:
             tuple[str, ...]: The external databases of the assembly that serves the release (not the synonyms a
-            database records: decision 56), and ``ensembl_gene`` and ``base_ensembl_gene``.
+            database records: a synonym is no target database), and ``ensembl_gene`` and ``base_ensembl_gene``.
         """
         found = self._final_databases.get(release)
         if found is None:
@@ -552,7 +556,7 @@ class _Search:
 
         A history step between two versions of the id that joins a gene of the mitochondrial genome and a gene of a
         nuclear sequence (:py:func:`idtrack.graph.genes.joins_mitochondrial_and_nuclear`, read from the kinds of the
-        places of each version: decision 91) separates two genes that share the stable id (decision 100). The versions
+        places of each version) separates two genes that share the stable id. The versions
         joined by the other history steps of the id are one side.
 
         Args:
@@ -709,7 +713,7 @@ class Track:
        splits, retirements) forward or backward in time until the target release. It is a best-first search over
        states ``(gene, release)``: every state is expanded once, so the work is bounded by the size of the part of
        the history that the query can reach, and every call has a budget. A step between a gene of the mitochondrial
-       genome and a gene of a nuclear sequence is no lineage and is not followed (decision 91; the explained path
+       genome and a gene of a nuclear sequence is no lineage and is not followed (the explained path
        lists it among the refused steps).
     4. **Bridges.** Only when the history leads to no gene at the target release, the search may pass from a gene to
        another gene that carried the same external id (or the same transcript) at the same time or later (the gap in
@@ -1276,7 +1280,7 @@ class Track:
 
         1. A synonym is no bridge (``synonym``): a synonym names other genes far more often than it stands for one.
            Nor is any id between the two sides of a stable id that Ensembl reused across the mitochondrial genome and
-           a nuclear sequence (``mitochondrial_genome``, decision 100: two genes, as the history step between them is
+           a nuclear sequence (``mitochondrial_genome``: two genes, as the history step between them is
            refused); the places of such an id are compared per side (:py:meth:`_Search.sides`).
         2. Where the two genes lie on the reference sequence of one assembly, or Ensembl's mapping of their two
            assemblies carries the earlier place onto the later one, the bridge is taken when the places overlap
@@ -1395,7 +1399,7 @@ class Track:
         """Return the releases at which the gene a node stands for carries an id, on the primary line.
 
         The gene is its stable id (:py:meth:`_holders`), or, for an id Ensembl reused across the mitochondrial genome
-        and a nuclear sequence, the versions of the node's side (:py:meth:`_Search.sides`, decision 100).
+        and a nuclear sequence, the versions of the node's side (:py:meth:`_Search.sides`).
 
         Args:
             search (_Search): Scratch memory of the conversion (after :py:meth:`_holders` of the id).
@@ -1679,14 +1683,14 @@ class Track:
         """Tell whether a history step joins a gene of the mitochondrial genome and a gene of a nuclear sequence.
 
         At assembly changes Ensembl gave the ids of mitochondrial genes to nuclear genes (rhesus MT-ND1 to a gene of
-        chromosome 8 of Mmul_10); such a step is no lineage (decision 91): the walk does not follow it, the id has no
+        chromosome 8 of Mmul_10); such a step is no lineage: the walk does not follow it, the id has no
         successor across it (the other rules answer, such as a bridge), and the step is recorded with its rule for the
         explained path. The rule reads the kinds of the places of the two versions
         (:py:func:`idtrack.graph.genes.joins_mitochondrial_and_nuclear`, from Ensembl's sequence regions). A version
         without a place there is no evidence either way, and the step is followed. Every other move of place is
-        followed (decision 89). The versions on the two sides of such a step are two genes that share a stable id by
+        followed. The versions on the two sides of such a step are two genes that share a stable id by
         Ensembl's reuse (:py:meth:`_Search.sides`): bridges compare the places of each side, and a bridge between the
-        two sides is refused like the step (decision 100).
+        two sides is refused like the step.
 
         Args:
             search (_Search): Scratch memory of the conversion; a refused step is recorded there.
@@ -1985,7 +1989,7 @@ class Track:
         :py:meth:`idtrack.graph.TheGraph.display_releases`), the support of the query on the
         entry gene (the number of databases that attach the identifier to that gene at the starting release, to the
         gene itself or to one of its transcripts or translations), both the best over every entry gene from which the
-        search reaches the gene (several where the history merges genes: decision 106), the path score, being the query itself, the
+        search reaches the gene (several where the history merges genes), the path score, being the query itself, the
         number of cross-reference and history steps, and the ids. The best answer: the queried gene id's own version
         at the target release when the search reached it; otherwise the entry genes with the best confidence,
         bridges, gap, display name and support each contribute their best successor (by score, then being the query itself, then,
@@ -2318,7 +2322,7 @@ class Track:
 
         The graph's mark says which genes these are. The Y copy of a pseudoautosomal gene (a gene in a pseudoautosomal
         region of Y at the place of its gene on X, :py:meth:`idtrack.graph.TheGraph.y_copies`) is taken out likewise
-        beside that gene (decision 95). The queried gene id's own version at the target
+        beside that gene. The queried gene id's own version at the target
         release is never taken out: an id that exists at the target release is its own answer.
 
         Args:
@@ -2470,7 +2474,7 @@ def _weight(weight: float) -> float:
     """Return the mapping score of a history edge as a factor of a path's score, 1.0 where Ensembl gives none.
 
     A step between two different ids without a score (Ensembl writes 0 where it measured nothing) is counted apart,
-    before the product of the scores (decision 57; :py:attr:`idtrack.results.Candidate.unscored_steps`).
+    before the product of the scores (:py:attr:`idtrack.results.Candidate.unscored_steps`).
 
     Args:
         weight (float): The ``weight`` of a history edge (NaN when the event has no score).

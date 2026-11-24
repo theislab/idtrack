@@ -9,8 +9,8 @@ caller passes as a function.
 A pair is ordered by its key (:py:class:`Pair`): being the queried gene id's own version at the target release;
 then how its entry gene compares with the other entry genes (the *lineage*: final confidence, bridges, gap of the
 bridges, the query being the entry gene's display name at the starting release, support of the query on the entry
-gene; where the history merges several entry genes into the gene, the best display rank and support of them all,
-decision 106), then how its gene compares with the other successors of the same entry gene (*within*: steps without a score,
+gene; where the history merges several entry genes into the gene, the best display rank and support of them all),
+then how its gene compares with the other successors of the same entry gene (*within*: steps without a score,
 mapping score, being the query itself), then steps and ids.
 
 Of the evidence of which gene a name stands for at a release, Ensembl's display name of a gene (``gene.display_xref_id``)
@@ -18,12 +18,12 @@ is Ensembl's own statement of the gene's name there; support counts the database
 which a projection or a symbol that NCBI attached to another gene's translation is one like any other. So among the
 genes that carry a name at one release the gene whose display name it is ranks first, and support decides between genes
 that are equal in it (two genes that both display the name, or neither). The display name holds for the string as it
-is typed (decision 102): letter case is evidence where the string has mixed case (``Foxl1`` is not the display name
+is typed: letter case is evidence where the string has mixed case (``Foxl1`` is not the display name
 ``FOXL1`` of another gene); a string in one letter case carries none, and in an organism whose symbols are written in
 mixed case the display name of a name authority, read without letter case, ranks before another source's (mouse
 ``GAPDH`` is the gene that MGI displays as ``Gapdh`` before the gene that UniProt displays as ``GAPDH``). A name
 authority's symbol against another
-gene's synonym is decided before both, when the string is read (decision 94: every name of a release before any
+gene's synonym is decided before both, when the string is read (every name of a release before any
 synonym, :py:meth:`idtrack.graph.TheGraph.resolve_name`).
 
 The best answer: the pairs of the queried gene id's own version when the search reached it, else all pairs; of
@@ -59,7 +59,7 @@ class Pair(NamedTuple):
     #: (:py:attr:`idtrack.results.Candidate.display_rank`).
     lineage: tuple
     #: ``(history steps between two ids without a score, -score rounded to 12 places, 0 if the target is the query
-    #: itself else 1)``: a step that Ensembl scored 0 (no score) ranks a path below every measured score (decision 57).
+    #: itself else 1)``: a step that Ensembl scored 0 (no score) ranks a path below every measured score.
     within: tuple
     #: The gene at the target release.
     gene: str

@@ -3,7 +3,7 @@
 # Kemal Inecik
 # k.inecik@gmail.com
 
-"""Ensembl's mappings between two assemblies of an organism: its chain files, fetched, kept and read (decision 103).
+"""Ensembl's mappings between two assemblies of an organism: its chain files, fetched, kept and read.
 
 Where an organism changed assembly, Ensembl publishes how the bases of one assembly lie on the other in the
 ``assembly_chain`` folder of a release (``https://ftp.ensembl.org/pub/release-<r>/assembly_chain/<organism>/``), one

@@ -25,14 +25,14 @@ A list names a database by what it is; the graph reads it on every form and at e
 (NCBI's gene ids on translations up to release 62 and on genes from 63, Rfam's and miRBase's accessions on
 transcripts up to 62, MGI's symbols on translations up to 51), and with it every database of Ensembl whose links
 continue it (RefSeq's mRNA accessions under ``RefSeq_dna`` up to release 63, the HGNC projections of pig and macaque
-genes under ``HGNC_curated_gene`` and ``HGNC_automatic_gene`` up to 60): decision 104,
-:py:meth:`idtrack.DatabaseManager.database_filing`. The species' symbol source is what Ensembl names the genes by
+genes under ``HGNC_curated_gene`` and ``HGNC_automatic_gene`` up to 60), by the continuity of their links
+(:py:meth:`idtrack.DatabaseManager.database_filing`). The species' symbol source is what Ensembl names the genes by
 today. The names Ensembl gave the genes at a release, under whatever database it filed them (UniProt's entry names,
 clone-based names), are in the graph whatever this list says: a gene's display name at a release is a name of the
 gene at that release (:py:meth:`idtrack.DatabaseManager.create_external_db`).
 
-Names that an organism's template does not contain are skipped. Tutorial 02
-(``docs/_notebooks/02_prepare_new_external_yaml.ipynb``) shows the same lists as editable dictionaries.
+Names that an organism's template does not contain are skipped. The tutorial External database configuration
+(``docs/_notebooks/06_prepare_new_external_yaml.ipynb``) shows the same lists as editable dictionaries.
 """
 
 import copy
@@ -57,6 +57,12 @@ def _allowlist(assemblies: Sequence[int], **forms: Iterable[str]) -> Allowlist:
     return {form: {db: list(assemblies) for db in (*databases, *NCBI_GENE)} for form, databases in forms.items()}
 
 
+#: The allowlist of every organism whose externals YAML the package ships, by organism name (the keys of
+#: :py:data:`idtrack.organisms.ORGANISM_TABLE`): ``{form: {database: [assembly keys]}}``, the ``(form, database,
+#: assembly)`` entries that :py:func:`apply_allowlist` includes (``Include: true``) in the organism's template to make
+#: its shipped ``<organism>_externals_modified.yml``. It says which external databases a graph built with the shipped
+#: configuration reads, with the databases of Ensembl whose links continue each of them
+#: (:py:meth:`idtrack.DatabaseManager.database_filing`); a copy of one is a start for an allowlist of your own.
 DEFAULT_EXTERNALS: dict[str, Allowlist] = {
     # Human: HGNC symbols.
     "homo_sapiens": _allowlist(

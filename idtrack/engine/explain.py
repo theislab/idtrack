@@ -312,7 +312,7 @@ class PathBuilder:
             self._refused.append(step)
 
     def result(self) -> ExplainedPath:
-        """Return the explanation collected, its nodes and databases named as results name them (decision 56).
+        """Return the explanation collected, its nodes and databases named as results name them.
 
         A synonym is named without the graph's prefix (its node is of kind ``synonym``), as is the database of a
         synonym; should the same text name another node of the same explanation as well, the synonym's id is written

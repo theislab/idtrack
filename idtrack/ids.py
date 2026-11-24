@@ -24,9 +24,9 @@ ID_VERSION_DELIMITER = "."
 SYNONYM_PREFIX = "synonym_id::"
 
 #: The characters that join the parts of a name (``MIR138-2``, ``H1_0``, ``NKX2.1``): the step ``"separator"`` of
-#: the name resolution reads them as one (decision 87). A version (``NM_000546.6``, ``ENSG00000141510.18``) follows
+#: the name resolution reads them as one. A version (``NM_000546.6``, ``ENSG00000141510.18``) follows
 #: one of them, and so does the number a single-cell tool appends to a repeated name (``SRF.1``, ``SRF-1``,
-#: ``SRF_1``: decision 82).
+#: ``SRF_1``).
 SEPARATORS = "-_."
 
 #: The form of an Ensembl stable id without its version, by Ensembl's scheme of identifiers: ``ENS``, the species'
@@ -208,7 +208,7 @@ def stable_id_of(identifier: str) -> str:
 
 
 def public_name(name: str) -> str:
-    """Return a node name or database name as results show it: without the graph's synonym prefix (decision 56).
+    """Return a node name or database name as results show it: without the graph's synonym prefix.
 
     The graph keeps a synonym under ``synonym_id::<synonym>`` and its database as ``synonym_id::<database>``; a
     result says that a match is a synonym in its own words (``match="synonym:exact"``, :py:attr:`NameMatch.synonym`,

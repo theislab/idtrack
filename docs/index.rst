@@ -3,21 +3,49 @@
 Start here
 ----------
 
-* :doc:`tutorials` — the full tutorial suite (Part 0 → Part 7); primary learning resource
-* :doc:`usage` — a minimal quickstart, and the :ref:`current limitations <current-limitations>` of this version with
-  how often they matter
-* :doc:`installation` — installation, Ensembl access (MySQL or HTTPS), troubleshooting
-* :doc:`changes` — what changed, and what a user of an earlier version must do
+* :doc:`installation`, then the :doc:`usage`: your first conversions in a few minutes.
+* :doc:`concepts`: what an answer means, how it was found; :doc:`reading`: how a typed string is read.
+* :doc:`limitations`: when an answer can be wrong or missing, with how often it matters.
+* :doc:`cli`, :doc:`organisms`, :doc:`databases`, :doc:`harmonization`, :doc:`performance`.
+* :doc:`tutorials`: notebooks from installation to production patterns.
+* :doc:`reference/index`: every public class and function; :doc:`changes`: what changed, and what a user of an
+  earlier version must do.
 
 .. toctree::
-   :maxdepth: 3
-   :caption: Contents:
+   :maxdepth: 2
+   :caption: Using idtrack
    :hidden:
 
-   tutorials
    installation
    usage
-   reference
+   cli
+   tutorials
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Understanding the answers
+   :hidden:
+
+   concepts
+   reading
+   limitations
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Topics
+   :hidden:
+
+   organisms
+   databases
+   harmonization
+   performance
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Reference
+   :hidden:
+
+   reference/index
    changes
    contributing
    authors

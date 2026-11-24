@@ -8,17 +8,19 @@ Tutorials
 
    _notebooks/00_idtrack_overview
    _notebooks/01_installation_guide
-   _notebooks/02_prepare_new_external_yaml
-   _notebooks/03_initialization_graph
-   _notebooks/04_api_deep_dive_human
-   _notebooks/05_tutorial_harmonization
-   _notebooks/06_tutorial_humanization_mouse_pig_to_human
+   _notebooks/02_initialization_graph
+   _notebooks/03_api_deep_dive_human
+   _notebooks/04_tutorial_harmonization
+   _notebooks/05_tutorial_humanization_mouse_pig_to_human
+   _notebooks/06_prepare_new_external_yaml
    _notebooks/07_advanced_topics
    Appendix <_notebooks/99_initialization_test>
 
-These tutorials are the **primary learning resource** for IDTrack. They are written for wet-lab researchers (basic Python familiarity) and bioinformaticians (advanced patterns), and they cover both cross-release and cross-assembly identifier mapping.
-
-.. rubric:: Learning path
+Jupyter notebooks, in the order a reader needs them: install, build or load a graph, convert, harmonize, then the
+advanced topics. Every organism ships its externals configuration, so the configuration tutorial (Part 6) is needed
+only to change which external databases a graph holds. Each page has a "Download notebook" link; the outputs shown
+were made with this version on the graphs of Ensembl 115. The reference pages they link to (:doc:`concepts`,
+:doc:`reading`, :doc:`limitations`, :doc:`performance`) hold the rules and numbers in full.
 
 .. list-table::
     :header-rows: 1
@@ -26,31 +28,31 @@ These tutorials are the **primary learning resource** for IDTrack. They are writ
 
     * - Part
       - What you will learn
-      - Start here
+      - Notebook
     * - Part 0
-      - The mental model (time axis vs space axis, snapshot boundary, outcomes 1→0/1→1/1→n)
+      - The mental model: releases and assemblies, the snapshot release, the outcomes of a conversion
       - :doc:`_notebooks/00_idtrack_overview`
     * - Part 1
-      - Installation and a clean, reusable local repository directory
+      - Installation and a clean, reusable local repository
       - :doc:`_notebooks/01_installation_guide`
     * - Part 2
-      - External database configuration (YAML) for human, mouse, pig, rhesus and cynomolgus macaque, extending a YAML to new Ensembl releases, and how to add a new organism
-      - :doc:`_notebooks/02_prepare_new_external_yaml`
+      - Building graphs for the five organisms, loading them, managing graph files
+      - :doc:`_notebooks/02_initialization_graph`
     * - Part 3
-      - Build snapshot graphs (multi-assembly where applicable), load them from the local repository, and manage graph files across organisms and snapshots
-      - :doc:`_notebooks/03_initialization_graph`
+      - The API in depth: single and batch conversion, results, explained paths, introspection
+      - :doc:`_notebooks/03_api_deep_dive_human`
     * - Part 4
-      - Core API usage (single + batch conversion, explainability, introspection)
-      - :doc:`_notebooks/04_api_deep_dive_human`
+      - Harmonizing real datasets: integration hygiene, legacy rescue
+      - :doc:`_notebooks/04_tutorial_harmonization`
     * - Part 5
-      - Real dataset workflows (harmonization, integration hygiene, legacy rescue)
-      - :doc:`_notebooks/05_tutorial_harmonization`
+      - Cross-species "humanization" with an orthology table
+      - :doc:`_notebooks/05_tutorial_humanization_mouse_pig_to_human`
     * - Part 6
-      - Cross-species “humanization” workflows and comparative-analysis preparation
-      - :doc:`_notebooks/06_tutorial_humanization_mouse_pig_to_human`
+      - The externals configuration (YAML) of each organism, extending it to new Ensembl releases, adding an organism
+      - :doc:`_notebooks/06_prepare_new_external_yaml`
     * - Part 7
-      - Production patterns (profiles, automation, diagnostics, pipelines)
+      - Production patterns: profiles, automation, diagnostics, pipelines
       - :doc:`_notebooks/07_advanced_topics`
     * - Appendix
-      - Self-tests, sanity checks, and troubleshooting helpers
+      - Self-tests and sanity checks of built graphs
       - :doc:`Appendix <_notebooks/99_initialization_test>`

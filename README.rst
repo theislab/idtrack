@@ -35,53 +35,18 @@
 Cross-Temporal and Cross-Database Biological Identifier Mapping
 --------------------------------------------------------------------
 
-Modern biology constantly mixes identifiers from different years, databases, and genome builds. The result is a familiar set of problems:
-IDs disappear, symbols change, references disagree, and “the same gene” isn’t always represented the same way across datasets.
+**IDTrack** converts gene identifiers (Ensembl gene, transcript and translation ids, symbols, and the ids of external
+databases such as HGNC, NCBI Gene, RefSeq and UniProt) to the genes of one chosen Ensembl release, or to their ids in
+a chosen database. It is for anyone with gene lists or matrices made with different Ensembl releases, genome
+assemblies or databases. It follows each identifier through Ensembl's own history of retired, merged and split ids,
+across assemblies; it says how each string was read and which evidence decided; it returns a tie instead of a guess
+when the evidence cannot decide; and it states its own limits with how often they matter.
 
-**IDTrack** is built for that reality. It provides a **time-aware, audit-friendly** way to translate and harmonize biological identifiers
-across **Ensembl releases** and across **external namespaces** (HGNC, UniProt, RefSeq, Entrez, …), while keeping ambiguity explicit
-instead of silently forcing a single answer.
-
-What makes IDTrack different
-----------------------------
-
-* **Time-aware mapping**: treat Ensembl releases as a “time axis” and travel forward/backward through identifier history.
-* **Assembly-aware mapping**: identifiers of earlier genome builds (e.g. GRCh37) convert to the build Ensembl maintains at the target release, and external databases are read for the assembly they belong to.
-* **Snapshot boundary for reproducibility**: build a release-bounded graph snapshot; the same snapshot gives the same answers in every run.
-* **Explicit external database opt-in**: choose which external namespaces participate via a small, editable YAML contract.
-* **Transparency over coercion**: conversions are classified as **1→0** (no match), **1→1** (clean), or **1→n** (ambiguous); an answer shared by several equally supported genes is returned as a tie, and every result says how the identifier was read.
-* **Fast once built**: a graph built once loads from disk in 1 to 6 seconds into 0.3 to 1.5 GB of memory, without network, and a conversion takes about 0.2 to 0.3 ms at the median (measured for the five supported organisms; see the Quickstart's Time and Memory).
-
-Who is it for?
---------------
-
-* Wet-lab researchers who need a step-by-step path from “my gene list is old” to “my analysis is reproducible”.
-* Bioinformaticians who want release-pinned, auditable conversions in notebooks, pipelines, and integration workflows.
-* Atlas builders / integrators who need to harmonize gene identifiers across many cohorts (different Ensembl releases, symbols, and external IDs), keep an explicit audit trail of what mapped/failed/was ambiguous, and ship a release-pinned, reproducible feature space for downstream integration and publication.
-
-Common use cases
-----------------
-
-* **Dataset harmonization** before integration (single-cell, bulk, atlas-scale collections).
-* **Legacy data rescue** (old Ensembl releases, mixed symbols/IDs, retired identifiers).
-* **Publication-grade reproducibility** (pin a snapshot boundary + share the exact external configuration).
-* **Cross-database interoperability** when collaborators use different identifier conventions.
-
-Installation and a first conversion
------------------------------------
-
-IDTrack runs on Python 3.12 to 3.15 (on 3.15, install HDF5 and a C compiler first: h5py has no wheels for it yet; see
-the installation page) and supports human, mouse, pig, rhesus macaque and cynomolgus macaque. Install it from GitHub
-(``@v0.1.1`` names this release; without it pip takes the current ``main``); the second line adds the ``harmonize``
-extra for harmonizing ``.h5ad`` datasets, which brings anndata and scipy:
+It supports human, mouse, pig, rhesus macaque and cynomolgus macaque, on Python 3.12 to 3.15.
 
 .. code-block:: console
 
-    $ pip install "git+https://github.com/theislab/idtrack.git@v0.1.1"
-    $ pip install "idtrack[harmonize] @ git+https://github.com/theislab/idtrack.git@v0.1.1"
-
-The release on PyPI (``pip install idtrack``, version 0.0.5) is an older, different version with another API; use
-GitHub until this version is published on PyPI.
+    $ pip install idtrack
 
 .. code-block:: python
 
@@ -89,35 +54,43 @@ GitHub until this version is published on PyPI.
 
     from idtrack import API
 
-    os.makedirs("./idtrack_cache", exist_ok=True)  # the local repository: downloaded tables and graph files
-    # Built from Ensembl's tables the first time (hours for human), loaded from disk in seconds afterwards.
-    api = API.build("homo_sapiens", 115, "./idtrack_cache")
-    # A graph file on disk loads without any network: api = API.load(API.graph_path("homo_sapiens", 115, "./idtrack_cache"))
+    os.makedirs("./idtrack_cache", exist_ok=True)              # the local repository: tables and graph files
+    api = API.build("homo_sapiens", 115, "./idtrack_cache")    # built once (hours for human), then loaded in seconds
+    print(api.convert("TP53").targets())                                                    # ('ENSG00000141510.20',)
+    print(api.convert("ENSG00000141510", from_release=100, final_database="HGNC Symbol").targets())   # ('TP53',)
 
-    result = api.convert("TP53")  # to the snapshot release
-    print(result.targets())       # ('ENSG00000141510.20',)
-    result = api.convert("ENSG00000141510", from_release=100, final_database="HGNC Symbol")
-    print(result.targets())       # ('TP53',)
-
-The same from the command line (``idtrack --help`` says more):
+The same from the command line:
 
 .. code-block:: console
 
     $ idtrack build human 115 --repository idtrack_cache
     $ idtrack convert idtrack_cache/graph_homo_sapiens_assembly38_min48_max115.npz TP53 BRCA1
 
-Documentation and tutorials
----------------------------
+What it does
+------------
 
-The documentation includes a **full tutorial suite** designed to be the primary learning resource:
+* **Across releases**: an identifier of any release from the organism's first one in IDTrack to the graph's
+  snapshot release converts to any other, through Ensembl's id history (versions, replacements, splits, merges, with
+  Ensembl's mapping scores).
+* **Across assemblies**: identifiers of earlier genome builds (human NCBI36 and GRCh37, mouse NCBIM37 and GRCm38, ...)
+  convert to the build Ensembl maintains at the target release.
+* **Across databases**: symbols and ids of external databases convert to Ensembl genes and back, read as each
+  database wrote them at each release.
+* **Reproducible**: a graph is fixed by its organism, snapshot release and selection of databases; the same graph
+  gives the same answer in every run, and records what built it.
+* **Transparent**: every result has a status and, where it has no target, a reason; ties are returned as ties; with
+  ``explain=True`` the path behind the answer is data.
+* **Fast once built**: a graph loads from disk in 1 to 6 seconds into 0.3 to 1.5 GB of memory, without network, and a
+  conversion takes about 0.2 to 0.3 ms at the median.
+* **Harmonization** of ``.h5ad`` datasets onto one release (``pip install "idtrack[harmonize]"``).
 
-* Documentation: Documentation_
-* Tutorials: start from the “Tutorials” section in the docs (Part 0 → Part 7).
-* What this version does not do yet, with how often it matters: `Current Limitations`_.
-* Setting up, building and checking graphs, testing and releasing: `SETUP.md`_.
+Documentation
+-------------
 
-.. _PyPI: https://pypi.org/
-.. _pip: https://pip.pypa.io/
-.. _Documentation: https://idtrack.readthedocs.io/
-.. _Current Limitations: https://idtrack.readthedocs.io/en/latest/usage.html#current-limitations
+https://idtrack.readthedocs.io/: the `Quickstart <https://idtrack.readthedocs.io/en/latest/usage.html>`_, `how IDTrack
+answers <https://idtrack.readthedocs.io/en/latest/concepts.html>`_, its `limitations
+<https://idtrack.readthedocs.io/en/latest/limitations.html>`_, the `command line
+<https://idtrack.readthedocs.io/en/latest/cli.html>`_, the tutorials and the reference. Setting up, building and
+checking graphs, testing and releasing: `SETUP.md`_.
+
 .. _SETUP.md: https://github.com/theislab/idtrack/blob/main/SETUP.md

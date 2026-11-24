@@ -45,13 +45,17 @@ _CACHE_FORMAT = 4
 
 
 def read_feature_names(path: str) -> list[str]:
-    """Return the feature names (``var`` index) of an ``.h5ad`` file without reading anything else.
+    """Return the feature names (the ``var`` index) of an ``.h5ad`` file without reading anything else.
+
+    The file is opened read-only with h5py and only the index of ``var`` is read: neither the matrix nor the other
+    annotations are loaded, so a dataset of any size costs the size of its feature names.
+    :py:class:`idtrack.harmonize.HarmonizeFeatures` reads each dataset's features so.
 
     Args:
         path: Path of the ``.h5ad`` file.
 
     Returns:
-        list[str]: The names in file order.
+        list[str]: The names in file order (bytes decoded).
     """
     with h5py.File(path, "r") as handle:
         var = handle["var"]
@@ -140,13 +144,13 @@ class HarmonizeFeatures:
       ``merge="flag"``, an input feature that shares its gene with others), ``"unconverted_ambiguous"`` (several
       genes), ``"unconverted_no_conversion"`` (in the graph, but no gene at the target release),
       ``"unconverted_not_in_graph"``, ``"unconverted_missing_value"`` (a spelling of a missing value, ``nan`` or
-      ``NA``, which is never a gene: decision 81) or ``"unconverted_error"`` (the conversion of this feature raised an
+      ``NA``, which is never a gene) or ``"unconverted_error"`` (the conversion of this feature raised an
       error that concerns it alone, a search over its budget);
     * ``"idtrack_reason"``: why (missing for a plain conversion; the text of the conversion's reason,
       :py:data:`idtrack.results.REASONS`, for a feature without a conversion; for a feature that the graph does not
       hold at its dataset's source release and that was therefore read at another release, that release; for a
       feature that is another feature of the dataset with a suffix a single-cell tool appends to repeated names, the
-      feature it copies, decision 82);
+      feature it copies);
     * ``"Query ID"``: the input name(s), ``";"``-joined for a merged feature;
     * ``"matching_ensembl_gene"``: the gene (also for a merge partner; missing for the other unconverted features).
 
@@ -209,8 +213,9 @@ class HarmonizeFeatures:
 
     Attributes:
         feature_names (dict[str, list[str]]): The feature names of each dataset, in file order.
-        matchings (dict[str, list[dict]]): The conversion of each feature of each dataset (results of
-            :py:meth:`idtrack.API.convert`, plain data).
+        matchings (dict[str, list[idtrack.results.ConversionResult]]): The conversion of each feature of each
+            dataset, one result per feature in file order (:py:meth:`idtrack.API.convert_many`, or read back from the
+            result cache).
         gene_names (dict[str, dict[str, list[str]]]): Per dataset, the final-database names of each gene reached.
     """
 
