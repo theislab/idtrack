@@ -91,11 +91,13 @@ says so (:py:func:`idtrack.reading.read_identifier`; the prefixes are :py:data:`
 What is never read
 ------------------
 
-Forms that are not read stay not found (never another gene): database prefixes (``HGNC:11998``, ``UniProtKB:P04637``),
-Greek letters (``IL-1β``), UniProt isoforms (``P04637-2``), NCBI gene ids written as numbers of a spreadsheet
-(``7157.0``), and version forms other than ``.<version>`` (``ENSG00000141510-5``, ``ENSG00000141510_5``,
-``ENSG00000141510.v5``: a ``-`` or ``_`` and digits after an Ensembl id is as often a tool's suffix for a repeated
-name as a version, so it is no version).
+Forms that are not read stay not found (never another gene): database prefixes (``HGNC:11998``, ``UniProtKB:P04637``,
+``GeneID:7157``), Greek letters (``IL-1β``), UniProt isoforms (``P04637-2``), NCBI gene ids written as numbers of a
+spreadsheet (``7157.0``, ``7.157e+03``) or with leading zeros (``07157``), letters of other scripts that look like
+Latin ones (a Cyrillic ``ТР53``), brackets, emoji and spaces inside an identifier (``(TP53)``, ``TP 53``), the text of
+a terminal's escape sequence that is left once its control character is removed (``[1mTP53[0m``), and version forms
+other than ``.<version>`` (``ENSG00000141510-5``, ``ENSG00000141510_5``, ``ENSG00000141510.v5``: a ``-`` or ``_`` and
+digits after an Ensembl id is as often a tool's suffix for a repeated name as a version, so it is no version).
 
 
 .. _reading-matching:

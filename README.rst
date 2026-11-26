@@ -92,7 +92,8 @@ Documentation
 
 https://idtrack.readthedocs.io/: the `Quickstart <https://idtrack.readthedocs.io/en/stable/usage.html>`_, `how idtrack
 answers <https://idtrack.readthedocs.io/en/stable/concepts.html>`_, its `limitations
-<https://idtrack.readthedocs.io/en/stable/limitations.html>`_, the `command line
+<https://idtrack.readthedocs.io/en/stable/limitations.html>`_, the `comparison with other tools
+<https://idtrack.readthedocs.io/en/stable/comparison.html>`_, the `command line
 <https://idtrack.readthedocs.io/en/stable/cli.html>`_, the tutorials and the reference. Setting up, building and
 checking graphs, testing and releasing: `SETUP.md`_.
 
@@ -106,8 +107,8 @@ idtrack, its web app and its benchmarks carry one version number, and each relea
 * `idtrack-web <https://github.com/theislab/idtrack-web>`_: the web app (an HTTP api and a frontend) that converts
   identifiers with idtrack from a browser, without installing the package or building graphs.
 * `idtrack-reproducibility <https://github.com/theislab/idtrack-reproducibility>`_: the benchmarks that measure
-  idtrack's answers against Ensembl's own files and the naming authorities, their results, and the known limitations
-  with their measured sizes.
+  idtrack's answers against Ensembl's own files and the naming authorities, their results, the known limitations
+  with their measured sizes, and the comparison with other tools on the same lines.
 
 Help and license
 ----------------

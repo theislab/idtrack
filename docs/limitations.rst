@@ -6,10 +6,17 @@ Limitations and Known Costs
 =============================
 
 What this version does not do yet, with how often it matters, measured on the graphs of the five organisms built
-with Ensembl 115 (every number is a count over Ensembl's own records of the releases asked about, not over a
-benchmark's judgement), and what it costs in time and memory where that is not what a reader would expect. Each
-limitation says how to see it in a result and what to do about it. The terms are those of :doc:`concepts` and
-:doc:`reading`.
+with Ensembl 115, and what it costs in time and memory where that is not what a reader would expect. Each limitation
+says how to see it in a result and what to do about it. The terms are those of :doc:`concepts` and :doc:`reading`.
+
+A number is a count over Ensembl's own records of the releases asked about, unless the entry cites **the
+benchmarks**: the benchmark repository `idtrack-reproducibility <https://github.com/theislab/idtrack-reproducibility>`_
+judges this version's answers against Ensembl's files and the naming authorities, family by family, and its table of
+known limitations (``results/limitations/limitations.tsv`` at commit ``72eeb8a``) counts each limitation in the
+complete run of the families on the graphs of 115. Such a count is of the answers the benchmark judged wrong (each
+line answered under the views ``best`` and ``all``), or, for the comparison with other tools, of the lines of its read
+sample where idtrack is wrong (1,015 lines: pig 163, mouse 375, human 408, rhesus 52, cynomolgus 17;
+:doc:`comparison`).
 
 .. contents::
     :local:
@@ -28,6 +35,11 @@ at other releases is reported in ``result.other_readings`` (``reason="other_rele
 asked without a release is NR4A2's synonym, as Ensembl's records of release 115 have it; with ``from_release=90``
 it is MT-RNR1, whose NCBI symbol it was at releases 86 to 93 and 95. Give the release a table was made with to read its
 names as they were then.
+
+A string is read in every name database the graph holds, so without a release a symbol is read at the target release
+wherever any of them gives it there, also where Ensembl's display name of the list's own release belonged to another
+gene: in the benchmarks' marker lists asked without a release (CellMarker and PanglaoDB), mouse 49 and human 713
+answers.
 
 .. _limitation-assembly-mapping:
 
@@ -53,6 +65,13 @@ same chromosome is not known (pig 2,927 bridges at Sscrofa10.2 to 11.1 and 870 a
 alone would have put 1.0 to 14.8 % of such bridges elsewhere (above); that is the only measured guide to the size.
 ``allow_bridges=False`` turns bridges off; ``result.path.bridges`` lists each with its rule.
 
+Such a bridge can follow any identifier the old gene carried, also another gene's name: pig ``convert("AKR1C3",
+from_release=72, to_release=115)`` reads AKR1C3 as ENSSSCG00000023446 (Sscrofa10.2, last at release 89, no successor)
+and answers ENSSSCG00000062058, which carries AKR1C3 at 115, while ``view("all")`` adds ENSSSCG00000063387, reached
+through AKR1C1, an NCBI symbol the old gene also carried at 89: both lie on chromosome 10, which is all that the
+bridge can compare. In the benchmarks' comparison with other tools, 35 of the sampled wrong lines are names read at
+an old release and carried so across an assembly change without a published mapping (pig 24, rhesus 10, mouse 1).
+
 .. _limitation-copies:
 
 Copies on patches and alternative loci
@@ -70,8 +89,20 @@ of 10, mouse 4 of 4), and of those to a gene more than 1 Mb away on the same seq
 (the other 16 lie inside the region of their exception, which the rule of this section judges). The rule also refuses a
 copy's link to its own gene where a family shares the id.
 
-A number with a version that two numbering schemes share
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. _limitation-numbers:
+
+Numbers that several numbering schemes share
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**A string of digits is read in every database whose ids are numbers.** These are NCBI's gene ids, and the numeric
+Havana ids and RefSeq rows of early releases (:ref:`reading-rules`). A number that is no NCBI gene id of the organism can
+therefore answer the gene whose Havana number it was: human ``convert("1898")``, an NCBI gene id that NCBI
+discontinued, answers five genes of the MHC haplotypes through a Havana transcript number of release 52, and
+``convert("39152")``, a spreadsheet's serial number of a date that a symbol was turned into (MARCH11), answers
+ENSG00000099991 through a Havana translation number of release 51. The benchmarks count mouse 149 and human 123 such
+answers among NCBI gene ids of other organisms, and 6 human lines (date serials 4, discontinued NCBI ids 2) in the
+comparison with other tools. Name the database of NCBI gene ids: ``convert("1898", from_database="NCBI gene (formerly
+Entrezgene)")`` answers nothing. Keep symbols from being turned into dates before converting a table.
 
 **A number written with a version that two numbering schemes share is read where its version exists.** Human
 numeric Havana translation ids of releases 50 and 51 carry the version 1 and 2,493 of them are also NCBI gene ids:
@@ -88,6 +119,8 @@ Ensembl's scores and become the best answer (pig ``convert("ENSSSCG00000014532",
 answers ENSSSCG00000042508, an offshoot, while the id's own successors rank fourth to sixth). Pig: 7 ids, 1,133
 conversions (748 of them without a tie), all at the Sscrofa9 to Sscrofa10.2 change; human: none; mouse and the
 macaques: no id is branched while it lives. ``result.view("all")`` lists the id's own successors.
+
+.. _limitation-moves:
 
 An id that Ensembl moves to another place
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -139,6 +172,30 @@ mouse 7 and human 8).
 Each candidate says whether an authority gave it the name (``Candidate.authority``) and whether it is the gene's display
 name (``Candidate.display_name``); in rhesus the authority's names are themselves projected from human.
 
+.. _limitation-other-sources:
+
+A name that another source gives another gene
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**A string is read in every name source and database the graph holds at the release read, so the answer holds every
+gene that any of them gives it.** Ensembl's display name ranks first, then the support (:ref:`concept-ranking`), and
+the other genes are in ``view("all")``: human ``convert("BBS1", from_release=69, to_release=115)`` answers BBS1,
+ENSG00000174483, and ``view("all")`` adds ENSG00000256349, a gene to which UniProt's gene name BBS1 is attached at
+69. Where only copies on haplotypes or patches display the name, a gene of the reference sequence that any source
+gives it is the answer and the copies are listed apart (:ref:`reading-copies`), also when that gene is another gene:
+human ``convert("HLA-DRB3", from_release=70, to_release=70)`` answers a tie of HLA-DQB1 and HLA-DRB1, which UniProt's
+gene names call HLA-DRB3 too, and lists the HLA-DRB3 genes of the MHC haplotypes apart. A string that is also a value
+of another database (a symbol that is a clone name, a number that is an old Havana id) names the genes of both.
+
+The benchmarks count these answers where the truth reads the display name or the authority's file: a name of another
+name source, pig 24, mouse 476, human 2,720 and cynomolgus 8 answers (in the comparison with other tools 109 lines); a
+string read as another gene's name, a synonym or at another release than the list's, pig 32, mouse 252 and human 406 (36
+lines); a value of another database, pig 30, mouse 2,703 and human 7,499 (59 lines). Name the database
+(``from_database="HGNC Symbol"`` answers the HLA-DRB3 genes above) and read each candidate's ``entry_databases`` and
+``display_name``.
+
+.. _limitation-spellings:
+
 A name in one letter case that another gene's link spells so
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -154,6 +211,8 @@ gene that carries the name exactly as typed, mostly names of snoRNA and scaRNA f
 such strings without letter case at the exact step would undo the exact match for strings that do name a gene as typed,
 which is kept). Written as the authority writes it, the name is read as that gene's display name.
 
+.. _limitation-case:
+
 Symbols typed in small letters where symbols are written in capitals
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -164,7 +223,11 @@ authorities at release 115 that name one gene, each typed in small letters and w
 symbols (``convert("afp")`` answers ENSSSCG00000001233, whose NCBI synonym is ``afp``, not AFP, ENSSSCG00000008949;
 ``Has2`` answers ENSSSCG00000057079, not HAS2), rhesus (15,206 symbols), cynomolgus (748) and human (40,826) none.
 Type the symbol as the authority writes it (``AFP``), or name its database:
-``convert("afp", from_database="VGNC Symbol")`` is AFP.
+``convert("afp", from_database="VGNC Symbol")`` is AFP. In the benchmarks' comparison with other tools, 78 of the
+sampled wrong lines are strings matched only in another letter case (pig 39, rhesus 15, cynomolgus 15, mouse 5, human
+4), mostly aliases as NCBI's files type them: read as another gene's synonym, or as a synonym of the gene the alias
+names where the truth, which reads no other case, expects none (pig ``NGN3`` answers NEUROG3, ENSSSCG00000034488,
+through its synonym ``Ngn3`` of release 98).
 
 .. _limitation-bridges:
 
@@ -184,6 +247,15 @@ brought back). Human ``convert("ENSG00000198477", from_release=48, to_release=76
 release 75) answers ENSG00000275004.1, ZNF280B on GRCh38, through NCBI's id 140883, RefSeq's NM_080764 and the symbol
 ZNF280B at the same place on chromosome 22. ``Candidate.bridges`` counts the bridges of an answer and
 ``result.path.bridges`` lists them; ``allow_bridges=False`` answers by Ensembl's history alone.
+
+A name read at an old release whose genes' history ends is answered the same way: human ``convert("AC090377.15",
+from_release=53, to_release=115)`` (a clone-based name of release 53) answers ENSG00000267497, which a bridge through
+the HGNC symbol NFE2L3P1 reaches at the old gene's place on chromosome 18, and nothing with ``allow_bridges=False``. The
+benchmarks count the answers that only a bridge reaches and that do not lie at the old gene's place, where their truth
+follows Ensembl's history alone: pig 58,235, mouse 372,446, human 1,042,878, rhesus 6 and cynomolgus 14 answers over the
+families of Ensembl ids, names, external identifiers, lists and datasets, and in the comparison with other tools 361
+lines, with 74 more names read at an old release (at the old place 30, across an assembly change without a published
+mapping 35, through a copy outside the reference sequence 8, and one RFAM accession read as such).
 
 A retired gene whose accession another gene holds today
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -218,6 +290,22 @@ Of the Ensembl gene ids whose history splits, asked at their last release to rel
 never with another gene's identifier. Convert to Ensembl genes first, then each gene of ``view("all")`` to the database
 (``convert(gene, final_database=...)``): on 100 sampled pairs per organism this gives the descendants' identifiers every
 time.
+
+.. _limitation-split-place:
+
+Among the successors of a split, the best answer does not look at the old place
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Where Ensembl's history splits a gene, the best answer is ranked by Ensembl's scores and the evidence of the
+candidates, not by which successor lies where the old gene lay.** ``view("all")`` holds every successor, and with
+``explain=True`` each candidate's path ends at a gene whose place the result gives (``PathNode.places``). The
+benchmarks' gene lists (family D) count the best answers that lie away from the old gene model while another
+successor holds it: pig 658, mouse 1,457 and human 69 answers; and where the old place holds one successor while the
+answer holds others too, pig 1,498, mouse 2,156 and human 221. Human ``convert("ENSG00000272196", from_release=98,
+to_release=115, explain=True)`` answers ENSG00000288825 (chromosome 1, 149,842,218 to 149,842,750, reverse strand;
+``Candidate.score`` 0.972), while ENSG00000288859, the other successor (0.964), lies where the old gene lay
+(149,851,061 to 149,851,652, forward strand); ``view("all")`` holds both. To map count matrices, keep the successor
+that overlaps the old place.
 
 RefSeq_mRNA in mouse releases 80 and 81
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -304,6 +392,41 @@ accession of TP53's P04637), ``URS0000761A87`` (RNAcentral's id of a MALAT1 tran
 Ensembl id; to read another database of Ensembl, build a graph whose configuration selects it
 (:doc:`databases`).
 
+At mouse release 49 Ensembl's GTF names 21,182 genes by their MGI accession, so these names are not found at 49
+either (``convert("MGI:2687328", from_release=49, to_release=49)``): in the benchmarks, 79,786 mouse answers to
+names of release 49 (and 16 cynomolgus answers to names that are accessions of another database). Ask by the
+gene's MGI symbol or its Ensembl id.
+
+.. _limitation-mgi-havana:
+
+MGI's symbols of mouse releases 48 to 54 that are Havana ids
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**At mouse releases 48 to 54, a gene whose MGI symbol was its Havana id has no MGI symbol in a conversion.** MGI gave
+genes without a symbol of their own their Havana gene id as their symbol, and Ensembl's records of those releases
+file it as the gene's ``MGI Symbol`` label (``OTTMUSG00000000990`` of ENSMUSG00000018925 at release 52; MGI keeps it
+as a withdrawn symbol of the gene, now Heatr9). The graph files every string of Havana's identifier scheme under
+``Havana gene`` (:ref:`database-filing`), so ``convert("ENSMUSG00000018925", from_release=52, to_release=52,
+final_database="MGI Symbol")`` answers the gene itself with ``status="no_target"``, while ``final_database="Havana
+gene"`` answers ``OTTMUSG00000000990`` and, at release 115, ``final_database="MGI Symbol"`` answers ``Heatr9``. The
+benchmarks ask 1,534 such conversions (374 genes, releases 48 to 54) and count 2,365 of their 3,068 answers wrong.
+Convert to ``Havana gene`` at these releases, or to ``MGI Symbol`` at a later release.
+
+.. _limitation-mirbase:
+
+miRBase's names on miRNA genes only
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**The graph holds miRBase's names and accessions on genes of a miRNA biotype only, and leaves out an entry that Ensembl
+gives to genes at two loci.** Such a name therefore answers the miRNA gene, or nothing, where Ensembl's records give it
+to other genes too (:doc:`changes`, 0.1.0). At release 76 Ensembl displays the names of rhesus and pig miRNAs also for
+their host genes: rhesus ``convert("mml-mir-126", from_release=76, to_release=76)`` answers the miRNA gene
+ENSMMUG00000032649, not its host EGFL7 (ENSMMUG00000026981), whose display name it is there too. The benchmarks count 62
+answers to a miRBase name that is not found (human 24, pig 14, rhesus 24) and, among the display names of miRBase and of
+names of several genes at early releases, answers read at another release (pig 20, mouse 40, human 56, rhesus 28); in
+the comparison with other tools, 17 lines (8 of them such host genes). Ask by the gene's Ensembl id or its symbol
+(``MIR126``).
+
 Synonyms that are fragments of UniProt's evidence text
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -313,6 +436,8 @@ opening brace stays a synonym of the gene: human 45 synonyms, mouse 20, pig and 
 (``api.genes_named("GNECO:0000312|HGNC:HGNC:11125}")`` gives UniProt's synonym of SUMO2, ENSG00000188612, at
 release 79). They name the gene they came with and are reached only by typing such a string;
 :py:meth:`idtrack.API.names_of` lists them among a gene's synonyms.
+
+.. _limitation-cross-references:
 
 Ensembl's cross references against the databases' own files
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -329,6 +454,11 @@ NCBI's files give pig's ids to the genes of another Ensembl annotation of pig (`
 names a gene of the reference assembly; human and mouse were not compared. Rhesus ``convert("100425060")`` answers
 ENSMMUG00000002917, the gene Ensembl gives NCBI's id 100425060, while NCBI's ``gene2ensembl`` gives it
 ENSMMUG00000049684. Where the authority's assignment matters, check the answer against the authority's own file.
+
+The same holds for an NCBI gene id that NCBI discontinued or replaced and that Ensembl's records keep as a synonym of
+a gene's NCBI or UniProt link: mouse ``convert("668009")`` answers ENSMUSG00000078896 (``match="synonym:exact"``, read
+at release 87), while NCBI's gene history gives the id's successor to ENSMUSG00000078879 (3 mouse lines in the
+benchmarks' comparison with other tools).
 
 
 .. _known-costs:
