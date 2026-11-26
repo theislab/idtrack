@@ -94,9 +94,12 @@ todo_include_todos = False
 # a list of builtin themes.
 #
 html_theme = "sphinx_rtd_theme"
-html_logo = "_logo/logo.png"
+# The logo is drawn as SVG (docs/_logo/logo.svg; the white one sits on the theme's coloured sidebar); logo.png is the
+# same logo on a white plate, for places that take no SVG (the README on PyPI and GitHub, in light and dark modes).
+html_logo = "_logo/logo_white.svg"
+html_favicon = "_logo/favicon.svg"
 html_theme_options = {
-    "logo_only": False,
+    "logo_only": True,
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
