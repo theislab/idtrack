@@ -93,7 +93,7 @@ Documentation
 https://idtrack.readthedocs.io/: the `Quickstart <https://idtrack.readthedocs.io/en/stable/usage.html>`_, `how idtrack
 answers <https://idtrack.readthedocs.io/en/stable/concepts.html>`_, its `limitations
 <https://idtrack.readthedocs.io/en/stable/limitations.html>`_, the `comparison with other tools
-<https://idtrack.readthedocs.io/en/stable/comparison.html>`_, the `command line
+<https://idtrack.readthedocs.io/en/latest/comparison.html>`_, the `command line
 <https://idtrack.readthedocs.io/en/stable/cli.html>`_, the tutorials and the reference. Setting up, building and
 checking graphs, testing and releasing: `SETUP.md`_.
 
