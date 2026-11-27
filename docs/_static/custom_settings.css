@@ -13,3 +13,11 @@ div.nbinput div.input_area,
 div.nboutput div.output_area {
     margin-left: 0;
 }
+
+/* The logo on the sidebar's coloured header: the white logo at a fixed width (its SVG scales). */
+.wy-side-nav-search > a img.logo {
+    width: 190px;
+    max-width: 100%;
+    height: auto;
+    margin: 6px auto 2px;
+}
